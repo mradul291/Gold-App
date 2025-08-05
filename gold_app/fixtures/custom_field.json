@@ -1,0 +1,57 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Item-custom_date",
+    "dt": "Item",
+    "fieldname": "custom_date",
+    "fieldtype": "Date",
+    "label": "Date",
+    "insert_after": "valuation_rate"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Item-item_tag",
+    "dt": "Item",
+    "fieldname": "item_tag",
+    "fieldtype": "Data",
+    "label": "Item Tag",
+    "insert_after": "custom_date"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Item-purity",
+    "dt": "Item",
+    "fieldname": "purity",
+    "fieldtype": "Select",
+    "label": "Purity",
+    "options": "999.9\n916",
+    "insert_after": "item_tag"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Item-item_length",
+    "dt": "Item",
+    "fieldname": "item_length",
+    "fieldtype": "Float",
+    "label": "Item Length",
+    "insert_after": "purity"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Item-sold_ag_ws",
+    "dt": "Item",
+    "fieldname": "sold_ag_ws",
+    "fieldtype": "Check",
+    "label": "Sold to AG Wholesale?",
+    "insert_after": "item_length"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Item-sold_retail",
+    "dt": "Item",
+    "fieldname": "sold_retail",
+    "fieldtype": "Check",
+    "label": "Sold Retail?",
+    "insert_after": "sold_ag_ws"
+  }
+]

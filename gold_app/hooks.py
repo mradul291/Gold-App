@@ -10,6 +10,24 @@ app_license = "mit"
 
 # required_apps = []
 
+fixtures = [
+    {"dt": "Custom Field", "filters": [["module", "=", "Gold App"]]}
+]
+
+
+doctype_js = {
+    "Item": "public/js/item.js"
+}
+
+doc_events = {
+    "Item": {
+        "autoname": "gold_app.api.item.autoname",
+        # "before_save": "gold_app.api.item.run_item_import_cleanup"
+    }
+}
+
+
+
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
 # 	{
@@ -137,13 +155,8 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+
+
 
 # Scheduled Tasks
 # ---------------
