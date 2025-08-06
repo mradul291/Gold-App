@@ -16,13 +16,13 @@ fixtures = [
 
 
 doctype_js = {
-    "Item": "public/js/item.js"
+    "Item": "public/js/item.js",
+    "Sales Invoice": "public/js/sales_invoice_item.js"
 }
 
 doc_events = {
     "Item": {
         "autoname": "gold_app.api.item.autoname",
-        # "before_save": "gold_app.api.item.run_item_import_cleanup"
     }
 }
 

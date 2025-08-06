@@ -36,22 +36,3 @@ def autoname(doc, method):
 
     new_number = last_number + 1
     doc.item_code = f"{prefix}-{new_number:03d}"
-
-
-# def clean_rm_value(value):
-#     if isinstance(value, str):
-#         return flt(value.replace("RM", "").replace(",", "").strip())
-#     return flt(value)
-
-# def run_item_import_cleanup(doc, method):
-#     try:
-#         weight = flt(doc.weight_per_unit or 0)
-#         rate = clean_rm_value(doc.custom_rate or 0)
-#         cost = weight * rate
-
-#         doc.standard_rate = rate
-#         doc.valuation_rate = cost
-
-#     except Exception as e:
-#         frappe.logger().error(f"Error updating item {doc.name}: {str(e)}")
-

@@ -53,5 +53,38 @@
     "fieldtype": "Check",
     "label": "Sold Retail?",
     "insert_after": "sold_ag_ws"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice Item",
+    "fieldname": "valuation_rate",
+    "label": "Valuation Rate (RM/g)",
+    "fieldtype": "Currency",
+    "insert_after": "weight_per_unit",
+    "fetch_from": "item_code.valuation_rate",
+    "reqd": 0,
+    "name": "Sales Invoice Item-valuation_rate"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice Item",
+    "fieldname": "item_tag",
+    "label": "Item Tag",
+    "fieldtype": "Data",
+    "insert_after": "item_code",
+    "fetch_from": "item_code.item_tag",
+    "reqd": 0,
+    "name": "Sales Invoice Item-item_tag"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice Item",
+    "fieldname": "purity",
+    "label": "Purity",
+    "fieldtype": "Data",
+    "insert_after": "item_tag",
+    "fetch_from": "item_code.purity",
+    "reqd": 0,
+    "name": "Sales Invoice Item-purity"
   }
 ]
