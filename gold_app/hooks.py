@@ -18,7 +18,9 @@ fixtures = [
 doctype_js = {
     "Item": "public/js/item.js",
     "Sales Invoice": "public/js/sales_invoice_item.js",
-    "Purchase Invoice": "public/js/purchase_invoice_item.js"
+    "Purchase Invoice": "public/js/purchase_invoice_item.js",
+    "Sales Order": "public/js/sales_order_item.js",
+    "Purchase Order": "public/js/purchase_order_item.js"
 }
 
 doc_events = {
