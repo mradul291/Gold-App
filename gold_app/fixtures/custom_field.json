@@ -120,71 +120,110 @@
     "reqd": 0,
     "name": "Purchase Invoice Item-purity"
   },
- {
-  "doctype": "Custom Field",
-  "dt": "Sales Order Item",
-  "fieldname": "so_valuation_rate",
-  "label": "Valuation Rate (RM/g)",
-  "fieldtype": "Currency",
-  "insert_after": "weight_per_unit",
-  "fetch_from": "item_code.valuation_rate",
-  "reqd": 0,
-  "name": "Sales Order Item-so_valuation_rate"
-},
-{
-  "doctype": "Custom Field",
-  "dt": "Sales Order Item",
-  "fieldname": "item_tag",
-  "label": "Item Tag",
-  "fieldtype": "Data",
-  "insert_after": "item_code",
-  "fetch_from": "item_code.item_tag",
-  "reqd": 0,
-  "name": "Sales Order Item-item_tag"
-},
-{
-  "doctype": "Custom Field",
-  "dt": "Sales Order Item",
-  "fieldname": "purity",
-  "label": "Purity",
-  "fieldtype": "Data",
-  "insert_after": "item_tag",
-  "fetch_from": "item_code.purity",
-  "reqd": 0,
-  "name": "Sales Order Item-purity"
-},
-{
-  "doctype": "Custom Field",
-  "dt": "Purchase Order Item",
-  "fieldname": "custom_valuation_rate_po",
-  "label": "Valuation Rate (RM/g)",
-  "fieldtype": "Currency",
-  "insert_after": "weight_per_unit",
-  "fetch_from": "item_code.valuation_rate",
-  "reqd": 0,
-  "name": "Purchase Order Item-custom_valuation_rate_po"
-},
-{
-  "doctype": "Custom Field",
-  "dt": "Purchase Order Item",
-  "fieldname": "item_tag",
-  "label": "Item Tag",
-  "fieldtype": "Data",
-  "insert_after": "item_code",
-  "fetch_from": "item_code.item_tag",
-  "reqd": 0,
-  "name": "Purchase Order Item-item_tag"
-},
-{
-  "doctype": "Custom Field",
-  "dt": "Purchase Order Item",
-  "fieldname": "purity",
-  "label": "Purity",
-  "fieldtype": "Data",
-  "insert_after": "item_tag",
-  "fetch_from": "item_code.purity",
-  "reqd": 0,
-  "name": "Purchase Order Item-purity"
-}
-
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Order Item",
+    "fieldname": "so_valuation_rate",
+    "label": "Valuation Rate (RM/g)",
+    "fieldtype": "Currency",
+    "insert_after": "weight_per_unit",
+    "fetch_from": "item_code.valuation_rate",
+    "reqd": 0,
+    "name": "Sales Order Item-so_valuation_rate"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Order Item",
+    "fieldname": "item_tag",
+    "label": "Item Tag",
+    "fieldtype": "Data",
+    "insert_after": "item_code",
+    "fetch_from": "item_code.item_tag",
+    "reqd": 0,
+    "name": "Sales Order Item-item_tag"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Order Item",
+    "fieldname": "purity",
+    "label": "Purity",
+    "fieldtype": "Data",
+    "insert_after": "item_tag",
+    "fetch_from": "item_code.purity",
+    "reqd": 0,
+    "name": "Sales Order Item-purity"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Order Item",
+    "fieldname": "custom_valuation_rate_po",
+    "label": "Valuation Rate (RM/g)",
+    "fieldtype": "Currency",
+    "insert_after": "weight_per_unit",
+    "fetch_from": "item_code.valuation_rate",
+    "reqd": 0,
+    "name": "Purchase Order Item-custom_valuation_rate_po"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Order Item",
+    "fieldname": "item_tag",
+    "label": "Item Tag",
+    "fieldtype": "Data",
+    "insert_after": "item_code",
+    "fetch_from": "item_code.item_tag",
+    "reqd": 0,
+    "name": "Purchase Order Item-item_tag"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Order Item",
+    "fieldname": "purity",
+    "label": "Purity",
+    "fieldtype": "Data",
+    "insert_after": "item_tag",
+    "fetch_from": "item_code.purity",
+    "reqd": 0,
+    "name": "Purchase Order Item-purity"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Order",
+    "fieldname": "so_time",
+    "label": "Order Time",
+    "fieldtype": "Time",
+    "insert_after": "transaction_date",
+    "reqd": 0,
+    "name": "Sales Order-so_time"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Order",
+    "fieldname": "po_time",
+    "label": "Order Time",
+    "fieldtype": "Time",
+    "insert_after": "transaction_date",
+    "reqd": 0,
+    "name": "Purchase Order-po_time"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "si_time",
+    "label": "Invoice Time",
+    "fieldtype": "Time",
+    "insert_after": "posting_date",
+    "reqd": 0,
+    "name": "Sales Invoice-si_time"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Invoice",
+    "fieldname": "pi_time",
+    "label": "Invoice Time",
+    "fieldtype": "Time",
+    "insert_after": "posting_date",
+    "reqd": 0,
+    "name": "Purchase Invoice-pi_time"
+  }
 ]
