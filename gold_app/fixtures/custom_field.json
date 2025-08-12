@@ -225,5 +225,20 @@
     "insert_after": "posting_date",
     "reqd": 0,
     "name": "Purchase Invoice-pi_time"
+  },
+    {
+    "doctype": "Custom Field",
+    "dt": "Item Group",
+    "fieldname": "item_code_prefix",
+    "label": "Item Code Prefix",
+    "fieldtype": "Data",
+    "insert_after": "parent_item_group",
+    "reqd": 0,
+    "unique": 0,
+    "translatable": 0,
+    "no_copy": 1,
+    "hidden": 0,
+    "name": "Item Group-item_code_prefix",
+    "module": "Gold App"
   }
 ]

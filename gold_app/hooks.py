@@ -11,7 +11,8 @@ app_license = "mit"
 # required_apps = []
 
 fixtures = [
-    {"dt": "Custom Field", "filters": [["module", "=", "Gold App"]]}
+    {"dt": "Custom Field", "filters": [["module", "=", "Gold App"]]},
+    {"dt": "Property Setter", "filters": [["module", "=", "Gold App"]]}
 ]
 
 
@@ -38,6 +39,9 @@ doc_events = {
     },
     "Purchase Invoice": {
         "before_save": "gold_app.api.custom_time_auto_fill.set_order_time"
+    },
+    "Item Group": {
+        "before_save": "gold_app.api.item.set_item_group_prefix"
     }
 }
 
