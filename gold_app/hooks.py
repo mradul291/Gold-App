@@ -5,10 +5,6 @@ app_description = "Erpnext Gold"
 app_email = "mishramradul29@gmail.com"
 app_license = "mit"
 
-# Apps
-# ------------------
-
-# required_apps = []
 
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "Gold App"]]},
@@ -17,11 +13,11 @@ fixtures = [
 
 
 doctype_js = {
-    "Item": "public/js/item.js",
     "Sales Invoice": "public/js/sales_invoice_item.js",
     "Purchase Invoice": "public/js/purchase_invoice_item.js",
     "Sales Order": "public/js/sales_order_item.js",
-    "Purchase Order": "public/js/purchase_order_item.js"
+    "Purchase Order": "public/js/purchase_order_item.js",
+    "Stock Entry": "public/js/stock_entry.js",
 }
 
 doc_events = {
@@ -42,10 +38,16 @@ doc_events = {
     },
     "Item Group": {
         "before_save": "gold_app.api.item.set_item_group_prefix"
+    },
+    "Stock Entry": {
+        "before_save": "gold_app.api.stock_entry.set_zero_valuation_flag",
     }
 }
 
+# Apps
+# ------------------
 
+# required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [

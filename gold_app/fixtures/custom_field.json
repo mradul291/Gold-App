@@ -240,5 +240,30 @@
     "hidden": 0,
     "name": "Item Group-item_code_prefix",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Stock Entry",
+    "name": "Stock Entry-source_item",
+    "module": "Gold App",
+    "label": "Source Item",
+    "fieldname": "source_item",
+    "fieldtype": "Link",
+    "options": "Item",
+    "insert_after": "stock_entry_type",
+    "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "hidden": 0
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Stock Entry",
+    "name": "Stock Entry-item_quantity",
+    "module": "Gold App",
+    "label": "Item Weight",
+    "fieldname": "item_quantity",
+    "fieldtype": "Float",
+    "insert_after": "source_item",
+    "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "hidden": 0
   }
 ]
