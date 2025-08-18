@@ -265,5 +265,30 @@
     "insert_after": "source_item",
     "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
     "hidden": 0
+  },
+{
+    "doctype": "Custom Field",
+    "dt": "Stock Entry",
+    "name": "Stock Entry-source_item_warehouse",
+    "module": "Gold App",
+    "label": "Source Item Warehouse",
+    "fieldname": "source_item_warehouse",
+    "fieldtype": "Link",
+    "options": "Warehouse",
+    "insert_after": "source_item",
+    "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Stock Entry",
+    "name": "Stock Entry-reduce_quantity",
+    "module": "Gold App",
+    "label": "Reduced Weight",
+    "fieldname": "reduce_quantity",
+    "fieldtype": "Float",
+    "insert_after": "source_item_warehouse",
+    "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "read_only": 1
   }
 ]

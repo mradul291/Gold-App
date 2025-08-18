@@ -9,7 +9,7 @@ frappe.ui.form.on("Stock Entry", {
                 callback: function(r) {
                     if (r.message) {
                         if (r.message.warehouse) {
-                            // frm.set_value("from_warehouse", r.message.warehouse);
+                            frm.set_value("source_item_warehouse", r.message.warehouse);
                         }
                         if (r.message.qty !== undefined) {
                             frm.set_value("item_quantity", r.message.qty);
@@ -18,8 +18,20 @@ frappe.ui.form.on("Stock Entry", {
                 }
             });
         }
+    },
+    validate: function(frm) {
+        if (frm.doc.stock_entry_type === "Break Item") {
+            let total_qty = 0;
+            (frm.doc.items || []).forEach(row => {
+                if (row.item_code !== frm.doc.source_item) {
+                    total_qty += flt(row.qty);
+                }
+            });
+            frm.set_value("reduce_quantity", total_qty);
+        }
     }
 });
+
 
 frappe.ui.form.on('Stock Entry Detail', {
     items_add: function(frm, cdt, cdn) {

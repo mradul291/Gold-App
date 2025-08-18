@@ -8,5 +8,15 @@
     "property_type": "Check",
     "value": "0",
     "name": "Item-item_code-reqd"
+  },
+  {
+    "doctype": "Property Setter",
+    "doc_type": "Purchase Receipt Item",
+    "doctype_or_field": "DocField",
+    "field_name": "item_group",
+    "property": "read_only",
+    "property_type": "Check",
+    "value": "0",
+    "name": "Purchase Receipt Item-item_group-read_only"
   }
 ]

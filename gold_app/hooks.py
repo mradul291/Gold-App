@@ -18,6 +18,7 @@ doctype_js = {
     "Sales Order": "public/js/sales_order_item.js",
     "Purchase Order": "public/js/purchase_order_item.js",
     "Stock Entry": "public/js/stock_entry.js",
+    "Purchase Receipt": "public/js/purchase_receipt.js"
 }
 
 doc_events = {
@@ -40,7 +41,11 @@ doc_events = {
         "before_save": "gold_app.api.item.set_item_group_prefix"
     },
     "Stock Entry": {
-        "before_save": "gold_app.api.stock_entry.set_zero_valuation_flag",
+        "validate": [
+            "gold_app.api.stock_entry.validate_break_item_qty",
+            "gold_app.api.stock_entry.set_zero_valuation_flag"
+        ],
+        "on_submit": "gold_app.api.stock_entry.create_material_issue"
     }
 }
 
