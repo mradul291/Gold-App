@@ -18,5 +18,15 @@
     "property_type": "Check",
     "value": "0",
     "name": "Purchase Receipt Item-item_group-read_only"
+  },
+  {
+    "doctype": "Property Setter",
+    "doc_type": "Purchase Receipt",
+    "doctype_or_field": "DocField",
+    "field_name": "supplier",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Supplier/Customer",
+    "name": "Purchase Receipt-supplier-label"
   }
 ]
