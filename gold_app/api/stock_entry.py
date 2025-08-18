@@ -2,30 +2,58 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+# @frappe.whitelist()
+# def get_item_stock_info(item_code):
+#     """Fetch latest warehouse and available qty for the given item."""
+#     if not item_code:
+#         return {}
+
+#     latest_warehouse = frappe.db.get_value(
+#         "Stock Ledger Entry",
+#         {"item_code": item_code},
+#         "warehouse",
+#         order_by="posting_date desc, posting_time desc"
+#     )
+
+#     qty = 0
+#     if latest_warehouse:
+#         qty = frappe.db.get_value(
+#             "Bin",
+#             {"item_code": item_code, "warehouse": latest_warehouse},
+#             "actual_qty"
+#         ) or 0
+
+#     return {
+#         "warehouse": latest_warehouse,
+#         "qty": qty
+#     }
+
 @frappe.whitelist()
 def get_item_stock_info(item_code):
-    """Fetch latest warehouse and available qty for the given item."""
+    """Fetch latest warehouse, available qty, and valuation rate for the given item."""
     if not item_code:
         return {}
 
-    latest_warehouse = frappe.db.get_value(
+    latest_sle = frappe.db.get_value(
         "Stock Ledger Entry",
         {"item_code": item_code},
-        "warehouse",
-        order_by="posting_date desc, posting_time desc"
+        ["warehouse", "valuation_rate"],
+        order_by="posting_date desc, posting_time desc",
+        as_dict=True
     )
 
     qty = 0
-    if latest_warehouse:
+    if latest_sle and latest_sle.warehouse:
         qty = frappe.db.get_value(
             "Bin",
-            {"item_code": item_code, "warehouse": latest_warehouse},
+            {"item_code": item_code, "warehouse": latest_sle.warehouse},
             "actual_qty"
         ) or 0
 
     return {
-        "warehouse": latest_warehouse,
-        "qty": qty
+        "warehouse": latest_sle.warehouse if latest_sle else None,
+        "qty": qty,
+        "valuation_rate": latest_sle.valuation_rate if latest_sle else 0
     }
 
 def set_zero_valuation_flag(doc, method):

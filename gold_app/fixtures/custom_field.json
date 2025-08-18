@@ -226,7 +226,7 @@
     "reqd": 0,
     "name": "Purchase Invoice-pi_time"
   },
-    {
+  {
     "doctype": "Custom Field",
     "dt": "Item Group",
     "fieldname": "item_code_prefix",
@@ -266,7 +266,7 @@
     "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
     "hidden": 0
   },
-{
+  {
     "doctype": "Custom Field",
     "dt": "Stock Entry",
     "name": "Stock Entry-source_item_warehouse",
@@ -289,6 +289,17 @@
     "fieldtype": "Float",
     "insert_after": "source_item_warehouse",
     "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Stock Entry",
+    "name": "Stock Entry-source_valuation_rate",
+    "module": "Gold App",
+    "label": "Source Valuation Rate",
+    "fieldname": "source_valuation_rate",
+    "fieldtype": "Currency",
+    "insert_after": "item_quantity",
     "read_only": 1
   }
 ]
