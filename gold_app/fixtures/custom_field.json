@@ -194,7 +194,8 @@
     "fieldtype": "Time",
     "insert_after": "transaction_date",
     "reqd": 0,
-    "name": "Sales Order-so_time"
+    "name": "Sales Order-so_time",
+    "read_only": 1
   },
   {
     "doctype": "Custom Field",
@@ -204,7 +205,8 @@
     "fieldtype": "Time",
     "insert_after": "transaction_date",
     "reqd": 0,
-    "name": "Purchase Order-po_time"
+    "name": "Purchase Order-po_time",
+    "read_only": 1
   },
   {
     "doctype": "Custom Field",
@@ -259,11 +261,12 @@
     "dt": "Stock Entry",
     "name": "Stock Entry-item_quantity",
     "module": "Gold App",
-    "label": "Item Weight(in GMs)",
+    "label": "Item Weight (in GMs)",
     "fieldname": "item_quantity",
     "fieldtype": "Float",
     "insert_after": "source_item",
     "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "read_only": 1,
     "hidden": 0
   },
   {
@@ -284,7 +287,7 @@
     "dt": "Stock Entry",
     "name": "Stock Entry-reduce_quantity",
     "module": "Gold App",
-    "label": "Reduced Weight(in GMs)",
+    "label": "Reduced Weight (in GMs)",
     "fieldname": "reduce_quantity",
     "fieldtype": "Float",
     "insert_after": "source_item_warehouse",

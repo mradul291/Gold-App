@@ -7,7 +7,8 @@
     "property": "reqd",
     "property_type": "Check",
     "value": "0",
-    "name": "Item-item_code-reqd"
+    "name": "Item-item_code-reqd",
+    "module": "Gold App"
   },
   {
     "doctype": "Property Setter",
@@ -17,16 +18,29 @@
     "property": "read_only",
     "property_type": "Check",
     "value": "0",
-    "name": "Purchase Receipt Item-item_group-read_only"
+    "name": "Purchase Receipt Item-item_group-read_only",
+    "module": "Gold App"
   },
   {
     "doctype": "Property Setter",
-    "doc_type": "Purchase Receipt",
+    "name": "purchase_receipt_item-qty-label",
     "doctype_or_field": "DocField",
-    "field_name": "supplier",
+    "doc_type": "Purchase Receipt Item",
+    "field_name": "qty",
     "property": "label",
-    "property_type": "Data",
-    "value": "Supplier/Customer",
-    "name": "Purchase Receipt-supplier-label"
-  }
+    "property_type": "float",
+    "value": "Qty (in GMs)",
+    "module": "Gold App"
+  },
+  {
+  "doctype": "Property Setter",
+  "name": "stock_entry_detail-qty-label",
+  "doctype_or_field": "DocField",
+  "doc_type": "Stock Entry Detail",
+  "field_name": "qty",
+  "property": "label",
+  "property_type": "Data",
+  "value": "Qty (in GMs)",
+  "module": "Gold App"
+}
 ]

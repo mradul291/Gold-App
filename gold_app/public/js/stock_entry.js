@@ -96,6 +96,20 @@ function recalc_reduce_qty_and_guard(frm) {
     // Guard: child total must not exceed source qty
     const source_qty = flt(frm.doc.item_quantity) || 0;
     if (source_qty > 0 && total_qty > source_qty) {
-        frappe.throw(__("Total child weight ({0}) cannot exceed Source Item weight ({1}).", [total_qty, source_qty]));
+        frappe.throw(__("The total weight of new items ({0} gm) cannot be greater than the source item weight ({1} gm).", [total_qty, source_qty]));
     }
 }
+
+// frappe.ui.form.on("Stock Entry", {
+//     stock_entry_type(frm) {
+//         frm.set_query("source_item", () => {
+//             if (frm.doc.stock_entry_type === "Break Item") {
+//                 return {
+//                     filters: {
+//                         item_group: "MG - Mixed Gold"
+//                     }
+//                 };
+//             }
+//         });
+//     }
+// });

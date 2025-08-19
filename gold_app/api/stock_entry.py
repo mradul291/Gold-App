@@ -49,13 +49,13 @@ def validate_break_item_qty(doc, method):
 
     if child_total > source_qty:
         frappe.throw(
-            _("Total child weight ({0}) cannot exceed Source Item weight ({1}).")
+            _("The total weight of new items ({0} gm) cannot exceed the available Mixed Gold weight ({1} gm).")
             .format(child_total, source_qty)
         )
 
     # If less, that’s fine — balance remains in stock
     remaining = source_qty - child_total
-    frappe.msgprint(_("Remaining source weight will be {0} gm.").format(remaining))
+    frappe.msgprint(_("Updated balance: {0} gm of Mixed Gold remaining").format(remaining))
 
 
 def create_material_issue(doc, method):
@@ -81,4 +81,4 @@ def create_material_issue(doc, method):
     se.insert(ignore_permissions=True)
     se.submit()
 
-    frappe.msgprint(_("Mixed Gold Weight reduced successfully. Stock Entry: {0}").format(se.name))
+    frappe.msgprint(_("Mixed Gold weight has been updated successfully. Stock Entry: {0}").format(se.name))
