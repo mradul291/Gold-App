@@ -2,32 +2,6 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-# @frappe.whitelist()
-# def get_item_stock_info(item_code):
-#     """Fetch latest warehouse and available qty for the given item."""
-#     if not item_code:
-#         return {}
-
-#     latest_warehouse = frappe.db.get_value(
-#         "Stock Ledger Entry",
-#         {"item_code": item_code},
-#         "warehouse",
-#         order_by="posting_date desc, posting_time desc"
-#     )
-
-#     qty = 0
-#     if latest_warehouse:
-#         qty = frappe.db.get_value(
-#             "Bin",
-#             {"item_code": item_code, "warehouse": latest_warehouse},
-#             "actual_qty"
-#         ) or 0
-
-#     return {
-#         "warehouse": latest_warehouse,
-#         "qty": qty
-#     }
-
 @frappe.whitelist()
 def get_item_stock_info(item_code):
     """Fetch latest warehouse, available qty, and valuation rate for the given item."""
@@ -75,13 +49,13 @@ def validate_break_item_qty(doc, method):
 
     if child_total > source_qty:
         frappe.throw(
-            _("Total child quantity ({0}) cannot exceed Source Item quantity ({1}).")
+            _("Total child weight ({0}) cannot exceed Source Item weight ({1}).")
             .format(child_total, source_qty)
         )
 
     # If less, that’s fine — balance remains in stock
     remaining = source_qty - child_total
-    frappe.msgprint(_("Remaining source qty will be {0}.").format(remaining))
+    frappe.msgprint(_("Remaining source weight will be {0} gm.").format(remaining))
 
 
 def create_material_issue(doc, method):
@@ -90,7 +64,7 @@ def create_material_issue(doc, method):
 
     # Ensure required data exists
     if not doc.source_item or not doc.source_item_warehouse or not doc.reduce_quantity:
-        frappe.throw(_("Source Item, Source Item Warehouse and Reduce Quantity are required."))
+        frappe.throw(_("Source Item, Source Item Warehouse and Reduce Weight are required."))
 
     # Create Material Issue
     se = frappe.new_doc("Stock Entry")
@@ -107,4 +81,4 @@ def create_material_issue(doc, method):
     se.insert(ignore_permissions=True)
     se.submit()
 
-    frappe.msgprint(_("Mixed Gold Quantity reduced successfully. Stock Entry: {0}").format(se.name))
+    frappe.msgprint(_("Mixed Gold Weight reduced successfully. Stock Entry: {0}").format(se.name))

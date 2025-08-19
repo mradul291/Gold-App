@@ -43,7 +43,6 @@ doc_events = {
     "Stock Entry": {
         "validate": [
             "gold_app.api.stock_entry.validate_break_item_qty",
-            # "gold_app.api.stock_entry.set_zero_valuation_flag"
         ],
         "on_submit": "gold_app.api.stock_entry.create_material_issue"
     }
