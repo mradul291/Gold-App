@@ -24,7 +24,6 @@ doctype_js = {
 doc_events = {
     "Item": {
         "autoname": "gold_app.api.item.autoname",
-        "after_insert": "gold_app.gold_app.doctype.purity.purity.item_update_handler",
         "on_update": "gold_app.gold_app.doctype.purity.purity.item_update_handler"
     },
     "Sales Order": {
@@ -47,6 +46,9 @@ doc_events = {
             "gold_app.api.stock_entry.validate_break_item_qty",
         ],
         "on_submit": "gold_app.api.stock_entry.create_material_issue"
+    },
+    "Purchase Receipt": {
+        "on_submit": "gold_app.api.purchase_receipt.update_item_from_receipt"
     }
 }
 

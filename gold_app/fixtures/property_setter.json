@@ -42,5 +42,17 @@
   "property_type": "Data",
   "value": "Qty (in GMs)",
   "module": "Gold App"
+},
+{
+  "doctype": "Property Setter",
+  "doc_type": "Purchase Receipt Item",
+  "doctype_or_field": "DocField",
+  "field_name": "amount",
+  "property": "read_only",
+  "property_type": "Check",
+  "value": "0",
+  "name": "Purchase Receipt Item-amount-read_only",
+  "module": "Gold App"
 }
+
 ]

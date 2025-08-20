@@ -304,5 +304,17 @@
     "fieldtype": "Currency",
     "insert_after": "item_quantity",
     "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt Item",
+    "fieldname": "purity",
+    "label": "Purity",
+    "fieldtype": "Link",
+    "options": "Purity",
+    "insert_after": "item_code",
+    "reqd": 0,
+    "name": "Purchase Receipt Item-purity",
+    "module": "Gold App"
   }
 ]

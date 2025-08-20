@@ -28,3 +28,33 @@ frappe.ui.form.on('Purchase Receipt Item', {
         }
     }
 });
+
+frappe.ui.form.on("Purchase Receipt Item", {
+    amount: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.qty && row.qty != 0) {
+            // Custom reverse calculation
+            row.rate = flt(row.amount) / flt(row.qty);
+            frm.refresh_field("items");
+        }
+    },
+
+    // Optional: keep ERPNext default flow intact
+    rate: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.qty) {
+            row.amount = flt(row.qty) * flt(row.rate);
+            frm.refresh_field("items");
+        }
+    },
+
+    qty: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.rate) {
+            row.amount = flt(row.qty) * flt(row.rate);
+        } else if (row.amount) {
+            row.rate = flt(row.amount) / flt(row.qty);
+        }
+        frm.refresh_field("items");
+    }
+});
