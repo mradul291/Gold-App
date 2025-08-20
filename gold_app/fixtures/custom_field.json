@@ -22,9 +22,9 @@
     "name": "Item-purity",
     "dt": "Item",
     "fieldname": "purity",
-    "fieldtype": "Select",
+    "fieldtype": "Link",
     "label": "Purity",
-    "options": "999.9\n916",
+    "options": "Purity",
     "insert_after": "item_tag"
   },
   {

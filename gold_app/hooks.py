@@ -24,6 +24,8 @@ doctype_js = {
 doc_events = {
     "Item": {
         "autoname": "gold_app.api.item.autoname",
+        "after_insert": "gold_app.gold_app.doctype.purity.purity.item_update_handler",
+        "on_update": "gold_app.gold_app.doctype.purity.purity.item_update_handler"
     },
     "Sales Order": {
         "before_save": "gold_app.api.custom_time_auto_fill.set_order_time"

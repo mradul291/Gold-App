@@ -100,16 +100,16 @@ function recalc_reduce_qty_and_guard(frm) {
     }
 }
 
-// frappe.ui.form.on("Stock Entry", {
-//     stock_entry_type(frm) {
-//         frm.set_query("source_item", () => {
-//             if (frm.doc.stock_entry_type === "Break Item") {
-//                 return {
-//                     filters: {
-//                         item_group: "MG - Mixed Gold"
-//                     }
-//                 };
-//             }
-//         });
-//     }
-// });
+frappe.ui.form.on("Stock Entry", {
+    stock_entry_type(frm) {
+        frm.set_query("source_item", () => {
+            if (frm.doc.stock_entry_type === "Break Item") {
+                return {
+                    filters: {
+                        item_group: "MG - Mixed Gold"
+                    }
+                };
+            }
+        });
+    }
+});
