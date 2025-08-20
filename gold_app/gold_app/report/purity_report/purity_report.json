@@ -1,0 +1,29 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2025-08-20 20:46:37.856277",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "json": "{\"filters\":[[\"Purity\",\"weight_g\",\"!=\",0,false]],\"fields\":[[\"name\",\"Purity\"],[\"weight_g\",\"Purity\"],[\"avco_rm_per_g\",\"Purity\"],[\"price_rm\",\"Purity\"]],\"order_by\":\"`tabPurity`.`purity_name` desc\",\"page_length\":20,\"column_widths\":{\"name\":120,\"weight_g\":120,\"avco_rm_per_g\":120,\"price_rm\":120},\"group_by\":null}",
+ "letterhead": null,
+ "modified": "2025-08-20 20:47:45.031226",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Purity Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Purity",
+ "report_name": "Purity Report",
+ "report_type": "Report Builder",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "timeout": 0
+}
