@@ -316,5 +316,29 @@
     "reqd": 0,
     "name": "Purchase Receipt Item-purity",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "supplier_id_number",
+    "label": "ID Number",
+    "fieldtype": "Data",
+    "insert_after": "supplier",
+    "fetch_from": "supplier.name",
+    "reqd": 0,
+    "name": "Purchase Receipt-supplier_id_number",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "supplier_phone_number",
+    "label": "Phone Number",
+    "fieldtype": "Data",
+    "insert_after": "supplier_id_number",
+    "fetch_from": "supplier.mobile_no",
+    "reqd": 0,
+    "name": "Purchase Receipt-supplier_phone_number",
+    "module": "Gold App"
   }
 ]
