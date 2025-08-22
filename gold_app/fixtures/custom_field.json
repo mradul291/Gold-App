@@ -326,6 +326,7 @@
     "insert_after": "supplier",
     "fetch_from": "supplier.name",
     "reqd": 0,
+    "read_only": 1,
     "name": "Purchase Receipt-supplier_id_number",
     "module": "Gold App"
   },
@@ -338,6 +339,7 @@
     "insert_after": "supplier_id_number",
     "fetch_from": "supplier.mobile_no",
     "reqd": 0,
+    "read_only": 1,
     "name": "Purchase Receipt-supplier_phone_number",
     "module": "Gold App"
   }
