@@ -48,6 +48,7 @@ doc_events = {
         "on_submit": "gold_app.api.stock_entry.create_material_issue"
     },
     "Purchase Receipt": {
+        "before_submit": "gold_app.gold_app.doctype.item_pickup.item_pickup.create_item_pickups",
         "on_submit": "gold_app.api.purchase_receipt.update_item_from_receipt"
     }
 }
