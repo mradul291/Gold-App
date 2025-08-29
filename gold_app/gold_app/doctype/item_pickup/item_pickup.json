@@ -22,6 +22,7 @@
   {
    "fieldname": "dealer",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Dealer",
    "options": "Supplier",
    "read_only": 1
@@ -49,6 +50,7 @@
   {
    "fieldname": "purity",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Purity",
    "options": "Purity",
    "read_only": 1
@@ -91,7 +93,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-08-29 13:31:36.738404",
+ "modified": "2025-08-29 16:05:29.495277",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

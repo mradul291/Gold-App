@@ -21,8 +21,6 @@ doctype_js = {
     "Purchase Receipt": "public/js/purchase_receipt.js",
 }
 
-doctype_list_js = {"Item Pickup": "public/js/item_pickup_list.js"}
-
 doc_events = {
     "Item": {
         "autoname": "gold_app.api.item.autoname",
