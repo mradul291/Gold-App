@@ -8,7 +8,6 @@ frappe.ui.form.on('Item Pickup', {
     }
 });
 
-
 frappe.ui.form.on("Item Pickup", {
     setup: function(frm) {
         frappe.meta.get_docfield("Item Pickup", "assigned_to").get_query = function() {
