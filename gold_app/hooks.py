@@ -51,9 +51,17 @@ doc_events = {
     },
     "Purchase Receipt": {
         "before_submit": "gold_app.gold_app.doctype.item_pickup.item_pickup.create_item_pickups",
-        "on_submit": "gold_app.api.purchase_receipt.update_item_from_receipt"
+        "on_submit": [
+        "gold_app.api.purchase_receipt.update_item_from_receipt",
+        # "gold_app.api.purchase_receipt.create_invoice_and_payment"
+    ]
+    },
+    "Item Pickup": {
+        "validate": "gold_app.gold_app.doctype.item_pickup.item_pickup.validate"
     }
 }
+
+
 
 # Apps
 # ------------------

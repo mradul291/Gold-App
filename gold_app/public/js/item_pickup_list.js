@@ -38,3 +38,6 @@ frappe.listview_settings['Item Pickup'] = {
         });
     }
 };
+
+
+

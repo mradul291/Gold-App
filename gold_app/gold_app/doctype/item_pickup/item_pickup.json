@@ -10,12 +10,13 @@
   "date",
   "item_code",
   "purity",
+  "purchase_receipt",
   "column_break_xymh",
   "total_weight",
   "avco_rate",
   "amount",
-  "is_pickup",
-  "purchase_receipt"
+  "assigned_to",
+  "is_pickup"
  ],
  "fields": [
   {
@@ -79,12 +80,18 @@
    "fieldname": "is_pickup",
    "fieldtype": "Check",
    "label": "Is Pickup"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned To",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-08-28 13:00:45.042254",
+ "modified": "2025-08-29 13:31:36.738404",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

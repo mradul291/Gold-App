@@ -1,8 +1,6 @@
-# Copyright (c) 2025, Mradul and contributors
-# For license information, please see license.txt
-
 import frappe
 from frappe.model.document import Document
+from frappe.desk.form.assign_to import add as add_assignment
 
 class ItemPickup(Document):
 	pass
@@ -41,3 +39,21 @@ def create_item_pickups(doc, method):
             title="Item Pickup Created",
             indicator="green"
         )
+        
+        
+# Auto Add Assign To from Custom Field       
+def validate(doc, method):
+    if doc.assigned_to:
+        # First clear existing assignments for this document
+        frappe.db.delete("ToDo", {
+            "reference_type": doc.doctype,
+            "reference_name": doc.name
+        })
+
+        # Create a new assignment
+        add_assignment({
+            "assign_to": [doc.assigned_to],
+            "doctype": doc.doctype,
+            "name": doc.name,
+            "description": f"Assigned via Item Pickup field"
+        })

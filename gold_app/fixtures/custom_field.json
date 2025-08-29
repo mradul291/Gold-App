@@ -353,5 +353,29 @@
     "insert_after": "supplier",
     "name": "Purchase Receipt-item_availability",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "purchase_invoice_ref",
+    "label": "Purchase Invoice Ref",
+    "fieldtype": "Link",
+    "options": "Purchase Invoice",
+    "insert_after": "is_return",
+    "read_only": 1,
+    "name": "Purchase Receipt-purchase_invoice_ref",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "payment_entry_ref",
+    "label": "Payment Entry Ref",
+    "fieldtype": "Link",
+    "options": "Payment Entry",
+    "insert_after": "purchase_invoice_ref",
+    "read_only": 1,
+    "name": "Purchase Receipt-payment_entry_ref",
+    "module": "Gold App"
   }
 ]
