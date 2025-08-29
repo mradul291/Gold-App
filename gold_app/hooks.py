@@ -59,6 +59,11 @@ doc_events = {
     }
 }
 
+permission_query_conditions = {
+    "Item Pickup": "gold_app.api.api.user_specific_item_pickup",
+}
+
+
 
 
 # Apps
