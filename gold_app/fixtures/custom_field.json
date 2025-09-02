@@ -377,5 +377,40 @@
     "read_only": 1,
     "name": "Purchase Receipt-payment_entry_ref",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "payment_method",
+    "label": "Payment Method",
+    "fieldtype": "Select",
+    "options": "Cash\nBank Transfer\nMix",
+    "insert_after": "set_posting_time",
+    "reqd": 1,
+    "name": "Purchase Receipt-payment_method",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "bank_reference_no",
+    "label": "Bank Reference No",
+    "fieldtype": "Data",
+    "insert_after": "payment_method",
+    "depends_on": "eval:doc.payment_method=='Bank Transfer'",
+    "reqd": 1,
+    "name": "Purchase Receipt-bank_reference_no",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Invoice",
+    "fieldname": "custom_payment_mode",
+    "fieldtype": "Select",
+    "label": "Payment Mode of invoice",
+    "options": "Cash\nCheque\nBank Transfer\nCredit Card\nDebit Card\nE-wallet\nMix",
+    "insert_after": "custom_invoicetype_code",
+    "module": "Gold App",
+    "name": "Purchase Invoice-custom_payment_mode"
   }
 ]
