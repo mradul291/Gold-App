@@ -371,8 +371,7 @@
     "dt": "Purchase Receipt",
     "fieldname": "payment_entry_ref",
     "label": "Payment Entry Ref",
-    "fieldtype": "Link",
-    "options": "Payment Entry",
+    "fieldtype": "Data",
     "insert_after": "purchase_invoice_ref",
     "read_only": 1,
     "name": "Purchase Receipt-payment_entry_ref",
@@ -412,5 +411,19 @@
     "insert_after": "custom_invoicetype_code",
     "module": "Gold App",
     "name": "Purchase Invoice-custom_payment_mode"
-  }
+  },
+  {
+  "doctype": "Custom Field",
+  "dt": "Purchase Receipt",
+  "fieldname": "payment_split",
+  "label": "Payment Split",
+  "fieldtype": "Table",
+  "options": "Payment Split Entry",
+  "insert_after": "payment_method",
+  "depends_on": "eval:doc.payment_method=='Mix'",
+  "reqd": 0,
+  "module": "Gold App",
+  "name": "Purchase Receipt-payment_split"
+}
+
 ]
