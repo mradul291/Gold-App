@@ -398,7 +398,7 @@
     "fieldtype": "Data",
     "insert_after": "payment_method",
     "depends_on": "eval:doc.payment_method=='Bank Transfer'",
-    "reqd": 1,
+    "mandatory_depends_on": "eval:doc.payment_method=='Bank Transfer'",
     "name": "Purchase Receipt-bank_reference_no",
     "module": "Gold App"
   },
