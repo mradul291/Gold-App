@@ -31,15 +31,13 @@ frappe.ui.form.on("Purchase Receipt Item", {
 
 //Supplier based on Group
 frappe.ui.form.on("Purchase Receipt", {
-    refresh: function(frm) {
+    supplier_type: function(frm) {
         frm.set_query("supplier", function() {
-            if (frm.doc.supplier_type) {
-                return {
-                    filters: {
-                        supplier_group: frm.doc.supplier_type
-                    }
-                };
-            }
+            return {
+                filters: {
+                    supplier_group: frm.doc.supplier_type
+                }
+            };
         });
     }
 });
@@ -83,6 +81,7 @@ frappe.ui.form.on("Purchase Receipt Item", {
     }
 });
 
+// Fetching Supplier Bank Info
 frappe.ui.form.on("Purchase Receipt", {
     payment_method: function(frm) {
         if (frm.doc.payment_method === "Bank Transfer" && frm.doc.supplier) {
