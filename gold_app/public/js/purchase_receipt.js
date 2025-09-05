@@ -29,61 +29,73 @@ frappe.ui.form.on("Purchase Receipt Item", {
 	},
 });
 
-// Item Suggestions on the basis of Purity
-frappe.ui.form.on("Purchase Receipt Item", {
-	purity(frm, cdt, cdn) {
-		const rowdoc = locals[cdt][cdn];
-		if (!rowdoc.purity) return;
-
-		const grid = frm.fields_dict.items.grid;
-		const grid_row = grid.get_row(cdn) || grid.grid_rows_by_docname?.[cdn];
-
-		// Ensure the row editor and the link input exist
-		const ensureCtrl = () => {
-			// Try both: expanded row form and inline cell editor
-			let ctrl =
-				grid_row?.grid_form?.fields_dict?.item_code ||
-				(grid_row?.get_field ? grid_row.get_field("item_code") : null);
-
-			// If still not available, try expanding the row and re-pulling the control
-			if (!ctrl && grid_row?.toggle_view) {
-				grid_row.toggle_view(true);
-				ctrl =
-					grid_row?.grid_form?.fields_dict?.item_code ||
-					(grid_row?.get_field ? grid_row.get_field("item_code") : null);
-			}
-			return ctrl;
-		};
-
-		// Give the UI a moment if needed (handles quick changes)
-		setTimeout(() => {
-			const ctrl = ensureCtrl();
-			if (!ctrl || !ctrl.$input) return;
-
-			const txt = String(rowdoc.purity);
-
-			// "Type" into the input without touching the model
-			ctrl.$input.val(txt);
-			ctrl.$input.trigger("input").trigger("focus");
-
-			// Open suggestions (handles different Frappe builds)
-			if (ctrl.awesomplete && typeof ctrl.awesomplete.evaluate === "function") {
-				ctrl.awesomplete.evaluate();
-			} else if (typeof ctrl.$input.autocomplete === "function") {
-				try {
-					ctrl.$input.autocomplete("search", txt);
-				} catch (e) {}
-			} else {
-				ctrl.$input.trigger("keydown");
-			}
-
-			// Place caret at end (nice UX)
-			const el = ctrl.$input.get(0);
-			if (el && el.setSelectionRange) {
-				el.setSelectionRange(txt.length, txt.length);
-			}
-		}, 0);
-	},
+//Supplier based on Group
+frappe.ui.form.on("Purchase Receipt", {
+    refresh: function(frm) {
+        frm.set_query("supplier", function() {
+            if (frm.doc.supplier_type) {
+                return {
+                    filters: {
+                        supplier_group: frm.doc.supplier_type
+                    }
+                };
+            }
+        });
+    }
 });
 
+//Remove Default Downloan and Upload Buttons from Child Table
+frappe.ui.form.on("Purchase Receipt", {
+    refresh: function(frm) {
+        if (frm.fields_dict.items && frm.fields_dict.items.grid) {
+            // Hide "Download" button
+            frm.fields_dict.items.grid.wrapper
+                .find('.grid-download')
+                .hide();
 
+            // Hide "Upload" button
+            frm.fields_dict.items.grid.wrapper
+                .find('.grid-upload')
+                .hide();
+        }
+    }
+});
+
+// Auto Item Code and Group Selection on the Basis of Purity.
+frappe.ui.form.on("Purchase Receipt Item", {
+    purity: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (row.purity) {
+            let target_item_code = "Unsorted-" + row.purity;
+
+            frappe.db.get_value("Item", target_item_code, "item_group", function(r) {
+                if (r && r.item_group === "MG - Mixed Gold") {
+                    frappe.model.set_value(cdt, cdn, "item_code", target_item_code);
+                } else {
+                    frappe.msgprint(
+                        __("Item {0} not found in MG - Mixed Gold group", [target_item_code])
+                    );
+                    frappe.model.set_value(cdt, cdn, "item_code", "");
+                }
+            });
+        }
+    }
+});
+
+frappe.ui.form.on("Purchase Receipt", {
+    payment_method: function(frm) {
+        if (frm.doc.payment_method === "Bank Transfer" && frm.doc.supplier) {
+            frappe.db.get_value("Supplier", frm.doc.supplier, ["bank_name", "bank_account_number"])
+                .then(r => {
+                    if (r && r.message) {
+                        frm.set_value("supplier_bank_name", r.message.bank_name || "");
+                        frm.set_value("supplier_bank_account_number", r.message.bank_account_number || "");
+                    }
+                });
+        } else {
+            frm.set_value("supplier_bank_name", "");
+            frm.set_value("supplier_bank_account_number", "");
+        }
+    }
+});

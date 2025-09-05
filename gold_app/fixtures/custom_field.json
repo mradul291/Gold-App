@@ -347,11 +347,22 @@
     "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "item_availability",
-    "label": "Item Availability",
+    "label": "Purchase Type",
     "fieldtype": "Select",
     "options": "Item in Hand\nItem Not in Hand",
-    "insert_after": "supplier",
+    "insert_after": null,
     "name": "Purchase Receipt-item_availability",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "supplier_type",
+    "label": "Supplier Type",
+    "fieldtype": "Link",
+    "options": "Supplier Group",
+    "insert_after": "naming_series",
+    "name": "Purchase Receipt-supplier_type",
     "module": "Gold App"
   },
   {
@@ -397,8 +408,18 @@
     "fieldtype": "Data",
     "insert_after": "payment_method",
     "depends_on": "eval:doc.payment_method=='Bank Transfer'",
-    "mandatory_depends_on": "eval:doc.payment_method=='Bank Transfer'",
+    "read_only": 1,
     "name": "Purchase Receipt-bank_reference_no",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Purchase Receipt Item-item_description",
+    "dt": "Purchase Receipt Item",
+    "fieldname": "item_description",
+    "label": "Description",
+    "fieldtype": "Small Text",
+    "insert_after": "item_name",
     "module": "Gold App"
   },
   {
@@ -413,17 +434,60 @@
     "name": "Purchase Invoice-custom_payment_mode"
   },
   {
-  "doctype": "Custom Field",
-  "dt": "Purchase Receipt",
-  "fieldname": "payment_split",
-  "label": "Payment Split",
-  "fieldtype": "Table",
-  "options": "Payment Split Entry",
-  "insert_after": "payment_method",
-  "depends_on": "eval:doc.payment_method=='Mix'",
-  "reqd": 0,
-  "module": "Gold App",
-  "name": "Purchase Receipt-payment_split"
-}
-
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "payment_split",
+    "label": "Payment Split",
+    "fieldtype": "Table",
+    "options": "Payment Split Entry",
+    "insert_after": "payment_method",
+    "depends_on": "eval:doc.payment_method=='Mix'",
+    "reqd": 0,
+    "module": "Gold App",
+    "name": "Purchase Receipt-payment_split"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Supplier",
+    "fieldname": "bank_name",
+    "label": "Bank Name",
+    "fieldtype": "Data",
+    "insert_after": "is_transporter",
+    "reqd": 1,
+    "name": "Supplier-bank_name",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Supplier",
+    "fieldname": "bank_account_number",
+    "label": "Bank Account Number",
+    "fieldtype": "Data",
+    "insert_after": "bank_name",
+    "reqd": 1,
+    "name": "Supplier-bank_account_number",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "supplier_bank_name",
+    "label": "Supplier Bank Name",
+    "fieldtype": "Data",
+    "insert_after": "bank_reference_no",
+    "read_only": 1,
+    "name": "Purchase Receipt-supplier_bank_name",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "supplier_bank_account_number",
+    "label": "Supplier Bank Account Number",
+    "fieldtype": "Data",
+    "insert_after": "supplier_bank_name",
+    "read_only": 1,
+    "name": "Purchase Receipt-supplier_bank_account_number",
+    "module": "Gold App"
+  }
 ]

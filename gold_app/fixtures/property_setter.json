@@ -33,26 +33,146 @@
     "module": "Gold App"
   },
   {
-  "doctype": "Property Setter",
-  "name": "stock_entry_detail-qty-label",
-  "doctype_or_field": "DocField",
-  "doc_type": "Stock Entry Detail",
-  "field_name": "qty",
-  "property": "label",
-  "property_type": "Data",
-  "value": "Qty (in GMs)",
-  "module": "Gold App"
-},
-{
-  "doctype": "Property Setter",
-  "doc_type": "Purchase Receipt Item",
-  "doctype_or_field": "DocField",
-  "field_name": "amount",
-  "property": "read_only",
-  "property_type": "Check",
-  "value": "0",
-  "name": "Purchase Receipt Item-amount-read_only",
-  "module": "Gold App"
-}
-
+    "doctype": "Property Setter",
+    "name": "stock_entry_detail-qty-label",
+    "doctype_or_field": "DocField",
+    "doc_type": "Stock Entry Detail",
+    "field_name": "qty",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Qty (in GMs)",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doc_type": "Purchase Receipt Item",
+    "doctype_or_field": "DocField",
+    "field_name": "amount",
+    "property": "read_only",
+    "property_type": "Check",
+    "value": "0",
+    "name": "Purchase Receipt Item-amount-read_only",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "naming_series",
+    "property": "options",
+    "property_type": "Text",
+    "value": "PUR-DDMMYY-",
+    "name": "Purchase Receipt-naming_series-options",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-apply_putaway_rule-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "apply_putaway_rule",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-is_return-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "is_return",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-scan_barcode-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "scan_barcode",
+    "property": "hidden",
+    "property_type": "Data",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-set_warehouse-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "set_warehouse",
+    "property": "hidden",
+    "property_type": "Link",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-rejected_warehouse-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "rejected_warehouse",
+    "property": "hidden",
+    "property_type": "Link",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-is_subcontracted-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "is_subcontracted",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-taxes_charges_section-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "taxes_charges_section",
+    "property": "hidden",
+    "property_type": "Section Break",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-taxes-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "taxes",
+    "property": "hidden",
+    "property_type": "Table",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-raw_material_details-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "raw_material_details",
+    "property": "hidden",
+    "property_type": "Section Break",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-disable_rounded_total-default",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "disable_rounded_total",
+    "property": "default",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  }
 ]

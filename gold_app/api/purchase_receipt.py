@@ -1,6 +1,13 @@
 import frappe
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+from frappe.model.naming import make_autoname
+from frappe.utils import nowdate, formatdate
+
+def autoname(doc, method):
+    # Custom format: PUR-DDMMYY-RUNNINGNUMBER
+    today = formatdate(nowdate(), "ddMMyy")
+    doc.name = make_autoname(f"PUR-{today}-.####")
 
 # Updating Item on the Basis of Price Updated in PR
 def update_item_from_receipt(doc, method):
@@ -36,6 +43,17 @@ def validate_payment_split(doc, method):
             frappe.throw(
                 f"Payment Split total ({split_total}) must match Purchase Receipt total ({doc.grand_total})"
             )
+
+# Set Bank Reference Before Save
+def set_bank_reference_code(doc, method):
+    """Auto-generate or update Bank Reference Code for Bank Transfer"""
+    if doc.payment_method == "Bank Transfer":
+        # Always regenerate the code, keep it in sync with grand_total
+        doc.bank_reference_no = f"BELI EMAS - RM{int(doc.grand_total or 0)}"
+    else:
+        # Clear it if not Bank Transfer
+        doc.bank_reference_no = None
+
 
 # Create PI and PE on PR Submission
 @frappe.whitelist()
