@@ -6,7 +6,8 @@
     "fieldname": "custom_date",
     "fieldtype": "Date",
     "label": "Date",
-    "insert_after": "valuation_rate"
+    "insert_after": "valuation_rate",
+    "read_only": 1
   },
   {
     "doctype": "Custom Field",
@@ -15,7 +16,7 @@
     "fieldname": "item_tag",
     "fieldtype": "Data",
     "label": "Item Tag",
-    "insert_after": "custom_date"
+    "insert_after": "has_variants"
   },
   {
     "doctype": "Custom Field",
@@ -25,7 +26,7 @@
     "fieldtype": "Link",
     "label": "Purity",
     "options": "Purity",
-    "insert_after": "item_tag"
+    "insert_after": "item_group"
   },
   {
     "doctype": "Custom Field",
@@ -34,7 +35,7 @@
     "fieldname": "item_length",
     "fieldtype": "Float",
     "label": "Item Length",
-    "insert_after": "purity"
+    "insert_after": "warranty_period"
   },
   {
     "doctype": "Custom Field",
