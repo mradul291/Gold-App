@@ -35,7 +35,7 @@
     "fieldname": "item_length",
     "fieldtype": "Float",
     "label": "Item Length",
-    "insert_after": "warranty_period"
+    "insert_after": "weight_uom"
   },
   {
     "doctype": "Custom Field",
@@ -359,7 +359,7 @@
     "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "supplier_type",
-    "label": "Supplier Type",
+    "label": "Customer Type",
     "fieldtype": "Link",
     "options": "Supplier Group",
     "insert_after": "naming_series",
@@ -473,7 +473,7 @@
     "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "supplier_bank_name",
-    "label": "Supplier Bank Name",
+    "label": "Customer Bank Name",
     "fieldtype": "Data",
     "insert_after": "bank_reference_no",
     "read_only": 1,
@@ -484,11 +484,33 @@
     "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "supplier_bank_account_number",
-    "label": "Supplier Bank Account Number",
+    "label": "Customer Bank Account Number",
     "fieldtype": "Data",
     "insert_after": "supplier_bank_name",
     "read_only": 1,
     "name": "Purchase Receipt-supplier_bank_account_number",
     "module": "Gold App"
-  }
+  },
+  {
+  "doctype": "Custom Field",
+  "dt": "Customer",
+  "fieldname": "bank_name",
+  "label": "Bank Name",
+  "fieldtype": "Data",
+  "insert_after": "territory",
+  "reqd": 1,
+  "name": "Customer-bank_name",
+  "module": "Gold App"
+},
+{
+  "doctype": "Custom Field",
+  "dt": "Customer",
+  "fieldname": "bank_account_number",
+  "label": "Bank Account Number",
+  "fieldtype": "Data",
+  "insert_after": "bank_name",
+  "reqd": 1,
+  "name": "Customer-bank_account_number",
+  "module": "Gold App"
+}
 ]

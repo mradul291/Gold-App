@@ -61,6 +61,14 @@ doc_events = {
     },
     "Item Pickup": {
         "validate": "gold_app.gold_app.doctype.item_pickup.item_pickup.validate"
+    },
+    "Supplier": {
+        "after_insert": "gold_app.api.api.sync_customer_with_supplier",
+        "on_update": "gold_app.api.api.sync_customer_with_supplier"
+    },
+    "Customer": {
+        "after_insert": "gold_app.api.api.sync_supplier_with_customer",
+        "on_update": "gold_app.api.api.sync_supplier_with_customer"
     }
 }
 

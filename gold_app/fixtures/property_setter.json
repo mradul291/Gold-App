@@ -174,5 +174,49 @@
     "property_type": "Check",
     "value": "1",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "supplier",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Customer",
+    "name": "Purchase Receipt-supplier-label",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "is_internal_supplier",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Is Internal Customer",
+    "name": "Purchase Receipt-is_internal_supplier-label",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-totals-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "totals",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-supplier_delivery_note-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "supplier_delivery_note",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
   }
 ]
