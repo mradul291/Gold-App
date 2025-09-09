@@ -218,5 +218,28 @@
     "property_type": "Check",
     "value": "1",
     "module": "Gold App"
-  }
+  },
+  {
+  "doctype": "Property Setter",
+  "name": "Purchase Receipt-section_addresses-label",
+  "doctype_or_field": "DocField",
+  "doc_type": "Purchase Receipt",
+  "field_name": "section_addresses",
+  "property": "label",
+  "property_type": "Data",
+  "value": "Customer Address",
+  "module": "Gold App"
+},
+{
+  "doctype": "Property Setter",
+  "name": "Purchase Receipt-supplier_address-label",
+  "doctype_or_field": "DocField",
+  "doc_type": "Purchase Receipt",
+  "field_name": "supplier_address",
+  "property": "label",
+  "property_type": "Data",
+  "value": "Customer Address",
+  "module": "Gold App"
+}
+
 ]
