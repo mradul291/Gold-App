@@ -25,7 +25,7 @@ class PickupItemsPage {
 		this.make_container();
 		// initial hint
 		this.container.html(
-			'<div class="alert alert-info ml-3 mr-3">Select a Dealer to load pickup summary.</div>'
+			'<div class="alert alert-info ml-5 mr-5">Select a Dealer to load pickup summary.</div>'
 		);
 	}
 
@@ -37,7 +37,7 @@ class PickupItemsPage {
 	}
 
 	make_filters() {
-		const $frow = $('<div class="filter-row flex"></div>').appendTo(this.wrapper);
+		const $frow = $('<div class="filter-row flex ml-4 mr-4"></div>').appendTo(this.wrapper);
 		const $left = $('<div class="col-sm-6"></div>').appendTo($frow);
 		const $right = $('<div class="col-sm-6 text-right"></div>').appendTo($frow);
 
@@ -82,7 +82,7 @@ class PickupItemsPage {
 		this.selected.clear();
 		if (!dealer) {
 			this.container.html(
-				'<div class="alert alert-info ml-3 mr-3">Select a Dealer to load pickup summary.</div>'
+				'<div class="alert alert-info ml-5 mr-5">Select a Dealer to load pickup summary.</div>'
 			);
 			return;
 		}
@@ -96,7 +96,7 @@ class PickupItemsPage {
 		const dealer = this.current_dealer || this.dealer_field.get_value();
 		if (!dealer) {
 			this.container.html(
-				'<div class="alert alert-info ml-3 mr-3">Select a Dealer to load pickup summary.</div>'
+				'<div class="alert alert-info ml-5 mr-5">Select a Dealer to load pickup summary.</div>'
 			);
 			return;
 		}
@@ -130,7 +130,7 @@ class PickupItemsPage {
 
 		// header
 		const $hdr = $(`
-            <div class="mb-2 ml-3">
+            <div class="mb-2 ml-5">
               <h5>Dealer: ${frappe.utils.escape_html(dealer)}</h5>
             </div>
         `).appendTo(this.container);
@@ -150,7 +150,7 @@ class PickupItemsPage {
 		});
 
 		const $dealerTotals = $(`
-          <div class="mb-3 mr-3 text-right text-muted">Dealer Totals — Weight: ${dealer_weight.toFixed(
+          <div class="mb-3 mr-5 text-right text-muted">Dealer Totals — Weight: ${dealer_weight.toFixed(
 				2
 			)} g, Amount: ${dealer_amount.toFixed(2)} MYR</div>
         `).appendTo(this.container);
@@ -268,7 +268,7 @@ class PickupItemsPage {
 		}
 
 		const $tbl = $(`
-            <table class="table table-sm table-hover ml-3 mr-3">
+            <table class="table table-sm table-hover">
               <thead>
                 <tr>
                   <th style="width:36px"><input type="checkbox" class="detail-select-all" /></th>
