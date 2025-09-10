@@ -20,18 +20,6 @@ def get_staff_users(doctype, txt, searchfield, start, page_len, filters):
         "page_len": page_len
     })
 
-# Condition to add documents restrictions to only Assigned Staff User or System Manager
-def user_specific_item_pickup(user):
-    if not user:
-        user = frappe.session.user
-
-    roles = frappe.get_roles(user)
-
-    if "System Manager" in roles or user == "Administrator":
-        return ""
-
-    return f"""(`tabItem Pickup`.`assigned_to` = '{user}')"""
-
 # Create Customer on Supplier Creation
 def sync_customer_with_supplier(doc, method):
     """Create/Update Customer when Supplier is created/updated"""

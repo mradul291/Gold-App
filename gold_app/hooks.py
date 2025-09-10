@@ -73,9 +73,12 @@ doc_events = {
 }
 
 permission_query_conditions = {
-    "Item Pickup": "gold_app.api.api.user_specific_item_pickup",
+    "Item Pickup": "gold_app.api.permission_api.permission_query_item_pickup",
 }
 
+has_permission = {
+    "Item Pickup": "gold_app.api.permission_api.has_permission_item_pickup",
+}
 
 
 

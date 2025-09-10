@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"rFFvV1rykE\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Staff Pickup</span>\",\"col\":12}},{\"id\":\"3NqnEo7EvD\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Picked Up Items\",\"col\":6}},{\"id\":\"fvigWAXi9c\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Non Picked Up Items\",\"col\":6}},{\"id\":\"dyIMOgi5ju\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"0m0a0wN4MR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item Pickup\",\"col\":3}}]",
+ "content": "[{\"id\":\"rFFvV1rykE\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Staff Pickup</span>\",\"col\":12}},{\"id\":\"3NqnEo7EvD\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Picked Up Items\",\"col\":6}},{\"id\":\"fvigWAXi9c\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Non Picked Up Items\",\"col\":6}},{\"id\":\"dyIMOgi5ju\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ZzBGj6FU_-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pickup Items\",\"col\":3}}]",
  "creation": "2025-08-28 15:31:44.887809",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Staff Pickup",
  "links": [],
- "modified": "2025-09-02 15:33:19.609894",
+ "modified": "2025-09-10 17:36:34.441927",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Staff Pickup",
@@ -41,10 +41,9 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Item Pickup",
-   "link_to": "Item Pickup",
-   "stats_filter": "[]",
-   "type": "DocType"
+   "label": "Pickup Items",
+   "link_to": "pickup-items",
+   "type": "Page"
   }
  ],
  "title": "Staff Pickup"

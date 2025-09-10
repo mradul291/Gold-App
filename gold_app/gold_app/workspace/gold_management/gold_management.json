@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"EgwRP-LaEd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Gold Management</span>\",\"col\":12}},{\"id\":\"nw6EYamNzc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Items\",\"col\":3}},{\"id\":\"wAbwYCMGkQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purities\",\"col\":3}},{\"id\":\"h9wvNAzFli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Receipt\",\"col\":3}},{\"id\":\"TNLipQGXoo\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pickup Items\",\"col\":3}},{\"id\":\"w8lB7x-P-z\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"2tVy-hubj6\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"nvo8HcMm-_\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dealer Wise Pickup Items\",\"col\":3}},{\"id\":\"zZvWe0X7Ui\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pickup Report\",\"col\":3}},{\"id\":\"Mmrf96zSo0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Warehouse Wise Purity\",\"col\":3}}]",
+ "content": "[{\"id\":\"EgwRP-LaEd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Gold Management</span>\",\"col\":12}},{\"id\":\"nw6EYamNzc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Items\",\"col\":3}},{\"id\":\"wAbwYCMGkQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purities\",\"col\":3}},{\"id\":\"h9wvNAzFli\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Receipt\",\"col\":3}},{\"id\":\"fK1unrFbQr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pickup Items\",\"col\":3}},{\"id\":\"TNLipQGXoo\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Item Pickup\",\"col\":3}},{\"id\":\"w8lB7x-P-z\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"2tVy-hubj6\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports</b></span>\",\"col\":12}},{\"id\":\"nvo8HcMm-_\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dealer Wise Pickup Items\",\"col\":3}},{\"id\":\"zZvWe0X7Ui\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pickup Report\",\"col\":3}},{\"id\":\"Mmrf96zSo0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Warehouse Wise Purity\",\"col\":3}}]",
  "creation": "2025-09-02 15:23:54.063782",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Gold Management",
  "links": [],
- "modified": "2025-09-05 15:54:52.949955",
+ "modified": "2025-09-10 14:08:48.652665",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Gold Management",
@@ -22,7 +22,11 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 1.0,
  "shortcuts": [
   {
@@ -30,6 +34,14 @@
    "doc_view": "List",
    "label": "Items",
    "link_to": "Item",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Item Pickup",
+   "link_to": "Item Pickup",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -44,16 +56,15 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Purchase Receipt",
-   "link_to": "Purchase Receipt",
-   "stats_filter": "[]",
-   "type": "DocType"
+   "label": "Pickup Items",
+   "link_to": "pickup-items",
+   "type": "Page"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Pickup Items",
-   "link_to": "Item Pickup",
+   "label": "Purchase Receipt",
+   "link_to": "Purchase Receipt",
    "stats_filter": "[]",
    "type": "DocType"
   },
