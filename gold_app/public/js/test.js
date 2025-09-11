@@ -27,8 +27,9 @@ class PickupItemsPage {
 	}
 
 	make_toolbar() {
+		this.page.set_primary_action(__("Mark Pickup"), () => this.change_selected_pickup(true));
+		this.page.add_action_item(__("Refresh"), () => this.refresh());
 		this.page.add_action_item(__("Assign To"), () => this.assign_selected_to());
-		this.page.add_action_item(__("Mark Pickup"), () => this.change_selected_pickup(true));
 	}
 
 	make_filters() {}
@@ -51,7 +52,9 @@ class PickupItemsPage {
 		try {
 			overview_data = await frappe.xcall(
 				"gold_app.api.page_api.get_pending_pickup_overview",
-				{ dealer: selectedDealer }
+				{
+					dealer: selectedDealer,
+				}
 			);
 		} catch (err) {
 			console.error(err);
@@ -68,35 +71,33 @@ class PickupItemsPage {
 			return;
 		}
 
-		// Table wrapper for styling
-		const $wrapper = $(`
-        <div class="overview-table-wrapper">
-            <table class="table table-hover table-sm modern-overview-table">
-                <thead>
-                    <tr>
-                        <th colspan="8" class="text-center table-title">Pending Pick-up Items Overview</th>
-                    </tr>
-                    <tr>
-                        <th colspan="4" class="text-center table-subtitle">Total Overview</th>
-                        <th colspan="4" class="text-center table-subtitle">Selected Dealer Overview</th>
-                    </tr>
-                    <tr>
-                        <th>Purity</th>
-                        <th>Weight (g)</th>
-                        <th>Avco (RM/g)</th>
-                        <th>Amount (RM)</th>
-                        <th>Purity</th>
-                        <th>Weight (g)</th>
-                        <th>Avco (RM/g)</th>
-                        <th>Amount (RM)</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
+		// Build table HTML
+		const $tbl = $(`
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th colspan="8" class="text-center" style="text-align:center">Pending Pick-up Items Overview</th>
+                </tr>
+                <tr>
+                    <th colspan="4" class="text-center">Total Overview</th>
+                    <th colspan="4" class="text-center">Selected Dealer Overview</th>
+                </tr>
+                <tr>
+                    <th>Purity</th>
+                    <th>Weight (g)</th>
+                    <th>Avco (RM/g)</th>
+                    <th>Amount (RM)</th>
+                    <th>Purity</th>
+                    <th>Weight (g)</th>
+                    <th>Avco (RM/g)</th>
+                    <th>Amount (RM)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     `).appendTo(this.overview_container);
 
-		const $tbody = $wrapper.find("tbody");
+		const $tbody = $tbl.find("tbody");
 
 		// Combine purities from both total and selected dealer
 		const purities = new Set([
@@ -107,10 +108,6 @@ class PickupItemsPage {
 		purities.forEach((purity) => {
 			const total = overview_data.total?.[purity] || {};
 			const selected = overview_data.selected?.[purity] || {};
-
-			// Skip rows where selected.weight is 0 (only for Selected Dealer)
-			if (selectedDealer && (!selected.weight || selected.weight === 0)) return;
-
 			$tbody.append(`
             <tr>
                 <td>${purity}</td>
@@ -126,6 +123,7 @@ class PickupItemsPage {
 		});
 	}
 
+	// ---- Dealer summary (new) ----
 	async show_dealer_summary() {
 		this.selected.clear();
 		this.summary_container.empty();
@@ -313,8 +311,7 @@ class PickupItemsPage {
 	// ---- refresh / purity / items flow (reused) ----
 	async refresh() {
 		this.selected.clear();
-		this.summary_container.empty();
-		await this.show_overview(this.current_dealer);
+		this.container.empty();
 
 		const dealer = this.current_dealer;
 		if (!dealer) {
@@ -327,9 +324,9 @@ class PickupItemsPage {
 		let rows = [];
 		try {
 			rows = await frappe.xcall("gold_app.api.page_api.get_summary", { dealer: dealer });
-		} catch (err) {	
+		} catch (err) {
 			console.error(err);
-			this.summary_container.html(
+			this.container.html(
 				'<div class="alert alert-danger ml-5 mr-5">Error loading data. Check console.</div>'
 			);
 			return;
@@ -537,6 +534,13 @@ class PickupItemsPage {
 		});
 	}
 
+	update_primary_action_label() {
+		const count = this.selected.size;
+		const label = count ? `Mark Pickup` : "Mark Pickup";
+		// const label = count ? `Mark Pickup (${count})` : "Mark Pickup";
+		this.page.set_primary_action(label, () => this.change_selected_pickup(true));
+	}
+
 	async change_selected_pickup(is_pickup) {
 		if (!this.selected.size) {
 			frappe.msgprint(__("No rows selected"));
@@ -619,54 +623,4 @@ class PickupItemsPage {
 
 		d.show();
 	}
-}
-
-// Inject custom styles only once
-if (!document.getElementById("pickup-overview-style")) {
-	const style = document.createElement("style");
-	style.id = "pickup-overview-style";
-	style.innerHTML = `
-        .overview-table-wrapper {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            padding: 10px;
-            margin-top: 10px;
-            overflow-x: auto;
-        }
-
-        .modern-overview-table {
-            font-size: 13px;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .modern-overview-table th,
-        .modern-overview-table td {
-            padding: 6px 8px;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .modern-overview-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .modern-overview-table tbody tr:hover {
-            background-color: #f1f1f1;
-        }
-
-        .table-title {
-            font-size: 16px;
-            font-weight: 600;
-            background: #f3f6f9;
-        }
-
-        .table-subtitle {
-            font-size: 14px;
-            font-weight: 500;
-            background: #fafafa;
-        }
-    `;
-	document.head.appendChild(style);
 }
