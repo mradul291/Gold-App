@@ -635,6 +635,7 @@ class PickupItemsPage {
                   <th style="text-align:right">AvCo (RM/g)</th>
                   <th style="text-align:right">Amount (MYR)</th>
                   <th>Purchase Receipt</th>
+				  <th>Status</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -656,6 +657,11 @@ class PickupItemsPage {
                   <td style="text-align:right">${(it.avco_rate || 0).toFixed(2)}</td>
                   <td style="text-align:right">${(it.amount || 0).toFixed(2)}</td>
                   <td>${frappe.utils.escape_html(it.purchase_receipt || "")}</td>
+				 <td class="item-status" style="text-align:center" data-name="${it.name}">
+    				<span class="badge ${it.assigned_to ? "badge-assigned" : "badge-pending"}">
+        				${it.assigned_to ? "Assigned" : "Pending"}
+    				</span>
+				</td>
                 </tr>
             `).appendTo($tbody);
 
@@ -744,18 +750,25 @@ class PickupItemsPage {
 				let res;
 				try {
 					res = await frappe.xcall("gold_app.api.page_api.bulk_update_pickup", args);
+					await this.refresh();
 				} catch (err) {
 					console.error(err);
 					frappe.msgprint(__("Assignment failed. Check console for details."));
 					return;
 				}
+
+				// Show success message
 				let message = `Assigned to ${values.user}\nUpdated: ${res.updated || 0}`;
 				if (res.skipped && res.skipped.length)
 					message += `\nSkipped: ${res.skipped.length}`;
 				if (res.errors && res.errors.length)
 					message += `\nErrors: ${res.errors.length} (check server logs)`;
 				frappe.msgprint(message);
-				await this.refresh();
+
+				// Clear selection so user doesn't accidentally reassign
+				this.selected.clear();
+				$(".detail-select-all").prop("checked", false);
+				$(".item-select").prop("checked", false);
 			},
 		});
 
@@ -861,7 +874,7 @@ if (!document.getElementById("pickup-overview-style")) {
 		.fa-exchange.ml-2 {
     		margin-left: 6px !important;
 		}
-			.toggle-transactions {
+		.toggle-transactions {
             cursor: pointer;
             text-decoration: underline;
             color: #007bff;
@@ -872,6 +885,37 @@ if (!document.getElementById("pickup-overview-style")) {
         .toggle-transactions:hover {
             color: #0056b3;
         }
+	.item-status {
+    text-align: center !important; /* center text inside cell */
+    vertical-align: middle;
+}
+
+.item-status .badge {
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+    font-size: 0.70rem;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* Pending - soft red */
+.badge-pending {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c2c7;
+}
+
+/* Assigned - soft green */
+.badge-assigned {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+	
     `;
 	document.head.appendChild(style);
 }
