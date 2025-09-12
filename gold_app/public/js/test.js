@@ -27,9 +27,9 @@ class PickupItemsPage {
 	}
 
 	make_toolbar() {
-		this.page.set_primary_action(__("Mark Pickup"), () => this.change_selected_pickup(true));
-		this.page.add_action_item(__("Refresh"), () => this.refresh());
+		this.page.set_primary_action(__("Refresh"), () => location.reload());
 		this.page.add_action_item(__("Assign To"), () => this.assign_selected_to());
+		this.page.add_action_item(__("Mark Pickup"), () => this.change_selected_pickup(true));
 	}
 
 	make_filters() {}
@@ -52,9 +52,7 @@ class PickupItemsPage {
 		try {
 			overview_data = await frappe.xcall(
 				"gold_app.api.page_api.get_pending_pickup_overview",
-				{
-					dealer: selectedDealer,
-				}
+				{ dealer: selectedDealer }
 			);
 		} catch (err) {
 			console.error(err);
@@ -71,33 +69,37 @@ class PickupItemsPage {
 			return;
 		}
 
-		// Build table HTML
-		const $tbl = $(`
-        <table class="table table-sm table-bordered">
-            <thead>
-                <tr>
-                    <th colspan="8" class="text-center" style="text-align:center">Pending Pick-up Items Overview</th>
-                </tr>
-                <tr>
-                    <th colspan="4" class="text-center">Total Overview</th>
-                    <th colspan="4" class="text-center">Selected Dealer Overview</th>
-                </tr>
-                <tr>
-                    <th>Purity</th>
-                    <th>Weight (g)</th>
-                    <th>Avco (RM/g)</th>
-                    <th>Amount (RM)</th>
-                    <th>Purity</th>
-                    <th>Weight (g)</th>
-                    <th>Avco (RM/g)</th>
-                    <th>Amount (RM)</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+		// Table wrapper for styling
+		const $wrapper = $(`
+        <div class="overview-table-wrapper">
+            <table class="table table-hover table-sm modern-overview-table">
+                <thead>
+                    <tr>
+                        <th colspan="8" class="text-center table-title">Pending Pick-up Items Overview</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-center table-subtitle">Total Overview</th>
+                        <th colspan="4" class="text-center table-subtitle">
+    						${selectedDealer ? `Selected Dealer Overview (${selectedDealer})` : "Selected Dealer Overview"}
+						</th>
+                    </tr>
+                    <tr>
+                        <th>Purity</th>
+                        <th>Weight (g)</th>
+                        <th>Avco (RM/g)</th>
+                        <th>Amount (RM)</th>
+                        <th>Purity</th>
+                        <th>Weight (g)</th>
+                        <th>Avco (RM/g)</th>
+                        <th>Amount (RM)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     `).appendTo(this.overview_container);
 
-		const $tbody = $tbl.find("tbody");
+		const $tbody = $wrapper.find("tbody");
 
 		// Combine purities from both total and selected dealer
 		const purities = new Set([
@@ -108,6 +110,10 @@ class PickupItemsPage {
 		purities.forEach((purity) => {
 			const total = overview_data.total?.[purity] || {};
 			const selected = overview_data.selected?.[purity] || {};
+
+			// Skip rows where selected.weight is 0 (only for Selected Dealer)
+			if (selectedDealer && (!selected.weight || selected.weight === 0)) return;
+
 			$tbody.append(`
             <tr>
                 <td>${purity}</td>
@@ -123,7 +129,6 @@ class PickupItemsPage {
 		});
 	}
 
-	// ---- Dealer summary (new) ----
 	async show_dealer_summary() {
 		this.selected.clear();
 		this.summary_container.empty();
@@ -164,38 +169,75 @@ class PickupItemsPage {
 		const $tbody = $tbl.find("tbody");
 
 		dealers.forEach((d) => {
+			// Dealer row with separate toggle-purity and toggle-transactions
 			const $tr = $(`
             <tr class="dealer-row" data-dealer="${frappe.utils.escape_html(d.dealer)}">
-              <td class="toggle-cell" style="cursor:pointer; text-align:center;">
-                <i class="fa fa-chevron-right"></i>
+              <td style="text-align:center;">
+                <input type="checkbox" class="dealer-select" data-dealer="${frappe.utils.escape_html(
+					d.dealer
+				)}" />
+                <i class="fa fa-chevron-right toggle-purity" style="cursor:pointer;"></i>
               </td>
               <td>${frappe.utils.escape_html(d.date_range || "")}</td>
               <td>${frappe.utils.escape_html(d.dealer)}</td>
               <td>${frappe.utils.escape_html(d.purities || "")}</td>
               <td class="text-right">${(d.total_weight || 0).toFixed(2)}</td>
               <td class="text-right">${(d.avco_rate || 0).toFixed(2)}</td>
-              <td class="text-right">RM ${(d.amount || 0).toFixed(2)}</td>
+              <td class="text-right">
+                RM ${(d.amount || 0).toFixed(2)}
+                <i class="fa fa-exchange ml-2 toggle-transactions" style="cursor:pointer;" title="View Transactions"></i>
+              </td>
             </tr>
         `).appendTo($tbody);
 
-			// hidden detail row for purities
-			const $details =
-				$(`<tr class="dealer-detail d-none" data-dealer="${frappe.utils.escape_html(
-					d.dealer
-				)}">
-            <td colspan="7"><div class="purity-container p-2">Loading...</div></td>
-        </tr>`).appendTo($tbody);
+			// Transactions row (hidden)
+			const $transactionsRow = $(`
+            <tr class="dealer-transactions d-none" data-dealer="${frappe.utils.escape_html(
+				d.dealer
+			)}">
+                <td colspan="8">
+                    <div class="transactions-container p-2">Loading transactions...</div>
+                </td>
+            </tr>
+        `).appendTo($tbody);
 
-			// toggle click handler
-			$tr.find(".toggle-cell").on("click", async () => {
-				const icon = $tr.find(".fa");
+			// Transactions icon click
+			$tr.find(".toggle-transactions").on("click", async (e) => {
+				e.stopPropagation(); // Prevent triggering purity toggle
+				const $container = $transactionsRow.find(".transactions-container");
+				const showing = !$transactionsRow.hasClass("d-none");
+
+				if (showing) {
+					$transactionsRow.addClass("d-none"); // hide
+				} else {
+					if (!$container.data("loaded")) {
+						$container.html('<div class="text-muted">Loading transactions...</div>');
+						await this.render_transactions($container, d.dealer);
+						$container.data("loaded", true);
+					}
+					$transactionsRow.removeClass("d-none"); // show
+				}
+			});
+
+			// Purities row (hidden)
+			const $details = $(`
+            <tr class="dealer-detail d-none" data-dealer="${frappe.utils.escape_html(d.dealer)}">
+                <td colspan="8"><div class="purity-container p-2">Loading...</div></td>
+            </tr>
+        `).appendTo($tbody);
+
+			// Toggle purity
+			$tr.find(".toggle-purity").on("click", async () => {
+				const icon = $tr.find(".toggle-purity");
 				const showing = !$details.hasClass("d-none");
+
 				if (showing) {
 					$details.addClass("d-none");
 					icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
 				} else {
 					icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
 					await this.show_overview(d.dealer);
+
 					const $container = $details.find(".purity-container");
 					if (!$container.data("loaded")) {
 						$container.html('<div class="text-muted">Loading purities...</div>');
@@ -217,6 +259,60 @@ class PickupItemsPage {
 					}
 					$details.removeClass("d-none");
 				}
+			});
+
+			// Checkbox select logic
+			$tr.find(".dealer-select").on("change", async (e) => {
+				const checked = $(e.currentTarget).is(":checked");
+
+				if ($details.hasClass("d-none")) {
+					$tr.find(".toggle-purity")
+						.removeClass("fa-chevron-right")
+						.addClass("fa-chevron-down");
+					await this.show_overview(d.dealer);
+
+					const $container = $details.find(".purity-container");
+					if (!$container.data("loaded")) {
+						$container.html('<div class="text-muted">Loading purities...</div>');
+						let rows = [];
+						try {
+							rows = await frappe.xcall("gold_app.api.page_api.get_summary", {
+								dealer: d.dealer,
+							});
+						} catch (err) {
+							console.error(err);
+							$container.html(
+								'<div class="text-danger">Failed to load purities</div>'
+							);
+							$container.data("loaded", true);
+							return;
+						}
+						this.render_purities($container, d.dealer, rows);
+						$container.data("loaded", true);
+					}
+					$details.removeClass("d-none");
+				}
+
+				setTimeout(() => {
+					$details.find(".toggle-cell").each((i, purityCell) => {
+						const $purityIcon = $(purityCell).find(".fa");
+						if ($purityIcon.hasClass("fa-chevron-right")) {
+							$purityIcon
+								.removeClass("fa-chevron-right")
+								.addClass("fa-chevron-down");
+							$(purityCell).trigger("click");
+						}
+					});
+
+					setTimeout(() => {
+						$details.find(".item-select").each((i, cb) => {
+							cb.checked = checked;
+							const name = cb.getAttribute("data-name");
+							if (checked) this.selected.add(name);
+							else this.selected.delete(name);
+						});
+					}, 400);
+				}, 300);
 			});
 		});
 	}
@@ -307,11 +403,70 @@ class PickupItemsPage {
 			});
 		});
 	}
+	// ---- Dealer Transactions Table ----
+	async render_transactions($container, dealer, is_pickup = 0) {
+		$container.html('<div class="text-muted">Transactions List</div>');
+
+		let items = [];
+		try {
+			items = await frappe.xcall("gold_app.api.page_api.get_staff_pickup_items", {
+				dealer: dealer,
+				is_pickup: is_pickup,
+			});
+		} catch (err) {
+			console.error(err);
+			$container.html('<div class="text-danger">Failed to load transactions</div>');
+			return;
+		}
+
+		if (!items.length) {
+			$container.html('<div class="alert alert-info">No transactions found</div>');
+			return;
+		}
+
+		const $tbl = $(`
+        <table class="table table-sm table-bordered transaction-table mt-2">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Item Code</th>
+                    <th>Purity</th>
+                    <th>Weight (g)</th>
+                    <th>Avco (RM/g)</th>
+                    <th>Amount (RM)</th>
+                    <th>Purchase Receipt</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    `).appendTo($container);
+
+		const $tbody = $tbl.find("tbody");
+
+		items.forEach((item) => {
+			$tbody.append(`
+            <tr>
+                <td>${item.date ? frappe.datetime.str_to_user(item.date) : ""}</td>
+                <td>${frappe.utils.escape_html(item.item_code)}</td>
+                <td>${frappe.utils.escape_html(item.purity)}</td>
+                <td class="text-right">${(item.total_weight || 0).toFixed(2)}</td>
+                <td class="text-right">${
+					item.avco_rate ? "RM" + item.avco_rate.toFixed(2) : ""
+				}</td>
+                <td class="text-right">${
+					item.amount ? "RM" + item.amount.toLocaleString() : ""
+				}</td>
+                <td>${frappe.utils.escape_html(item.purchase_receipt || "")}</td>
+            </tr>
+        `);
+		});
+	}
 
 	// ---- refresh / purity / items flow (reused) ----
 	async refresh() {
 		this.selected.clear();
-		this.container.empty();
+		this.summary_container.empty();
+		await this.show_overview(this.current_dealer);
 
 		const dealer = this.current_dealer;
 		if (!dealer) {
@@ -326,7 +481,7 @@ class PickupItemsPage {
 			rows = await frappe.xcall("gold_app.api.page_api.get_summary", { dealer: dealer });
 		} catch (err) {
 			console.error(err);
-			this.container.html(
+			this.summary_container.html(
 				'<div class="alert alert-danger ml-5 mr-5">Error loading data. Check console.</div>'
 			);
 			return;
@@ -443,7 +598,6 @@ class PickupItemsPage {
 							cb.checked = true;
 							this.selected.add(cb.getAttribute("data-name"));
 						});
-						this.update_primary_action_label();
 					}
 					$details.removeClass("d-none");
 				}
@@ -463,11 +617,8 @@ class PickupItemsPage {
 					if (checked) this.selected.add(name);
 					else this.selected.delete(name);
 				});
-				this.update_primary_action_label();
 			});
 		}
-
-		this.update_primary_action_label();
 	}
 
 	render_items($container, items) {
@@ -517,7 +668,6 @@ class PickupItemsPage {
 				const name = e.currentTarget.getAttribute("data-name");
 				if (checked) this.selected.add(name);
 				else this.selected.delete(name);
-				this.update_primary_action_label();
 			});
 		});
 
@@ -530,15 +680,7 @@ class PickupItemsPage {
 				if (checked) this.selected.add(name);
 				else this.selected.delete(name);
 			});
-			this.update_primary_action_label();
 		});
-	}
-
-	update_primary_action_label() {
-		const count = this.selected.size;
-		const label = count ? `Mark Pickup` : "Mark Pickup";
-		// const label = count ? `Mark Pickup (${count})` : "Mark Pickup";
-		this.page.set_primary_action(label, () => this.change_selected_pickup(true));
 	}
 
 	async change_selected_pickup(is_pickup) {
@@ -623,4 +765,58 @@ class PickupItemsPage {
 
 		d.show();
 	}
+}
+
+// Inject custom styles only once
+if (!document.getElementById("pickup-overview-style")) {
+	const style = document.createElement("style");
+	style.id = "pickup-overview-style";
+	style.innerHTML = `
+        .overview-table-wrapper {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .modern-overview-table {
+            font-size: 13px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .modern-overview-table th,
+        .modern-overview-table td {
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+		.modern-overview-table td:nth-child(5),
+		.modern-overview-table th:nth-child(5) {
+    		border-left: 2px solid #ccc; /* or any highlight color */
+		}
+
+        .modern-overview-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .modern-overview-table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .table-title {
+            font-size: 16px;
+            font-weight: 600;
+            background: #f3f6f9;
+        }
+
+        .table-subtitle {
+            font-size: 14px;
+            font-weight: 500;
+            background: #fafafa;
+        }
+    `;
+	document.head.appendChild(style);
 }

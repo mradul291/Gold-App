@@ -24,6 +24,7 @@ class StaffPickupItemsPage {
 
     make_toolbar() {
         // Remove default action button
+        this.page.set_primary_action(__("Refresh"), () => location.reload());
         this.page.clear_menu();
 
         // Add Mark Pickup button in the toolbar
