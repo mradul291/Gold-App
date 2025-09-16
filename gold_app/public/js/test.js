@@ -150,7 +150,7 @@ class PickupItemsPage {
 		}
 
 		const $tbl = $(`
-        <table class="table table-sm table-bordered">
+        <table class="table table-sm dealer-summary-table">
           <thead>
             <tr>
               <th style="width:36px"></th>
@@ -160,6 +160,7 @@ class PickupItemsPage {
               <th style="text-align:right">Total Weight (g)</th>
               <th style="text-align:right">Avg AvCo (RM/g)</th>
               <th style="text-align:right">Total Amount (MYR)</th>
+			  <th style="width:80px; text-align:center;">Transactions</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -169,7 +170,6 @@ class PickupItemsPage {
 		const $tbody = $tbl.find("tbody");
 
 		dealers.forEach((d) => {
-			// Dealer row with separate toggle-purity and toggle-transactions
 			const $tr = $(`
             <tr class="dealer-row" data-dealer="${frappe.utils.escape_html(d.dealer)}">
               <td style="text-align:center;">
@@ -183,50 +183,47 @@ class PickupItemsPage {
               <td>${frappe.utils.escape_html(d.purities || "")}</td>
               <td class="text-right">${(d.total_weight || 0).toFixed(2)}</td>
               <td class="text-right">${(d.avco_rate || 0).toFixed(2)}</td>
-              <td class="text-right">
-                RM ${(d.amount || 0).toFixed(2)}
-                <i class="fa fa-exchange ml-2 toggle-transactions" style="cursor:pointer;" title="View Transactions"></i>
-              </td>
+               <td class="text-right">RM ${(d.amount || 0).toFixed(2)}</td>
+      <td class="text-center">
+        <span class="toggle-transactions" style="cursor:pointer; text-decoration:underline; color:#007bff;" title="View Transactions">
+            View
+        </span>
+      </td>
             </tr>
         `).appendTo($tbody);
 
-			// Transactions row (hidden)
 			const $transactionsRow = $(`
             <tr class="dealer-transactions d-none" data-dealer="${frappe.utils.escape_html(
 				d.dealer
 			)}">
                 <td colspan="8">
-                    <div class="transactions-container p-2">Loading transactions...</div>
+                    <div class="transactions-container">Loading transactions...</div>
                 </td>
             </tr>
         `).appendTo($tbody);
 
-			// Transactions icon click
 			$tr.find(".toggle-transactions").on("click", async (e) => {
-				e.stopPropagation(); // Prevent triggering purity toggle
+				e.stopPropagation();
 				const $container = $transactionsRow.find(".transactions-container");
 				const showing = !$transactionsRow.hasClass("d-none");
 
-				if (showing) {
-					$transactionsRow.addClass("d-none"); // hide
-				} else {
+				if (showing) $transactionsRow.addClass("d-none");
+				else {
 					if (!$container.data("loaded")) {
 						$container.html('<div class="text-muted">Loading transactions...</div>');
 						await this.render_transactions($container, d.dealer);
 						$container.data("loaded", true);
 					}
-					$transactionsRow.removeClass("d-none"); // show
+					$transactionsRow.removeClass("d-none");
 				}
 			});
 
-			// Purities row (hidden)
 			const $details = $(`
             <tr class="dealer-detail d-none" data-dealer="${frappe.utils.escape_html(d.dealer)}">
-                <td colspan="8"><div class="purity-container p-2">Loading...</div></td>
+                <td colspan="8"><div class="purity-container">Loading...</div></td>
             </tr>
         `).appendTo($tbody);
 
-			// Toggle purity
 			$tr.find(".toggle-purity").on("click", async () => {
 				const icon = $tr.find(".toggle-purity");
 				const showing = !$details.hasClass("d-none");
@@ -261,10 +258,32 @@ class PickupItemsPage {
 				}
 			});
 
-			// Checkbox select logic
+			// Utility to wait for elements inside a container
+			async function waitForElements($container, selector, maxRetries = 10, interval = 100) {
+				let retries = 0;
+				return new Promise((resolve, reject) => {
+					const check = () => {
+						const $elements = $container.find(selector);
+						if ($elements.length > 0) {
+							resolve($elements);
+						} else if (retries++ >= maxRetries) {
+							reject(
+								new Error(
+									`Timeout: Elements ${selector} not found after ${maxRetries} tries`
+								)
+							);
+						} else {
+							setTimeout(check, interval);
+						}
+					};
+					check();
+				});
+			}
+
 			$tr.find(".dealer-select").on("change", async (e) => {
 				const checked = $(e.currentTarget).is(":checked");
 
+				// Expand dealer details if not already open
 				if ($details.hasClass("d-none")) {
 					$tr.find(".toggle-purity")
 						.removeClass("fa-chevron-right")
@@ -293,8 +312,11 @@ class PickupItemsPage {
 					$details.removeClass("d-none");
 				}
 
-				setTimeout(() => {
-					$details.find(".toggle-cell").each((i, purityCell) => {
+				try {
+					const $toggleCells = await waitForElements($details, ".toggle-cell");
+
+					// Expand all purities
+					$toggleCells.each((i, purityCell) => {
 						const $purityIcon = $(purityCell).find(".fa");
 						if ($purityIcon.hasClass("fa-chevron-right")) {
 							$purityIcon
@@ -303,16 +325,18 @@ class PickupItemsPage {
 							$(purityCell).trigger("click");
 						}
 					});
+					const $itemCheckboxes = await waitForElements($details, ".item-select");
 
-					setTimeout(() => {
-						$details.find(".item-select").each((i, cb) => {
-							cb.checked = checked;
-							const name = cb.getAttribute("data-name");
-							if (checked) this.selected.add(name);
-							else this.selected.delete(name);
-						});
-					}, 400);
-				}, 300);
+					// Ensure **ALL** checkboxes are properly updated
+					$itemCheckboxes.each((i, cb) => {
+						cb.checked = checked;
+						const name = cb.getAttribute("data-name");
+						if (checked) this.selected.add(name);
+						else this.selected.delete(name);
+					});
+				} catch (err) {
+					console.warn("Could not fully expand/select items:", err);
+				}
 			});
 		});
 	}
@@ -435,6 +459,7 @@ class PickupItemsPage {
                     <th>Avco (RM/g)</th>
                     <th>Amount (RM)</th>
                     <th>Purchase Receipt</th>
+					<th>Assign Status</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -444,6 +469,10 @@ class PickupItemsPage {
 		const $tbody = $tbl.find("tbody");
 
 		items.forEach((item) => {
+			const assignStatus = item.assigned_to
+            ? `<span class="badge badge-assigned">Assigned</span>`
+            : `<span class="badge badge-pending">Pending</span>`;
+
 			$tbody.append(`
             <tr>
                 <td>${item.date ? frappe.datetime.str_to_user(item.date) : ""}</td>
@@ -457,6 +486,7 @@ class PickupItemsPage {
 					item.amount ? "RM" + item.amount.toLocaleString() : ""
 				}</td>
                 <td>${frappe.utils.escape_html(item.purchase_receipt || "")}</td>
+				<td class="text-center">${assignStatus}</td>
             </tr>
         `);
 		});
@@ -639,6 +669,7 @@ class PickupItemsPage {
                   <th style="text-align:right">AvCo (RM/g)</th>
                   <th style="text-align:right">Amount (MYR)</th>
                   <th>Purchase Receipt</th>
+				  <th>Status</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -660,6 +691,11 @@ class PickupItemsPage {
                   <td style="text-align:right">${(it.avco_rate || 0).toFixed(2)}</td>
                   <td style="text-align:right">${(it.amount || 0).toFixed(2)}</td>
                   <td>${frappe.utils.escape_html(it.purchase_receipt || "")}</td>
+				 <td class="item-status" style="text-align:center" data-name="${it.name}">
+    				<span class="badge ${it.assigned_to ? "badge-assigned" : "badge-pending"}">
+        				${it.assigned_to ? "Assigned" : "Pending"}
+    				</span>
+				</td>
                 </tr>
             `).appendTo($tbody);
 
@@ -748,18 +784,25 @@ class PickupItemsPage {
 				let res;
 				try {
 					res = await frappe.xcall("gold_app.api.page_api.bulk_update_pickup", args);
+					await this.refresh();
 				} catch (err) {
 					console.error(err);
 					frappe.msgprint(__("Assignment failed. Check console for details."));
 					return;
 				}
+
+				// Show success message
 				let message = `Assigned to ${values.user}\nUpdated: ${res.updated || 0}`;
 				if (res.skipped && res.skipped.length)
 					message += `\nSkipped: ${res.skipped.length}`;
 				if (res.errors && res.errors.length)
 					message += `\nErrors: ${res.errors.length} (check server logs)`;
 				frappe.msgprint(message);
-				await this.refresh();
+
+				// Clear selection so user doesn't accidentally reassign
+				this.selected.clear();
+				$(".detail-select-all").prop("checked", false);
+				$(".item-select").prop("checked", false);
 			},
 		});
 
@@ -817,6 +860,96 @@ if (!document.getElementById("pickup-overview-style")) {
             font-weight: 500;
             background: #fafafa;
         }
+		.dealer-summary-table {
+    		font-size: 13px; /* smaller font */
+    		border-collapse: separate;
+    		border-spacing: 0 4px; /* small vertical spacing */
+    		width: 100%;
+		}
+
+		.dealer-summary-table th,
+		.dealer-summary-table td {
+    		padding: 6px 10px; /* smaller padding */
+    		vertical-align: middle;
+		}
+
+		.dealer-summary-table thead th {
+    		background-color: #f8f9fa;
+    		font-weight: 600;
+    		color: #333;
+    		text-align: center;
+		}
+
+		.dealer-summary-table tbody tr.dealer-row:hover {
+    		background-color: #f1f3f5;
+		}
+
+		.toggle-purity, .toggle-transactions {
+    		font-size: 14px;
+		}
+
+		.transactions-container, .purity-container {
+    		font-size: 13px;
+    		padding: 6px;
+    		background-color: #fff;
+    		border-radius: 4px;
+    		border: 1px solid #e9ecef;
+		}
+
+		.dealer-select {
+    		margin-right: 6px;
+		}
+
+		.text-right {
+    		text-align: right;
+    		font-variant-numeric: tabular-nums; /* aligns numbers nicely */
+		}
+
+		.fa-exchange.ml-2 {
+    		margin-left: 6px !important;
+		}
+		.toggle-transactions {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #007bff;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .toggle-transactions:hover {
+            color: #0056b3;
+        }
+	.item-status {
+    text-align: center !important; /* center text inside cell */
+    vertical-align: middle;
+}
+
+.item-status .badge {
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+    font-size: 0.70rem;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* Pending - soft red */
+.badge-pending {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c2c7;
+}
+
+/* Assigned - soft green */
+.badge-assigned {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+	
     `;
 	document.head.appendChild(style);
 }

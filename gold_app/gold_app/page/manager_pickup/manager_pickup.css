@@ -1,0 +1,76 @@
+.manager-pickup-container {
+    padding: 1rem;
+    background-color: #f8fafc; /* subtle gray background */
+    border-radius: 12px;
+}
+
+.manager-pickup-container table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.manager-pickup-container thead th {
+    background-color: #1e293b;
+    color: white;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-align: left;
+    padding: 0.75rem;
+}
+
+.manager-pickup-container tbody tr {
+    background: white;
+    transition: background 0.2s ease;
+}
+
+.manager-pickup-container tbody tr:hover {
+    background: #f1f5f9;
+}
+
+.manager-pickup-container td {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+.manager-pickup-container .toggle-cell {
+    cursor: pointer;
+    color: #64748b;
+    font-size: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.manager-pickup-container .toggle-cell i.fa-chevron-down {
+    transform: rotate(90deg);
+}
+.manager-pickup-container .detail-row table {
+    display: block;
+    overflow-x: auto;
+    border: none;
+    box-shadow: none;
+}
+
+.manager-pickup-container .detail-row td, 
+.manager-pickup-container .detail-row th {
+    min-width: 180px; /* ensures table scrolls nicely on mobile */
+    white-space: nowrap;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+}
+.manager-pickup-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #16a34a; /* green tick */
+}
+
+.manager-pickup-container select.form-control-sm {
+    border-radius: 8px;
+    padding: 4px 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.85rem;
+}

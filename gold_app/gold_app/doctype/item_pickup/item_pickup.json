@@ -16,7 +16,9 @@
   "avco_rate",
   "amount",
   "assigned_to",
-  "is_pickup"
+  "is_pickup",
+  "tick_all_ok",
+  "discrepancy_action"
  ],
  "fields": [
   {
@@ -89,12 +91,24 @@
    "fieldtype": "Link",
    "label": "Assigned To",
    "options": "User"
+  },
+  {
+   "default": "0",
+   "fieldname": "tick_all_ok",
+   "fieldtype": "Check",
+   "label": "Tick if all ok"
+  },
+  {
+   "fieldname": "discrepancy_action",
+   "fieldtype": "Select",
+   "label": "Any discrepancies?",
+   "options": "\nRefund Request (ie. Credit Note)\nReplace Item\nEscalate to Admin\nNone"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-03 19:42:29.624238",
+ "modified": "2025-09-15 15:52:07.053158",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

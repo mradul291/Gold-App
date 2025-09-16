@@ -237,3 +237,34 @@ def get_staff_pickup_items(dealer, is_pickup=0):
         order_by="date desc, name desc",
         ignore_permissions=False
     )
+
+# Pickup Item check by Manager
+@frappe.whitelist()
+def get_manager_pickup_items(dealer=None, is_pickup=None):
+    """
+    Fetch all pickup items for manager review with Tick All OK and Discrepancy fields.
+    Dealer filter is optional so manager can view all dealers at once.
+    """
+    filters = {"docstatus": ["<", 2]}  # include all except cancelled
+    
+    if dealer:
+        filters["dealer"] = dealer
+    if is_pickup is not None and str(is_pickup) != "":
+        filters["is_pickup"] = int(is_pickup)
+
+    return frappe.get_all(
+        "Item Pickup",
+        fields=[
+            "name",
+            "date",
+            "dealer",
+            "purity",
+            "total_weight",
+            "amount",
+            "purchase_receipt",
+            "tick_all_ok",       # ✅ NEW FIELD
+            "discrepancy_action" # ✅ NEW FIELD
+        ],
+        filters=filters,
+        order_by="dealer asc, date desc"
+    )

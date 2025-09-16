@@ -173,9 +173,6 @@ class PickupItemsPage {
 			const $tr = $(`
             <tr class="dealer-row" data-dealer="${frappe.utils.escape_html(d.dealer)}">
               <td style="text-align:center;">
-                <input type="checkbox" class="dealer-select" data-dealer="${frappe.utils.escape_html(
-					d.dealer
-				)}" />
                 <i class="fa fa-chevron-right toggle-purity" style="cursor:pointer;"></i>
               </td>
               <td>${frappe.utils.escape_html(d.date_range || "")}</td>
@@ -256,59 +253,6 @@ class PickupItemsPage {
 					}
 					$details.removeClass("d-none");
 				}
-			});
-
-			$tr.find(".dealer-select").on("change", async (e) => {
-				const checked = $(e.currentTarget).is(":checked");
-
-				if ($details.hasClass("d-none")) {
-					$tr.find(".toggle-purity")
-						.removeClass("fa-chevron-right")
-						.addClass("fa-chevron-down");
-					await this.show_overview(d.dealer);
-
-					const $container = $details.find(".purity-container");
-					if (!$container.data("loaded")) {
-						$container.html('<div class="text-muted">Loading purities...</div>');
-						let rows = [];
-						try {
-							rows = await frappe.xcall("gold_app.api.page_api.get_summary", {
-								dealer: d.dealer,
-							});
-						} catch (err) {
-							console.error(err);
-							$container.html(
-								'<div class="text-danger">Failed to load purities</div>'
-							);
-							$container.data("loaded", true);
-							return;
-						}
-						this.render_purities($container, d.dealer, rows);
-						$container.data("loaded", true);
-					}
-					$details.removeClass("d-none");
-				}
-
-				setTimeout(() => {
-					$details.find(".toggle-cell").each((i, purityCell) => {
-						const $purityIcon = $(purityCell).find(".fa");
-						if ($purityIcon.hasClass("fa-chevron-right")) {
-							$purityIcon
-								.removeClass("fa-chevron-right")
-								.addClass("fa-chevron-down");
-							$(purityCell).trigger("click");
-						}
-					});
-
-					setTimeout(() => {
-						$details.find(".item-select").each((i, cb) => {
-							cb.checked = checked;
-							const name = cb.getAttribute("data-name");
-							if (checked) this.selected.add(name);
-							else this.selected.delete(name);
-						});
-					}, 400);
-				}, 300);
 			});
 		});
 	}
@@ -424,6 +368,7 @@ class PickupItemsPage {
         <table class="table table-sm table-bordered transaction-table mt-2">
             <thead>
                 <tr>
+				    <th><input type="checkbox" id="select-all-transactions" /></th>
                     <th>Date</th>
                     <th>Item Code</th>
                     <th>Purity</th>
@@ -431,6 +376,7 @@ class PickupItemsPage {
                     <th>Avco (RM/g)</th>
                     <th>Amount (RM)</th>
                     <th>Purchase Receipt</th>
+					<th>Assign Status</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -440,8 +386,15 @@ class PickupItemsPage {
 		const $tbody = $tbl.find("tbody");
 
 		items.forEach((item) => {
+			const assignStatus = item.assigned_to
+				? `<span class="badge badge-assigned">Assigned</span>`
+				: `<span class="badge badge-pending">Pending</span>`;
+
 			$tbody.append(`
             <tr>
+				<td class="text-center">
+                	<input type="checkbox" class="select-transaction" data-id="${item.name}">
+           	 	</td>
                 <td>${item.date ? frappe.datetime.str_to_user(item.date) : ""}</td>
                 <td>${frappe.utils.escape_html(item.item_code)}</td>
                 <td>${frappe.utils.escape_html(item.purity)}</td>
@@ -453,8 +406,32 @@ class PickupItemsPage {
 					item.amount ? "RM" + item.amount.toLocaleString() : ""
 				}</td>
                 <td>${frappe.utils.escape_html(item.purchase_receipt || "")}</td>
+				<td class="text-center">${assignStatus}</td>
             </tr>
         `);
+		});
+
+		// Keep track of selected transaction IDs
+		this.selected = new Set();
+
+		const me = this;
+
+		// Handle individual checkbox change
+		$tbl.find(".select-transaction").on("change", function () {
+			const id = $(this).data("id");
+			if (this.checked) {
+				me.selected.add(id);
+			} else {
+				me.selected.delete(id);
+			}
+		});
+
+		// Handle "Select All" checkbox
+		$tbl.find("#select-all-transactions").on("change", function () {
+			const checked = this.checked;
+			$tbl.find(".select-transaction").each(function () {
+				$(this).prop("checked", checked).trigger("change");
+			});
 		});
 	}
 
@@ -589,30 +566,9 @@ class PickupItemsPage {
 						}
 						this.render_items($container, items);
 						$container.data("loaded", true);
-						// Auto-select all after render
-						$container.find(".item-select").each((i, cb) => {
-							cb.checked = true;
-							this.selected.add(cb.getAttribute("data-name"));
-						});
 					}
 					$details.removeClass("d-none");
 				}
-			});
-
-			// select-all handler
-			$tr.find(".purity-select").on("change", async (e) => {
-				const checked = $(e.currentTarget).is(":checked");
-				const $container = $details.find(".detail-container");
-				if (!$container.data("loaded")) {
-					$tr.find(".toggle-cell").trigger("click");
-					await new Promise((r) => setTimeout(r, 300));
-				}
-				$container.find(".item-select").each((i, cb) => {
-					cb.checked = checked;
-					const name = cb.getAttribute("data-name");
-					if (checked) this.selected.add(name);
-					else this.selected.delete(name);
-				});
 			});
 		}
 	}
@@ -628,7 +584,6 @@ class PickupItemsPage {
             <table class="table table-sm table-hover">
               <thead>
                 <tr>
-                  <th style="width:36px"><input type="checkbox" class="detail-select-all" /></th>
                   <th>Date</th>
                   <th>Item Code</th>
                   <th style="text-align:right">Weight (g)</th>
@@ -648,9 +603,6 @@ class PickupItemsPage {
 			const dstr = it.date ? frappe.datetime.str_to_user(it.date) : "";
 			const $tr = $(`
                 <tr>
-                  <td><input type="checkbox" class="item-select" data-name="${frappe.utils.escape_html(
-						it.name
-					)}"></td>
                   <td>${frappe.utils.escape_html(dstr)}</td>
                   <td>${frappe.utils.escape_html(it.item_code || "")}</td>
                   <td style="text-align:right">${(it.total_weight || 0).toFixed(2)}</td>
@@ -664,24 +616,6 @@ class PickupItemsPage {
 				</td>
                 </tr>
             `).appendTo($tbody);
-
-			$tr.find(".item-select").on("change", (e) => {
-				const checked = $(e.currentTarget).is(":checked");
-				const name = e.currentTarget.getAttribute("data-name");
-				if (checked) this.selected.add(name);
-				else this.selected.delete(name);
-			});
-		});
-
-		// detail-wide select all
-		$tbl.find(".detail-select-all").on("change", (e) => {
-			const checked = $(e.currentTarget).is(":checked");
-			$container.find(".item-select").each((i, cb) => {
-				cb.checked = checked;
-				const name = cb.getAttribute("data-name");
-				if (checked) this.selected.add(name);
-				else this.selected.delete(name);
-			});
 		});
 	}
 
@@ -767,7 +701,7 @@ class PickupItemsPage {
 
 				// Clear selection so user doesn't accidentally reassign
 				this.selected.clear();
-				$(".detail-select-all").prop("checked", false);
+				$("#select-all-transactions").prop("checked", false);
 				$(".item-select").prop("checked", false);
 			},
 		});
