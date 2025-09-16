@@ -18,7 +18,8 @@
   "assigned_to",
   "is_pickup",
   "tick_all_ok",
-  "discrepancy_action"
+  "discrepancy_action",
+  "discrepancy_weight"
  ],
  "fields": [
   {
@@ -102,13 +103,20 @@
    "fieldname": "discrepancy_action",
    "fieldtype": "Select",
    "label": "Any discrepancies?",
-   "options": "\nRefund Request (ie. Credit Note)\nReplace Item\nEscalate to Admin\nNone"
+   "options": "Select\nRefund Request (ie. Credit Note)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discrepancy_weight",
+   "fieldtype": "Float",
+   "label": "Discrepancy Weight (g)",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-15 15:52:07.053158",
+ "modified": "2025-09-16 19:04:22.101355",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

@@ -198,7 +198,7 @@ def get_pending_pickup_overview(dealer=None):
 
     return {"total": total_data, "selected": selected_data}
 
-#----------------------------------------------------************************------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------------
 # Pickup Item Staff Page
 @frappe.whitelist()
 def get_staff_pickup_items(dealer, is_pickup=0):
@@ -245,12 +245,15 @@ def get_manager_pickup_items(dealer=None, is_pickup=None):
     Fetch all pickup items for manager review with Tick All OK and Discrepancy fields.
     Dealer filter is optional so manager can view all dealers at once.
     """
-    filters = {"docstatus": ["<", 2]}  # include all except cancelled
+    filters = {
+                "docstatus": ["<", 2],
+                "tick_all_ok": 0 
+            }
     
     if dealer:
         filters["dealer"] = dealer
     if is_pickup is not None and str(is_pickup) != "":
-        filters["is_pickup"] = int(is_pickup)
+        filters["is_pickup"] = 1 if str(is_pickup).lower() in ["1", "true", "yes"] else 0
 
     return frappe.get_all(
         "Item Pickup",
@@ -260,11 +263,66 @@ def get_manager_pickup_items(dealer=None, is_pickup=None):
             "dealer",
             "purity",
             "total_weight",
+            "discrepancy_weight",
             "amount",
             "purchase_receipt",
-            "tick_all_ok",       # ✅ NEW FIELD
-            "discrepancy_action" # ✅ NEW FIELD
+            "tick_all_ok",      
+            "discrepancy_action", 
         ],
         filters=filters,
         order_by="dealer asc, date desc"
     )
+
+@frappe.whitelist()
+def manager_bulk_update_pickup(doc_updates):
+    """
+    Bulk update Item Pickup documents from Manager Pickup page.
+    doc_updates = JSON list of objects:
+    [
+        {"name": "IP-0001", "tick_all_ok": 1, "discrepancy_action": "Replace Item"},
+        {"name": "IP-0002", "tick_all_ok": 0, "discrepancy_action": ""}
+    ]
+    """
+    if isinstance(doc_updates, str):
+        try:
+            doc_updates = json.loads(doc_updates)
+        except Exception:
+            frappe.throw("Invalid doc_updates JSON")
+
+    updated, skipped, errors = [], [], []
+
+    for update in doc_updates:
+        try:
+            name = update.get("name")
+            if not name:
+                continue
+
+            doc = frappe.get_doc("Item Pickup", name)
+            if doc.docstatus != 0:
+                skipped.append({"name": name, "reason": f"docstatus={doc.docstatus}"})
+                continue
+            if not doc.has_permission("write"):
+                skipped.append({"name": name, "reason": "no write permission"})
+                continue
+
+            # Apply updates
+            if "tick_all_ok" in update:
+                doc.tick_all_ok = int(update["tick_all_ok"])
+            if "discrepancy_action" in update:
+                doc.discrepancy_action = update["discrepancy_action"]
+            if "discrepancy_weight" in update:
+                doc.discrepancy_weight = update["discrepancy_weight"]
+
+            doc.save()
+            updated.append(name)
+
+        except Exception:
+            errors.append({"name": update.get("name"), "trace": frappe.get_traceback()})
+
+    frappe.db.commit()
+    return {
+        "updated": len(updated),
+        "updated_list": updated,
+        "skipped": skipped,
+        "errors": errors
+    }
