@@ -7,7 +7,7 @@ def permission_query_item_pickup(user):
 
     roles = frappe.get_roles(user)
 
-    if "System Manager" in roles or user == "Administrator":
+    if "System Manager" in roles or "Manager" in roles or user == "Administrator":
         return ""
 
     return f"""(`tabItem Pickup`.`assigned_to` = '{user}')"""
@@ -15,7 +15,7 @@ def permission_query_item_pickup(user):
 def has_permission_item_pickup(doc, user):
     roles = frappe.get_roles(user)
 
-    if "System Manager" in roles or user == "Administrator":
+    if "System Manager" in roles or "Manager" in roles or user == "Administrator":
         return True
 
     # Only allow if assigned_to matches
