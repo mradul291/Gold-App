@@ -135,7 +135,7 @@ class ManagerPickupPage {
                                 <th>Dealer</th>
                                 <th>Purity</th>
                                 <th>Total Weight (g)</th>
-                                 <th>Discrepancy (g)</th>
+                                 <th>Discrepancy (MYR)</th>
                                 <th>Amount</th>
                                 <th style="text-align:center;">Tick if ok</th>
                                 <th style="width:200px;">Any discrepancies?</th>
@@ -166,7 +166,7 @@ class ManagerPickupPage {
                     <td>${i.dealer}</td>
                     <td>${i.purity}</td>
                     <td>${(i.total_weight || 0).toFixed(2)}</td>
-                    <td>${i.discrepancy_weight || 0}</td>
+                    <td>${i.discrepancy_amount || 0}</td>
                     <td>${frappe.format(i.amount, { fieldtype: "Currency" })}</td>
                     <td style="text-align:center;">
                         <input type="checkbox" class="tick-all-ok" ${checked} />
@@ -183,15 +183,15 @@ class ManagerPickupPage {
                 this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
             });
 
-            // New functionality: prompt for discrepancy_weight
+            // New functionality: prompt for discrepancy_amount
             $tr.find(".discrepancy-action").on("change", async (e) => {
                 const val = e.target.value;
                 if (val === "Refund Request (ie. Credit Note)") {
                     const weight = await frappe.prompt(
                         [
                             {
-                                fieldname: "discrepancy_weight",
-                                label: "Discrepancy Weight (g)",
+                                fieldname: "discrepancy_amount",
+                                label: "Discrepancy Amount (MYR)",
                                 fieldtype: "Float",
                                 reqd: 1,
                             },
@@ -199,14 +199,14 @@ class ManagerPickupPage {
                         (values) => {
                             this.track_change(i.name, {
                                 discrepancy_action: val,
-                                discrepancy_weight: values.discrepancy_weight,
+                                discrepancy_amount: values.discrepancy_amount,
                             });
                         },
-                        __("Enter Discrepancy Weight"),
+                        __("Enter Discrepancy Amount"),
                         __("Save")
                     );
                 } else {
-                    this.track_change(i.name, { discrepancy_action: val, discrepancy_weight: null });
+                    this.track_change(i.name, { discrepancy_action: val, discrepancy_amount: null });
                 }
             });
         });

@@ -263,7 +263,7 @@ def get_manager_pickup_items(dealer=None, is_pickup=None):
             "dealer",
             "purity",
             "total_weight",
-            "discrepancy_weight",
+            "discrepancy_amount",
             "amount",
             "purchase_receipt",
             "tick_all_ok",      
@@ -310,8 +310,8 @@ def manager_bulk_update_pickup(doc_updates):
                 doc.tick_all_ok = int(update["tick_all_ok"])
             if "discrepancy_action" in update:
                 doc.discrepancy_action = update["discrepancy_action"]
-            if "discrepancy_weight" in update:
-                doc.discrepancy_weight = update["discrepancy_weight"]
+            if "discrepancy_amount" in update:
+                doc.discrepancy_amount = update["discrepancy_amount"]
 
             doc.save()
             updated.append(name)

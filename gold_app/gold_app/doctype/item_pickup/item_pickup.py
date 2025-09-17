@@ -57,3 +57,36 @@ def validate(doc, method):
             "name": doc.name,
             "description": f"Assigned via Item Pickup field"
         })
+
+# Create Credit Note if Discripancy Found
+def on_update(doc, method):
+    """
+    Triggered on Item Pickup save/update.
+    Creates Credit Note automatically if discrepancy_action = Refund Request.
+    """
+    if doc.discrepancy_action == "Refund Request (ie. Credit Note)":
+        # Prevent duplicate credit note logs for the same Item Pickup
+        existing_log = frappe.db.exists("Credit Note", {"item_pickup": doc.name})
+        if existing_log:
+            frappe.logger().info(f"Credit Note already exists for {doc.name}")
+            return
+
+        # Create new Credit Note document
+        credit_note = frappe.new_doc("Credit Note")
+        credit_note.item_pickup = doc.name
+        credit_note.dealer = doc.dealer
+        credit_note.date = doc.date
+        credit_note.item_code = doc.item_code
+        credit_note.purity = doc.purity
+        credit_note.purchase_receipt = doc.purchase_receipt
+        credit_note.total_weight = doc.total_weight
+        credit_note.avco_rate = doc.avco_rate
+        credit_note.amount = doc.amount
+        credit_note.discrepancy_action = doc.discrepancy_action
+        credit_note.discrepancy_amount = doc.discrepancy_amount
+        credit_note.status = "Draft"
+        credit_note.remarks = f"Auto-created from Item Pickup {doc.name}"
+        
+        credit_note.insert(ignore_permissions=True)
+
+        frappe.logger().info(f"Credit Note created for Item Pickup {doc.name}")

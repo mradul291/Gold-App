@@ -1,31 +1,38 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "IP-.YYYY.-.######",
- "creation": "2025-08-27 13:24:52.494141",
+ "autoname": "CN-.YYYY.-.####",
+ "creation": "2025-09-17 19:22:44.094392",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "item_pickup",
   "dealer",
   "date",
   "item_code",
   "purity",
   "purchase_receipt",
-  "column_break_xymh",
+  "column_break_sjru",
   "total_weight",
   "avco_rate",
   "amount",
-  "assigned_to",
-  "is_pickup",
-  "tick_all_ok",
   "discrepancy_action",
-  "discrepancy_amount"
+  "discrepancy_amount",
+  "status",
+  "section_break_njbd",
+  "remarks"
  ],
  "fields": [
   {
+   "fieldname": "item_pickup",
+   "fieldtype": "Link",
+   "label": "Item Pickup",
+   "options": "Item Pickup",
+   "read_only": 1
+  },
+  {
    "fieldname": "dealer",
    "fieldtype": "Link",
-   "in_standard_filter": 1,
    "label": "Dealer",
    "options": "Supplier",
    "read_only": 1
@@ -34,13 +41,6 @@
    "fieldname": "date",
    "fieldtype": "Date",
    "label": "Date",
-   "read_only": 1
-  },
-  {
-   "fieldname": "purchase_receipt",
-   "fieldtype": "Link",
-   "label": "Purchase Receipt",
-   "options": "Purchase Receipt",
    "read_only": 1
   },
   {
@@ -53,13 +53,19 @@
   {
    "fieldname": "purity",
    "fieldtype": "Link",
-   "in_standard_filter": 1,
    "label": "Purity",
    "options": "Purity",
    "read_only": 1
   },
   {
-   "fieldname": "column_break_xymh",
+   "fieldname": "purchase_receipt",
+   "fieldtype": "Link",
+   "label": "Purchase Receipt",
+   "options": "Purchase Receipt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sjru",
    "fieldtype": "Column Break"
   },
   {
@@ -81,45 +87,41 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "is_pickup",
-   "fieldtype": "Check",
-   "label": "Is Pickup"
-  },
-  {
-   "depends_on": "eval:frappe.user.has_role(\"System Manager\")",
-   "fieldname": "assigned_to",
-   "fieldtype": "Link",
-   "label": "Assigned To",
-   "options": "User"
-  },
-  {
-   "default": "0",
-   "fieldname": "tick_all_ok",
-   "fieldtype": "Check",
-   "label": "Tick if all ok"
-  },
-  {
    "fieldname": "discrepancy_action",
-   "fieldtype": "Select",
-   "label": "Any discrepancies?",
-   "options": "Select\nRefund Request (ie. Credit Note)",
+   "fieldtype": "Data",
+   "label": "Discrepancy Action",
    "read_only": 1
   },
   {
    "fieldname": "discrepancy_amount",
    "fieldtype": "Currency",
-   "label": "Discrepancy Amount (MYR)",
+   "label": "Discrepancy Amount",
    "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nDraft\nCreated\nApproved"
+  },
+  {
+   "fieldname": "section_break_njbd",
+   "fieldtype": "Section Break",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-17 19:12:12.616155",
+ "modified": "2025-09-17 19:39:07.022584",
  "modified_by": "Administrator",
  "module": "Gold App",
- "name": "Item Pickup",
+ "name": "Credit Note",
  "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [

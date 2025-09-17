@@ -291,7 +291,19 @@
     "label": "Reduced Weight (in GMs)",
     "fieldname": "reduce_quantity",
     "fieldtype": "Float",
-    "insert_after": "source_item_warehouse",
+    "insert_after": "posting_time",
+    "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Stock Entry",
+    "name": "Stock Entry-remaining_quantity",
+    "module": "Gold App",
+    "label": "Remaining Weight (in GMs)",
+    "fieldname": "remaining_quantity",
+    "fieldtype": "Float",
+    "insert_after": "reduce_quantity",
     "depends_on": "eval:doc.stock_entry_type == 'Break Item'",
     "read_only": 1
   },
@@ -492,25 +504,25 @@
     "module": "Gold App"
   },
   {
-  "doctype": "Custom Field",
-  "dt": "Customer",
-  "fieldname": "bank_name",
-  "label": "Bank Name",
-  "fieldtype": "Data",
-  "insert_after": "territory",
-  "reqd": 1,
-  "name": "Customer-bank_name",
-  "module": "Gold App"
-},
-{
-  "doctype": "Custom Field",
-  "dt": "Customer",
-  "fieldname": "bank_account_number",
-  "label": "Bank Account Number",
-  "fieldtype": "Data",
-  "insert_after": "bank_name",
-  "reqd": 1,
-  "name": "Customer-bank_account_number",
-  "module": "Gold App"
-}
+    "doctype": "Custom Field",
+    "dt": "Customer",
+    "fieldname": "bank_name",
+    "label": "Bank Name",
+    "fieldtype": "Data",
+    "insert_after": "territory",
+    "reqd": 1,
+    "name": "Customer-bank_name",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Customer",
+    "fieldname": "bank_account_number",
+    "label": "Bank Account Number",
+    "fieldtype": "Data",
+    "insert_after": "bank_name",
+    "reqd": 1,
+    "name": "Customer-bank_account_number",
+    "module": "Gold App"
+  }
 ]

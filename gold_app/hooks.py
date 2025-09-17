@@ -60,7 +60,8 @@ doc_events = {
         ]
     },
     "Item Pickup": {
-        "validate": "gold_app.gold_app.doctype.item_pickup.item_pickup.validate"
+        "validate": "gold_app.gold_app.doctype.item_pickup.item_pickup.validate",
+        "on_update": "gold_app.gold_app.doctype.item_pickup.item_pickup.on_update"
     },
     "Supplier": {
         "after_insert": "gold_app.api.api.sync_customer_with_supplier",
