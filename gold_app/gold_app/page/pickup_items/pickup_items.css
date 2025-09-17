@@ -1,0 +1,154 @@
+.overview-table-wrapper {
+    width: 90%;
+    margin: 10px auto;
+    background: #fff;
+    border-radius: 12px; /* Rounded corners */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    padding: 10px;
+    overflow-x: auto;
+}
+
+/* Modern overview table styling */
+.modern-overview-table {
+    font-size: 13px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px; /* Rounded table itself */
+    overflow: hidden;
+}
+
+.modern-overview-table th,
+.modern-overview-table td {
+    padding: 6px 8px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.modern-overview-table td:nth-child(5),
+.modern-overview-table th:nth-child(5) {
+    border-left: 2px solid #ccc;
+}
+
+.modern-overview-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.modern-overview-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+.table-title {
+    font-size: 16px;
+    font-weight: 600;
+    background: #f3f6f9;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.table-subtitle {
+    font-size: 14px;
+    font-weight: 500;
+    background: #fafafa;
+}
+
+/* Dealer summary table */
+.dealer-summary-table {
+    width: 90%;
+    margin: 10px auto;
+    font-size: 13px;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+    border-radius: 12px; /* Rounded */
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.dealer-summary-table th,
+.dealer-summary-table td {
+    padding: 6px 10px;
+    vertical-align: middle;
+}
+
+.dealer-summary-table thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.dealer-summary-table tbody tr.dealer-row:hover {
+    background-color: #f1f3f5;
+}
+
+/* Toggle buttons */
+.toggle-purity,
+.toggle-transactions {
+    font-size: 14px;
+}
+
+.toggle-transactions {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #007bff;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.toggle-transactions:hover {
+    color: #0056b3;
+}
+
+/* Nested containers */
+.transactions-container,
+.purity-container {
+    font-size: 13px;
+    padding: 6px;
+    background-color: #fff;
+    border-radius: 8px; /* Rounded inner containers */
+    border: 1px solid #e9ecef;
+}
+
+.dealer-select {
+    margin-right: 6px;
+}
+
+/* Text alignment helpers */
+.text-right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.fa-exchange.ml-2 {
+    margin-left: 6px !important;
+}
+
+/* Item status badges */
+.item-status {
+    text-align: center !important;
+    vertical-align: middle;
+}
+
+.item-status .badge {
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+    font-size: 0.70rem;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* Status variants */
+.badge-pending {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c2c7;
+}
+
+.badge-assigned {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}

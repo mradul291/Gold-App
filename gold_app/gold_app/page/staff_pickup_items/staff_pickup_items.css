@@ -1,11 +1,12 @@
-.manager-pickup-container {
+/* Staff Pickup Container */
+.staff-pickup-container {
     padding: 1rem;
     background-color: #f8fafc;
     border-radius: 12px;
 }
 
 /* Main table styling */
-.manager-pickup-container table {
+.staff-pickup-container table {
     width: 90%;
     margin: 10px auto;
     border-collapse: separate;
@@ -16,54 +17,53 @@
     overflow: hidden;
 }
 
-.manager-pickup-container thead th {
+.staff-pickup-container thead th {
     background-color: #f8f9fa;
     color: #333;
     text-transform: uppercase;
-    font-size: 0.7rem; /* slightly smaller */
+    font-size: 0.7rem;
     letter-spacing: 0.04em;
     text-align: left;
     padding: 0.5rem;
 }
 
-.manager-pickup-container tbody tr {
+.staff-pickup-container tbody tr {
     background: white;
     transition: background 0.2s ease;
 }
 
-.manager-pickup-container tbody tr:hover {
+.staff-pickup-container tbody tr:hover {
     background: #f1f5f9;
 }
 
-.manager-pickup-container td {
+.staff-pickup-container td {
     padding: 0.5rem;
     vertical-align: middle;
-    font-size: 0.8rem; /* smaller text */
+    font-size: 0.8rem;
 }
 
 /* Toggle cell */
-.manager-pickup-container .toggle-cell {
+.staff-pickup-container .toggle-cell {
     cursor: pointer;
     color: #64748b;
     font-size: 0.9rem;
     transition: transform 0.2s ease;
 }
 
-.manager-pickup-container .toggle-cell i.fa-chevron-down {
+.staff-pickup-container .toggle-cell i.fa-chevron-down {
     transform: rotate(90deg);
 }
 
-/* Detail table optimizations */
-.manager-pickup-container .detail-row table {
+/* Detail table inside expanded rows */
+.staff-pickup-container .detail-row table {
     width: 100%;
     border: none;
     box-shadow: none;
-    table-layout: fixed; /* forces equal distribution */
+    table-layout: fixed;
 }
 
-.manager-pickup-container .detail-row th,
-.manager-pickup-container .detail-row td {
-    min-width: auto; /* remove fixed 180px */
+.staff-pickup-container .detail-row th,
+.staff-pickup-container .detail-row td {
     padding: 3px 6px;
     font-size: 0.75rem;
     white-space: nowrap;
@@ -71,18 +71,9 @@
     overflow: hidden;
 }
 
-/* Reduce checkbox size slightly */
-.manager-pickup-container input[type="checkbox"] {
+/* Checkbox styling */
+.staff-pickup-container input[type="checkbox"] {
     width: 16px;
     height: 16px;
     accent-color: #16a34a;
-}
-
-/* Compact select dropdown */
-.manager-pickup-container select.form-control-sm {
-    border-radius: 6px;
-    padding: 3px 6px;
-    border: 1px solid #cbd5e1;
-    font-size: 0.75rem;
-    max-width: 140px; /* keeps select narrow */
 }
