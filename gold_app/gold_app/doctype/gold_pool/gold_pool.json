@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "POOL-.YYYY.-.#####",
+ "creation": "2025-09-17 21:15:05.693099",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "pool_type",
+  "status",
+  "date_created",
+  "total_weight",
+  "column_break_plxv",
+  "total_value",
+  "avco_by_purity",
+  "stock_entry",
+  "section_break_ftio",
+  "pool_items",
+  "section_break_nbei",
+  "purity_breakdown"
+ ],
+ "fields": [
+  {
+   "fieldname": "pool_type",
+   "fieldtype": "Select",
+   "label": "Pool Type",
+   "options": "\nDealer\nBranch"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nPending\nCompleted"
+  },
+  {
+   "fieldname": "date_created",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "total_weight",
+   "fieldtype": "Float",
+   "label": "Total Weight (g)"
+  },
+  {
+   "fieldname": "total_value",
+   "fieldtype": "Currency",
+   "label": "Amount (MYR)"
+  },
+  {
+   "fieldname": "column_break_plxv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "avco_by_purity",
+   "fieldtype": "Data",
+   "label": "Avg Cost"
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry"
+  },
+  {
+   "fieldname": "section_break_ftio",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "pool_items",
+   "fieldtype": "Table",
+   "label": "Pool Items",
+   "options": "Gold Pool Item"
+  },
+  {
+   "fieldname": "section_break_nbei",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "purity_breakdown",
+   "fieldtype": "Table",
+   "label": "Purity Breakdown",
+   "options": "Purity Breakdown"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-19 13:46:55.849170",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Gold Pool",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-09-17 21:11:56.478143",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_pickup",
+  "date",
+  "dealer",
+  "purity",
+  "total_weight",
+  "avco_rate",
+  "amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_pickup",
+   "fieldtype": "Link",
+   "label": "Item Pickup",
+   "options": "Item Pickup"
+  },
+  {
+   "fieldname": "dealer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Dealer",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date"
+  },
+  {
+   "fieldname": "purity",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purity",
+   "options": "Purity"
+  },
+  {
+   "fieldname": "total_weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Total Weight (g)"
+  },
+  {
+   "fieldname": "avco_rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Avg Cost"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount (MYR)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-09-18 13:52:37.102128",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Gold Pool Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

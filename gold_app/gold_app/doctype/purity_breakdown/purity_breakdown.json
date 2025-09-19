@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-09-18 15:26:56.938663",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "purity",
+  "total_weight",
+  "avco_rate",
+  "total_cost"
+ ],
+ "fields": [
+  {
+   "fieldname": "purity",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purity",
+   "options": "Purity"
+  },
+  {
+   "fieldname": "total_weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Total Weight (g)"
+  },
+  {
+   "fieldname": "avco_rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "AVCO (RM/g)"
+  },
+  {
+   "fieldname": "total_cost",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Cost (MYR)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-09-18 15:30:57.115878",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Purity Breakdown",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

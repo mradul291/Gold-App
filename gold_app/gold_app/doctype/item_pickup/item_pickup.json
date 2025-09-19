@@ -11,6 +11,8 @@
   "item_code",
   "purity",
   "purchase_receipt",
+  "discrepancy_action",
+  "discrepancy_amount",
   "column_break_xymh",
   "total_weight",
   "avco_rate",
@@ -18,8 +20,8 @@
   "assigned_to",
   "is_pickup",
   "tick_all_ok",
-  "discrepancy_action",
-  "discrepancy_amount"
+  "pooled",
+  "pool_reference"
  ],
  "fields": [
   {
@@ -111,12 +113,23 @@
    "fieldtype": "Currency",
    "label": "Discrepancy Amount (MYR)",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "pooled",
+   "fieldtype": "Check",
+   "label": "Pooled"
+  },
+  {
+   "fieldname": "pool_reference",
+   "fieldtype": "Data",
+   "label": "Pool Reference"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-17 19:12:12.616155",
+ "modified": "2025-09-17 21:11:34.938600",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

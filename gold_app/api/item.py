@@ -29,3 +29,56 @@ def autoname(doc, method):
         frappe.throw(f"Could not generate unique code for prefix {prefix}. Please try again.")
 
     doc.item_code = new_code
+
+
+# @frappe.whitelist()
+# def create_item_from_group(item_group):
+#     """Create a new Item using autoname logic based on given Item Group and return item_code."""
+#     if not item_group:
+#         frappe.throw("Item Group is required")
+
+#     # Create and insert new item
+#     new_item = frappe.new_doc("Item")
+#     new_item.item_group = item_group
+#     new_item.item_name = item_group  # or you can set a better name if required
+#     new_item.stock_uom = "Gram"
+#     new_item.insert(ignore_permissions=True)
+
+#     return {"item_code": new_item.item_code}
+
+
+import frappe
+from frappe.utils import flt
+
+@frappe.whitelist()
+def create_item_from_group(item_group, valuation_rate=None):
+    """
+    Auto-create an Item for a given Item Group using prefix-based autoname
+    and optionally set its valuation rate.
+    """
+    if not item_group:
+        frappe.throw("Item Group is required to create an Item")
+
+    # Create the Item (autoname will handle item_code generation)
+    new_item = frappe.new_doc("Item")
+    new_item.item_group = item_group
+    new_item.stock_uom = "Gram"
+    new_item.insert(ignore_permissions=True)
+
+    # If valuation_rate is provided, create a Valuation Rate entry for this Item
+    if valuation_rate is not None:
+        # Ensure numeric value
+        valuation_rate = flt(valuation_rate)
+        if valuation_rate > 0:
+            frappe.get_doc({
+                "doctype": "Item Price",
+                "price_list": "Standard Buying",
+                "item_code": new_item.item_code,
+                "price_list_rate": valuation_rate,
+                "currency": frappe.db.get_default("currency") or "INR"
+            }).insert(ignore_permissions=True)
+
+    return {
+        "item_code": new_item.item_code,
+        "item_name": new_item.item_name
+    }

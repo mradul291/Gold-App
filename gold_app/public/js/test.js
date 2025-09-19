@@ -1,235 +1,170 @@
-frappe.pages["manager-pickup"].on_page_load = function (wrapper) {
-	var page = frappe.ui.make_app_page({
-		parent: wrapper,
-		title: "Manager Pickup",
-		single_column: true,
-	});
-	new ManagerPickupPage(wrapper);
+frappe.pages["pool"].on_page_load = function (wrapper) {
+    new PoolPage(wrapper);
 };
 
-class ManagerPickupPage {
-	constructor(wrapper) {
-		this.wrapper = wrapper;
-		this.page = wrapper.page;
-		this.container = null;
-		this.current_dealer = null;
-		this.changes = {};
-		this.setup();
-	}
+class PoolPage {
+    constructor(wrapper) {
+        this.wrapper = $(wrapper);
+        this.page = frappe.ui.make_app_page({
+            parent: wrapper,
+            title: "Pool",
+            single_column: true,
+        });
 
-	setup() {
-		this.make_toolbar();
-		this.make_container();
-		this.show_summary();
-	}
+        this.container = $('<div class="pool-container"></div>').appendTo(this.page.main);
+        this.table_container = $('<div style="margin-top:20px;"></div>').appendTo(this.container);
+        this.entry_table_container = $('<div style="margin-top:30px;"></div>').appendTo(this.container);
 
-	make_toolbar() {
-		this.page.set_primary_action(__("Refresh"), () => this.show_summary());
-		this.page.set_secondary_action(__("Save"), () => this.save_changes());
-		this.page.clear_menu();
-	}
+        this.make_select_field();
+        this.last_data = [];
+        this.pool_name = null;
+    }
 
-	make_container() {
-		this.container = $('<div class="manager-pickup-container"></div>').appendTo(this.wrapper);
-	}
+    make_select_field() {
+        let me = this;
+        this.select_field = new frappe.ui.form.ControlSelect({
+            df: {
+                fieldname: "gold_pool_select",
+                label: "Select Gold Pool",
+                fieldtype: "Select",
+                options: ["Loading..."],
+            },
+            parent: this.container,
+        });
+        this.select_field.make_input();
 
-	async show_summary() {
-		this.container.empty();
+        $(this.select_field.input).on("focus", async function () {
+            let options = await frappe.xcall("gold_app.api.pooling.get_gold_pool_options");
+            me.select_field.df.options = options.length ? options : ["No Gold Pool Found"];
+            me.select_field.refresh();
+        });
 
-		let items = [];
-		try {
-			items = await frappe.xcall("gold_app.api.page_api.get_manager_pickup_items", {
-				is_pickup: 1,
-			});
-		} catch (err) {
-			console.error(err);
-			this.container.html('<div class="alert alert-danger">Failed to load data</div>');
-			return;
-		}
+        $(this.select_field.input).on("change", async function () {
+            me.pool_name = me.select_field.get_value();
+            if (me.pool_name) {
+                me.fetch_and_render_pool_data(me.pool_name);
+            }
+        });
+    }
 
-		if (!items.length) {
-			this.container.html('<div class="alert alert-info">No pickup items found</div>');
-			return;
-		}
+    async fetch_and_render_pool_data(pool_name) {
+        try {
+            let data = await frappe.xcall("gold_app.api.pooling.get_gold_pool_data", { pool_name });
+            this.last_data = data.purity_breakdown || [];
+            this.render_summary_table();
+            this.render_entry_table();
+        } catch (err) {
+            frappe.msgprint("Failed to fetch Gold Pool data");
+            console.error(err);
+        }
+    }
 
-		// Group items by dealer for summary view
-		const grouped = {};
-		items.forEach((i) => {
-			if (!grouped[i.dealer]) {
-				grouped[i.dealer] = {
-					dealer: i.dealer,
-					purities: new Set(),
-					total_weight: 0,
-					items: [],
-				};
-			}
-			grouped[i.dealer].purities.add(i.purity);
-			grouped[i.dealer].total_weight += i.total_weight || 0;
-			grouped[i.dealer].items.push(i);
-		});
+    render_summary_table() {
+        this.table_container.empty();
+        if (!this.last_data.length) {
+            this.table_container.html("<p>No purity breakdown data found.</p>");
+            return;
+        }
 
-		const $tbl = $(`
-            <table class="table table-sm table-bordered">
-                <thead>
-                    <tr>
-                        <th style="width:36px"></th>
-                        <th>Dealer</th>
-                        <th>Purities</th>
-                        <th>Total Weight (g)</th>
-                        <th>Tick if all ok</th>
+        let table = $("<table class='table table-bordered'></table>");
+        let thead = $("<thead><tr><th>Purity</th><th>Total Weight (g)</th><th>AVCO</th><th>Total Cost</th></tr></thead>");
+        table.append(thead);
 
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        `).appendTo(this.container);
+        let tbody = $("<tbody></tbody>");
+        this.last_data.forEach((row) => {
+            tbody.append(`<tr>
+                <td>${row["Purity"]}</td>
+                <td>${row["Total Weight (g)"]}</td>
+                <td>${row["AVCO (RM/g)"]}</td>
+                <td>${row["Total Cost (MYR)"]}</td>
+            </tr>`);
+        });
+        table.append(tbody);
+        this.table_container.append("<h4>Purity Summary</h4>");
+        this.table_container.append(table);
+    }
 
-		const $tbody = $tbl.find("tbody");
+    async render_entry_table() {
+        this.entry_table_container.empty();
 
-		Object.values(grouped).forEach((group) => {
-			const $tr = $(`
-                <tr data-dealer="${group.dealer}">
-                    <td class="toggle-cell" style="cursor:pointer;text-align:center;">
-                        <i class="fa fa-chevron-right"></i>
-                    </td>
-                    <td>${group.dealer}</td>
-                    <td>${Array.from(group.purities).join(", ")}</td>
-                    <td>${group.total_weight.toFixed(2)}</td>
-                    <td style="text-align:center;">
-                        <input type="checkbox" class="dealer-tick-all-ok" />
-                    </td>
+        // Preload select options
+        let warehouses = await frappe.db.get_list("Warehouse", { fields: ["name"], limit: 100 });
+        let item_groups = await frappe.db.get_list("Item Group", { fields: ["name"], limit: 100 });
+
+        let wh_options = warehouses.map(w => `<option value="${w.name}">${w.name}</option>`).join("");
+        let ig_options = item_groups.map(g => `<option value="${g.name}">${g.name}</option>`).join("");
+
+        let table = $("<table class='table table-bordered'></table>");
+        let thead = $("<thead><tr><th>Purity</th><th>Qty</th><th>Item Code</th><th>Valuation Rate</th><th>Source WH</th><th>Target WH</th><th>Item Group</th><th>Action</th></tr></thead>");
+        table.append(thead);
+
+        let tbody = $("<tbody></tbody>");
+        this.last_data.forEach(row => {
+            tbody.append(`
+                <tr data-purity="${row["Purity"]}">
+                    <td>${row["Purity"]}</td>
+                    <td><input type="number" class="form-control" name="qty" min="0"></td>
+                    <td><input type="text" class="form-control" name="item_code" placeholder="Item Code"></td>
+                    <td><input type="number" class="form-control" name="valuation_rate" value="${row["AVCO (RM/g)"] || 0}" step="0.01" readonly></td>
+                    <td><select class="form-control" name="source_warehouse">${wh_options}</select></td>
+                    <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
+                    <td><select class="form-control" name="item_group">${ig_options}</select></td>
+                    <td><button class="btn btn-sm btn-success create-entry">Create</button></td>
                 </tr>
-            `).appendTo($tbody);
+            `);
+        });
 
-			$tr.find(".toggle-cell").on("click", async () => {
-				this.current_dealer = group.dealer;
-				await this.show_detail(group.items, $tr);
-			});
+        table.append(tbody);
+        this.entry_table_container.append("<h4>Create Stock Entry</h4>");
+        this.entry_table_container.append(table);
 
-			$tr.find(".dealer-tick-all-ok").on("change", (e) => {
-				const checked = e.target.checked;
+        // Attach click event per row
+        this.entry_table_container.find(".create-entry").on("click", (e) => {
+            let row = $(e.currentTarget).closest("tr");
+            this.create_stock_entry_for_row(row);
+        });
+    }
 
-				// Update all items for this dealer
-				group.items.forEach((item) => {
-					this.track_change(item.name, { tick_all_ok: checked ? 1 : 0 });
-				});
+    async create_stock_entry_for_row(row) {
+        let purity = row.data("purity");
+        let qty = row.find("input[name='qty']").val();
+        let item_code = row.find("input[name='item_code']").val();
+        let valuation_rate = row.find("input[name='valuation_rate']").val();
+        let source_wh = row.find("select[name='source_warehouse']").val();
+        let target_wh = row.find("select[name='target_warehouse']").val();
+        let item_group = row.find("select[name='item_group']").val();
 
-				// If detail rows are visible, update their checkboxes too
-				if ($tr.next().hasClass("detail-row")) {
-					$tr.next().find(".tick-all-ok").prop("checked", checked);
-				}
-			});
-		});
-	}
+        if (!qty || !item_code || !source_wh || !target_wh || !item_group) {
+            frappe.msgprint("Fill all fields before creating entry.");
+            return;
+        }
 
-	async show_detail(items, $row) {
-		// Toggle if detail row already exists
-		if ($row.next().hasClass("detail-row")) {
-			$row.next().toggle();
-			const icon = $row.find(".toggle-cell i");
-			icon.toggleClass("fa-chevron-right fa-chevron-down");
-			return;
-		}
+        try {
+            let res = await frappe.xcall("gold_app.api.pooling.create_stock_entry_from_pool", {
+                purity_data: JSON.stringify([{
+                    purity,
+                    qty,
+                    item_code,
+                    valuation_rate,
+                    source_warehouse: source_wh,
+                    target_warehouse: target_wh,
+                    item_group
+                }]),
+                pool_name: this.pool_name
+            });
 
-		// Insert detail row
-		const $detailRow = $(`
-            <tr class="detail-row">
-                <td colspan="5">
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Dealer</th>
-                                <th>Purity</th>
-                                <th>Total Weight (g)</th>
-                                <th>Amount</th>
-                                <th style="text-align:center;">Tick if all ok</th>
-                                <th style="width:200px;">Any discrepancies?</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </td>
-            </tr>
-        `).insertAfter($row);
+            frappe.msgprint({
+                title: "Success",
+                message: `Stock Entry <a href="/app/stock-entry/${res.name}">${res.name}</a> created.`,
+                indicator: "green",
+            });
 
-		const $tbody = $detailRow.find("tbody");
-
-		items.forEach((i) => {
-			const dstr = i.date ? frappe.datetime.str_to_user(i.date) : "";
-			const checked = i.tick_all_ok ? "checked" : "";
-			const discrepancyOptions = `
-                <option value="">Select</option>
-                <option value="Refund Request (ie. Credit Note)" ${
-					i.discrepancy_action === "Refund Request (ie. Credit Note)" ? "selected" : ""
-				}>
-                    Refund Request (ie. Credit Note)
-                </option>
-            `;
-			const $tr = $(`
-                <tr data-name="${i.name}">
-                    <td>${dstr}</td>
-                    <td>${i.dealer}</td>
-                    <td>${i.purity}</td>
-                    <td>${(i.total_weight || 0).toFixed(2)}</td>
-                    <td>${frappe.format(i.amount, { fieldtype: "Currency" })}</td>
-                    <td style="text-align:center;">
-                        <input type="checkbox" class="tick-all-ok" ${checked} />
-                    </td>
-                    <td>
-                        <select class="discrepancy-action form-control form-control-sm">
-                            ${discrepancyOptions}
-                        </select>
-                    </td>
-                </tr>
-            `).appendTo($tbody);
-
-			// Checkbox change handler
-			$tr.find(".tick-all-ok").on("change", (e) => {
-				this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
-			});
-
-			// Discrepancy dropdown handler
-			$tr.find(".discrepancy-action").on("change", (e) => {
-				this.track_change(i.name, { discrepancy_action: e.target.value });
-			});
-		});
-
-		// Update chevron icon
-		$row.find(".toggle-cell i").removeClass("fa-chevron-right").addClass("fa-chevron-down");
-	}
-
-	track_change(name, update) {
-		if (!this.changes[name]) {
-			this.changes[name] = { name };
-		}
-		Object.assign(this.changes[name], update);
-		this.page.set_indicator(__("Not Saved"), "orange");
-	}
-
-	async save_changes() {
-		const updates = Object.values(this.changes);
-		if (!updates.length) {
-			frappe.show_alert({ message: __("No changes to save"), indicator: "blue" });
-			return;
-		}
-
-		try {
-			frappe.show_progress(__("Saving Changes"), 20, 100, __("Processing..."));
-			const result = await frappe.xcall("gold_app.api.page_api.manager_bulk_update_pickup", {
-				doc_updates: updates,
-			});
-			frappe.show_progress(__("Saving Changes"), 100, 100, __("Done"));
-			frappe.show_alert({
-				message: __(`${result.updated} records updated`),
-				indicator: "green",
-			});
-			this.page.clear_indicator();
-			this.changes = {};
-			this.show_summary();
-		} catch (err) {
-			console.error(err);
-			frappe.msgprint("Failed to save changes");
-		}
-	}
+            // Disable row inputs after success
+            row.find("input, select").prop("disabled", true);
+            row.find(".create-entry").prop("disabled", true);
+        } catch (err) {
+            console.error(err);
+            frappe.msgprint("Failed to create Stock Entry.");
+        }
+    }
 }

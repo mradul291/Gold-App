@@ -332,6 +332,18 @@
   },
   {
     "doctype": "Custom Field",
+    "dt": "Stock Entry Detail",
+    "fieldname": "purity",
+    "label": "Purity",
+    "fieldtype": "Link",
+    "options": "Purity",
+    "insert_after": "item_code",
+    "reqd": 0,
+    "name": "Stock Entry Detail-purity",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "supplier_id_number",
     "label": "ID Number",

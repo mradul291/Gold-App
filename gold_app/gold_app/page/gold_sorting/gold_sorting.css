@@ -1,0 +1,63 @@
+.gold-sorting-container {
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 12px;
+}
+
+/* Button styling */
+.gold-sorting-container .create-pool-btn {
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Table styling */
+.gold-sorting-container table {
+    width: 95%;
+    margin: 0 auto;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.gold-sorting-container thead th {
+    background-color: #f1f5f9;
+    color: #374151;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    padding: 0.5rem;
+}
+
+.gold-sorting-container tbody tr {
+    background: white;
+    transition: background 0.2s ease;
+}
+
+.gold-sorting-container tbody tr:hover {
+    background: #f9fafb;
+}
+
+.gold-sorting-container td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    vertical-align: middle;
+}
+
+.gold-sorting-container .summary-row {
+    background: #e0f2fe;
+    font-weight: bold;
+    border-top: 2px solid #bae6fd;
+}
+
+/* Checkbox styling */
+.gold-sorting-container input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #16a34a;
+    cursor: pointer;
+}
