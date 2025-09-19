@@ -165,7 +165,6 @@ class PoolPage {
 		this.entry_table_container.append("<h4>Create Stock Entry</h4>");
 		this.entry_table_container.append(table);
 
-		// 🔄 Attach auto-create item logic on Item Group change
 		tbody.find("select[name='item_group']").on("change", async function () {
 			let row = $(this).closest("tr");
 			let selected_group = $(this).val();

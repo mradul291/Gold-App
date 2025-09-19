@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Gold Management",
  "links": [],
- "modified": "2025-09-19 13:00:16.855154",
+ "modified": "2025-09-19 20:33:22.732192",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Gold Management",
@@ -29,6 +29,13 @@
  ],
  "sequence_id": 1.0,
  "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Gold Sorting",
+   "link_to": "gold-sorting",
+   "type": "Page"
+  },
   {
    "color": "Grey",
    "doc_view": "List",
@@ -59,13 +66,6 @@
    "link_to": "Purchase Receipt",
    "stats_filter": "[]",
    "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Gold Sorting",
-   "link_to": "gold-sorting",
-   "type": "Page"
   },
   {
    "color": "Grey",
