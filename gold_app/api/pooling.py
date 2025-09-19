@@ -231,3 +231,4 @@ def create_stock_entry_from_pool(purity_data, pool_name=None):
     se.submit()
 
     return {"name": se.name, "stock_entry_type": se.stock_entry_type}
+
