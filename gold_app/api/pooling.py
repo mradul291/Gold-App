@@ -1,6 +1,6 @@
 import frappe, json
-from frappe.utils import nowdate
-from frappe.utils import flt 
+from frappe import _
+from frappe.utils import flt, nowdate, nowtime
 
 # Unpooled Items from Item Pickup
 @frappe.whitelist()
@@ -158,10 +158,9 @@ def get_gold_pool_data(pool_name):
         'purity_breakdown': table_data
     }
 
-
+# Create Stock Entry from Pool - V1
 @frappe.whitelist()
 def create_stock_entry_from_pool(purity_data, pool_name=None):
-  
     data = json.loads(purity_data)
 
     if not pool_name:
@@ -180,11 +179,10 @@ def create_stock_entry_from_pool(purity_data, pool_name=None):
         purity = str(row.get("purity"))
         qty = flt(row.get("qty"))
         valuation_rate = flt(row.get("valuation_rate"))
-        source_warehouse = row.get("source_warehouse")
         target_warehouse = row.get("target_warehouse")
         item_group = row.get("item_group")
 
-        if not (item_code and qty and source_warehouse and target_warehouse):
+        if not (item_code and qty and target_warehouse):
             frappe.throw("Missing required fields for creating Stock Entry")
 
         if not frappe.db.exists("Item", item_code):
@@ -199,7 +197,6 @@ def create_stock_entry_from_pool(purity_data, pool_name=None):
         se.append("items", {
             "item_code": item_code,
             "qty": qty,
-            "s_warehouse": source_warehouse,
             "t_warehouse": target_warehouse,
             "purity": purity,
             "valuation_rate": valuation_rate,
@@ -232,3 +229,169 @@ def create_stock_entry_from_pool(purity_data, pool_name=None):
 
     return {"name": se.name, "stock_entry_type": se.stock_entry_type}
 
+# Break Item Stock Entry V2
+# @frappe.whitelist()
+# def create_stock_entry_from_pool(purity_data, pool_name=None):
+#     """
+#     Create Break Item Stock Entry(ies) from pool data.
+#     Accepts purity_data as JSON array of rows:
+#       [{ "purity": "999", "qty": 10, "item_code": "L-001", "valuation_rate": 1000, "target_warehouse": "Bag 1 - Retail - AGSB", "item_group": "L - Loket" }, ...]
+#     Creates one Stock Entry per source_item (Unsorted-{purity}) group.
+#     """
+#     data = json.loads(purity_data)
+
+#     if not pool_name:
+#         frappe.throw(_("Pool name is required"))
+
+#     if not data:
+#         frappe.throw(_("No items found to create Stock Entry"))
+
+#     pool_doc = frappe.get_doc("Gold Pool", pool_name)
+
+#     # use system default company
+#     company = frappe.db.get_single_value("Global Defaults", "default_company") or frappe.db.get_value("Company", {}, "name")
+
+#     # normalize rows and compute source_item per row
+#     rows = []
+#     for r in data:
+#         purity = str(r.get("purity") or "")
+#         if not purity:
+#             frappe.throw(_("Purity is required in each row"))
+#         source_item = r.get("source_item") or f"Unsorted-{purity}"
+#         rows.append({
+#             "purity": purity,
+#             "qty": flt(r.get("qty") or 0),
+#             "item_code": r.get("item_code"),
+#             "valuation_rate": flt(r.get("valuation_rate") or 0),
+#             "target_warehouse": r.get("target_warehouse"),
+#             "item_group": r.get("item_group"),
+#             "source_item": source_item
+#         })
+
+#     # group rows by source_item (i.e. Unsorted-XXX)
+#     groups = {}
+#     for r in rows:
+#         groups.setdefault(r["source_item"], []).append(r)
+
+#     created_entries = []
+
+#     # iterate groups and create one Stock Entry per group
+#     for source_item_code, group_rows in groups.items():
+#         # ensure source_item exists and belongs to Mixed Gold group
+#         if not frappe.db.exists("Item", {"item_code": source_item_code, "item_group": "MG - Mixed Gold"}):
+#             frappe.throw(_("Source Item '{0}' not found in Item Group 'MG - Mixed Gold'").format(source_item_code))
+
+#         # find latest SLE for the source item to determine source warehouse and valuation_rate
+#         latest_sle = frappe.db.get_value(
+#             "Stock Ledger Entry",
+#             {"item_code": source_item_code},
+#             ["warehouse", "valuation_rate"],
+#             order_by="posting_date desc, posting_time desc",
+#             as_dict=True
+#         )
+#         source_warehouse = latest_sle.warehouse if latest_sle and latest_sle.warehouse else None
+#         source_valuation_rate = flt(latest_sle.valuation_rate if latest_sle and latest_sle.valuation_rate else 0)
+
+#         if not source_warehouse:
+#             # try to find any Bin for item
+#             any_bin = frappe.db.get_value("Bin", {"item_code": source_item_code}, "warehouse")
+#             source_warehouse = any_bin
+
+#         # compute available qty in bin for that warehouse
+#         available_qty = flt(frappe.db.get_value("Bin", {"item_code": source_item_code, "warehouse": source_warehouse}, "actual_qty") or 0)
+
+#         # compute reduce_quantity (sum of qty in this group)
+#         reduce_qty = sum([r["qty"] for r in group_rows])
+
+#         if reduce_qty <= 0:
+#             frappe.throw(_("Reduce quantity for source item {0} must be greater than zero").format(source_item_code))
+
+#         if available_qty <= 0:
+#             frappe.throw(_("No available qty for source item {0} in warehouse {1}").format(source_item_code, source_warehouse or _("(unknown)")))
+
+#         if reduce_qty > available_qty:
+#             frappe.throw(_("The total weight of new items ({0} gm) cannot exceed the available {1} gm for source item {2}").format(reduce_qty, available_qty, source_item_code))
+
+#         # Build Stock Entry for this source_item group
+#         se = frappe.new_doc("Stock Entry")
+#         se.stock_entry_type = "Break Item"
+#         se.company = company
+#         se.posting_date = nowdate()
+#         se.posting_time = nowtime()
+
+#         # Set Break Item level fields
+#         se.source_item = source_item_code
+#         se.source_item_warehouse = source_warehouse
+#         se.item_quantity = available_qty
+#         se.source_valuation_rate = source_valuation_rate
+#         se.reduce_quantity = reduce_qty
+#         se.remaining_quantity = available_qty - reduce_qty
+
+#         # Append result rows (child items)
+#         for r in group_rows:
+#             item_code = r["item_code"]
+#             purity = r["purity"]
+#             qty = r["qty"]
+#             valuation_rate = r["valuation_rate"]
+#             target_warehouse = r["target_warehouse"]
+#             item_group = r["item_group"]
+
+#             if not (item_code and qty and target_warehouse):
+#                 frappe.throw(_("Missing required fields for creating Stock Entry (item_code, qty, target_warehouse are required)"))
+
+#             # create item if missing
+#             if not frappe.db.exists("Item", item_code):
+#                 new_item = frappe.new_doc("Item")
+#                 new_item.item_code = item_code
+#                 new_item.item_name = item_code
+#                 new_item.item_group = item_group or "All Item Groups"
+#                 new_item.stock_uom = "Gram"
+#                 new_item.insert(ignore_permissions=True)
+#                 # use msgprint sparingly on server side; kept for parity
+#                 frappe.msgprint(_("Item {0} created successfully").format(item_code))
+
+#             # append the child row
+#             se.append("items", {
+#                 "item_code": item_code,
+#                 "qty": qty,
+#                 "t_warehouse": target_warehouse,
+#                 "purity": purity,
+#                 "valuation_rate": valuation_rate,
+#                 "allow_zero_valuation_rate": 1 if valuation_rate == 0 else 0,
+#                 # It is not necessary to set s_warehouse on child rows for Break Item;
+#                 # important fields are set on SE header (source_item / source_item_warehouse)
+#             })
+
+#             # update the pool's purity breakdown
+#             updated = False
+#             for row_pb in pool_doc.purity_breakdown:
+#                 if str(row_pb.purity) == purity:
+#                     if qty > row_pb.total_weight:
+#                         frappe.throw(_("Cannot create Stock Entry: Qty {0} > available {1} for Purity {2}").format(qty, row_pb.total_weight, purity))
+#                     row_pb.total_weight = flt(row_pb.total_weight) - qty
+#                     row_pb.total_cost = flt(row_pb.total_weight) * flt(row_pb.avco_rate)
+#                     updated = True
+#                     break
+#             if not updated:
+#                 frappe.throw(_("Purity {0} not found in Pool {1}").format(purity, pool_name))
+
+#         # Save pool changes per group iteration to keep consistent state
+#         pool_doc.save(ignore_permissions=True)
+
+#         # Insert and submit the Stock Entry
+#         se.insert(ignore_permissions=True)
+#         se.submit()
+
+#         created_entries.append(se.name)
+
+#     # After all groups processed, if all pool weights <=0 then mark Completed
+#     if all(flt(r.total_weight) <= 0 for r in pool_doc.purity_breakdown):
+#         pool_doc.status = "Completed"
+#         pool_doc.save(ignore_permissions=True)
+
+#     # Return first created entry name for backward compatibility plus all names
+#     return {
+#         "name": created_entries[0] if created_entries else None,
+#         "all_names": created_entries,
+#         "stock_entry_type": "Break Item"
+#     }

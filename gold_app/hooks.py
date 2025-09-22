@@ -24,7 +24,6 @@ doctype_js = {
 doc_events = {
     "Item": {
         "autoname": "gold_app.api.item.autoname",
-        "on_update": "gold_app.gold_app.doctype.purity.purity.item_update_handler"
     },
     "Sales Order": {
         "before_save": "gold_app.api.custom_time_auto_fill.set_order_time"
@@ -43,7 +42,7 @@ doc_events = {
     },
     "Stock Entry": {
         "validate": [
-            "gold_app.api.stock_entry.validate_break_item_qty",
+            # "gold_app.api.stock_entry.validate_break_item_qty",
         ],
         "on_submit": "gold_app.api.stock_entry.create_material_issue"
     },

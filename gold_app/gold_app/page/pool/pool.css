@@ -74,3 +74,29 @@
 .status-green { color: #16a34a; }
 .status-yellow { color: #ca8a04; }
 .status-red { color: #dc2626; }
+
+.entry-table {
+    margin-top: 10px;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.entry-table th {
+    background: #f4f4f4;
+    text-align: center;
+}
+
+.entry-table td {
+    vertical-align: middle;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.remove-row {
+    background: #dc3545;
+    color: #fff;
+}

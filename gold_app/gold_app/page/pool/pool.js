@@ -137,65 +137,141 @@ class PoolPage {
 			.map((g) => `<option value="${g.name}">${g.name}</option>`)
 			.join("");
 
-		let table = $("<table class='table table-bordered'></table>");
-		let thead = $(
-			"<thead><tr><th>Purity</th><th>Item Group</th><th>Qty</th><th>Item Code</th><th>Valuation Rate</th><th>Source WH</th><th>Target WH</th><th>Action</th></tr></thead>"
-		);
+		// Prepare Purity options for dropdown
+		let purity_options = this.last_data
+			.map(
+				(row) =>
+					`<option value="${row["Purity"]}" data-rate="${row["AVCO (RM/g)"]}">${row["Purity"]}</option>`
+			)
+			.join("");
+
+		// Build table structure
+		let table = $("<table class='table table-bordered entry-table'></table>");
+		let thead = $(`
+        <thead>
+            <tr>
+                <th>Purity</th>
+                <th>Item Group</th>
+                <th>Qty</th>
+                <th>Item Code</th>
+                <th>Valuation Rate</th>
+                <th>Target WH</th>
+                <th></th>
+            </tr>
+        </thead>
+    `);
 		table.append(thead);
 
 		let tbody = $("<tbody></tbody>");
-		this.last_data.forEach((row) => {
-			tbody.append(`
-            <tr data-purity="${row["Purity"]}">
-                <td>${row["Purity"]}</td>
-                <td><select class="form-control" name="item_group">${ig_options}</select></td>
-                <td><input type="number" class="form-control" name="qty" min="0"></td>
-                <td><input type="text" class="form-control" name="item_code" placeholder="Item Code" readonly></td>
-                <td><input type="number" class="form-control" name="valuation_rate" value="${
-					row["AVCO (RM/g)"] || 0
-				}" step="0.01" readonly></td>
-                // <td><select class="form-control" name="source_warehouse">${wh_options}</select></td>
-                <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
-                <td><button class="btn btn-sm btn-success create-entry">Create</button></td>
-            </tr>
-        `);
-		});
-
 		table.append(tbody);
+
 		this.entry_table_container.append("<h4>Create Stock Entry</h4>");
 		this.entry_table_container.append(table);
 
-		tbody.find("select[name='item_group']").on("change", async function () {
-			let row = $(this).closest("tr");
-			let selected_group = $(this).val();
-			let valuation_rate = row.find("input[name='valuation_rate']").val(); // take AVCO as valuation rate
+		// Buttons
+		let addRowBtn = $('<button class="btn btn-sm btn-primary mt-2">Add Row</button>');
+		let saveBtn = $(
+			'<button class="btn btn-sm btn-success mt-2 ms-2 ml-1">Save Stock Entry</button>'
+		);
 
-			if (selected_group) {
-				try {
-					// Call backend to create item with valuation rate
-					let res = await frappe.xcall("gold_app.api.item.create_item_from_group", {
-						item_group: selected_group,
-						valuation_rate: valuation_rate || 0,
-					});
+		this.entry_table_container.append(addRowBtn).append(saveBtn);
 
-					// Fill auto-generated item_code in the input field
-					row.find("input[name='item_code']").val(res.item_code);
+		// Helper: Add Row
+		let addRow = (purity = "", valuation_rate = 0) => {
+			let row = $(`
+            <tr>
+                <td>
+                    <select class="form-control" name="purity">
+                        <option value="">Select Purity</option>
+                        ${purity_options}
+                    </select>
+                </td>
+                <td><select class="form-control" name="item_group">${ig_options}</select></td>
+                <td><input type="number" class="form-control" name="qty" min="0"></td>
+                <td><input type="text" class="form-control" name="item_code" readonly></td>
+                <td><input type="number" class="form-control" name="valuation_rate" value="${valuation_rate}" step="0.01" readonly></td>
+                <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
+                <td><button class="btn btn-danger btn-sm remove-row">X</button></td>
+            </tr>
+        `);
 
-					frappe.show_alert({
-						message: `Item <b>${res.item_code}</b> created for group <b>${selected_group}</b> with valuation rate ${valuation_rate}`,
-						indicator: "green",
-					});
-				} catch (err) {
-					console.error(err);
-					frappe.msgprint("Failed to auto-create item for selected Item Group.");
+			if (purity) row.find("select[name='purity']").val(purity);
+
+			// Events
+			row.find(".remove-row").on("click", () => row.remove());
+
+			row.find("select[name='purity']").on("change", function () {
+				let selected = $(this).find("option:selected");
+				row.find("input[name='valuation_rate']").val(selected.data("rate") || 0);
+			});
+
+			row.find("select[name='item_group']").on("change", async function () {
+				let selected_group = $(this).val();
+				let valuation_rate = row.find("input[name='valuation_rate']").val();
+				if (selected_group) {
+					try {
+						let res = await frappe.xcall("gold_app.api.item.create_item_from_group", {
+							item_group: selected_group,
+							valuation_rate: valuation_rate || 0,
+						});
+						row.find("input[name='item_code']").val(res.item_code);
+						frappe.show_alert({
+							message: `Item <b>${res.item_code}</b> created for group <b>${selected_group}</b>.`,
+							indicator: "green",
+						});
+					} catch (err) {
+						console.error(err);
+						frappe.msgprint("Failed to auto-create item for selected Item Group.");
+					}
 				}
-			}
-		});
+			});
 
-		// Attach click event per row
-		this.entry_table_container.find(".create-entry").on("click", (e) => {
-			let row = $(e.currentTarget).closest("tr");
-			this.create_stock_entry_for_row(row);
+			tbody.append(row);
+		};
+
+		// Show only ONE blank row on page load
+		addRow();
+
+		// Add new empty row button
+		addRowBtn.on("click", () => addRow());
+
+		// Save button logic remains unchanged
+		saveBtn.on("click", async () => {
+			let rows = [];
+			tbody.find("tr").each(function () {
+				let r = $(this);
+				rows.push({
+					purity: r.find("select[name='purity']").val(),
+					qty: r.find("input[name='qty']").val(),
+					item_code: r.find("input[name='item_code']").val(),
+					valuation_rate: r.find("input[name='valuation_rate']").val(),
+					target_warehouse: r.find("select[name='target_warehouse']").val(),
+					item_group: r.find("select[name='item_group']").val(),
+				});
+			});
+
+			if (!rows.length) {
+				frappe.msgprint("Please add at least one row before saving.");
+				return;
+			}
+
+			try {
+				let res = await frappe.xcall("gold_app.api.pooling.create_stock_entry_from_pool", {
+					purity_data: JSON.stringify(rows),
+					pool_name: this.pool_name,
+				});
+
+				frappe.msgprint({
+					title: "Success",
+					message: `Stock Entry <a href="/app/stock-entry/${res.name}">${res.name}</a> created.`,
+					indicator: "green",
+				});
+
+				await this.fetch_and_render_pool_data(this.pool_name);
+			} catch (err) {
+				console.error(err);
+				frappe.msgprint("Failed to create Stock Entry.");
+			}
 		});
 	}
 
