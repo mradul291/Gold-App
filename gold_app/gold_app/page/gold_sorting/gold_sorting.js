@@ -238,7 +238,7 @@ class GoldSortingPage {
 
 	async create_pool() {
     const btn = this.container.find(".create-pool-btn");
-    btn.prop("disabled", true).text("Creating...");
+    btn.prop("disabled", true).text("Created");
 
     try {
         const r = await frappe.call({

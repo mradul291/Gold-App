@@ -42,7 +42,7 @@ class PoolPage {
 				fieldname: "gold_pool_select",
 				label: "Select Gold Pool",
 				fieldtype: "Select",
-				options: ["Loading..."],
+				options: ["Select Pool..."],
 				reqd: 1,
 			},
 			parent: this.top_bar.find(".select-field-container"),
@@ -151,6 +151,7 @@ class PoolPage {
         <thead>
             <tr>
                 <th>Purity</th>
+				<th>Source Item</th>
                 <th>Item Group</th>
                 <th>Qty</th>
                 <th>Item Code</th>
@@ -186,6 +187,7 @@ class PoolPage {
                         ${purity_options}
                     </select>
                 </td>
+				<td><input type="text" class="form-control" name="source_item" readonly></td>
                 <td><select class="form-control" name="item_group">${ig_options}</select></td>
                 <td><input type="number" class="form-control" name="qty" min="0"></td>
                 <td><input type="text" class="form-control" name="item_code" readonly></td>
@@ -194,6 +196,17 @@ class PoolPage {
                 <td><button class="btn btn-danger btn-sm remove-row">X</button></td>
             </tr>
         `);
+			row.find("select[name='purity']").on("change", function () {
+				let selected = $(this).find("option:selected");
+				let purityVal = selected.val();
+				row.find("input[name='valuation_rate']").val(selected.data("rate") || 0);
+
+				if (purityVal) {
+					row.find("input[name='source_item']").val(`Unsorted-${purityVal}`);
+				} else {
+					row.find("input[name='source_item']").val("");
+				}
+			});
 
 			if (purity) row.find("select[name='purity']").val(purity);
 
@@ -242,6 +255,7 @@ class PoolPage {
 				let r = $(this);
 				rows.push({
 					purity: r.find("select[name='purity']").val(),
+					source_item: r.find("input[name='source_item']").val(),
 					qty: r.find("input[name='qty']").val(),
 					item_code: r.find("input[name='item_code']").val(),
 					valuation_rate: r.find("input[name='valuation_rate']").val(),
