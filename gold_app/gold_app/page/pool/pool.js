@@ -156,7 +156,6 @@ class PoolPage {
                 <th>Purity</th>
                 <th>Item Group</th>
                 <th>Weight (g)</th>
-                <th>Item Code</th>
                 <th>Length (CM)</th>
                 <th>Valuation Rate</th>
                 <th>Target WH</th>
@@ -243,7 +242,6 @@ class PoolPage {
         		</td>                
 				<td><select class="form-control" name="item_group">${ig_options}</select></td>
                 <td><input type="number" class="form-control" name="qty" min="0"></td>
-                <td><input type="text" class="form-control" name="item_code" readonly></td>
                 <td><input type="number" class="form-control" name="item_length" min="0" step="0.01" placeholder="Length (CM)"></td>
                 <td><input type="number" class="form-control" name="valuation_rate" value="${valuation_rate}" step="0.01" readonly></td>
                 <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
