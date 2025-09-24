@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 
 # Set prefix for Item Group based on the code before " - "
 def set_item_group_prefix(doc, method):
@@ -29,26 +30,6 @@ def autoname(doc, method):
         frappe.throw(f"Could not generate unique code for prefix {prefix}. Please try again.")
 
     doc.item_code = new_code
-
-
-# @frappe.whitelist()
-# def create_item_from_group(item_group):
-#     """Create a new Item using autoname logic based on given Item Group and return item_code."""
-#     if not item_group:
-#         frappe.throw("Item Group is required")
-
-#     # Create and insert new item
-#     new_item = frappe.new_doc("Item")
-#     new_item.item_group = item_group
-#     new_item.item_name = item_group  # or you can set a better name if required
-#     new_item.stock_uom = "Gram"
-#     new_item.insert(ignore_permissions=True)
-
-#     return {"item_code": new_item.item_code}
-
-
-import frappe
-from frappe.utils import flt
 
 @frappe.whitelist()
 def create_item_from_group(item_group, valuation_rate=None):
@@ -82,3 +63,16 @@ def create_item_from_group(item_group, valuation_rate=None):
         "item_code": new_item.item_code,
         "item_name": new_item.item_name
     }
+
+
+@frappe.whitelist()
+def bulk_create_items(rows):
+    import json
+    rows = json.loads(rows) if isinstance(rows, str) else rows
+    created_items = []
+    for r in rows:
+        if not r.get("item_group"):
+            continue
+        item = create_item_from_group(r["item_group"], r.get("valuation_rate", 0))
+        created_items.append({"item_code": item["item_code"]})
+    return created_items

@@ -237,26 +237,25 @@ class GoldSortingPage {
 	}
 
 	async create_pool() {
-    const btn = this.container.find(".create-pool-btn");
-    btn.prop("disabled", true).text("Created");
+		const btn = this.container.find(".create-pool-btn");
+		btn.prop("disabled", true).text("Created");
 
-    try {
-        const r = await frappe.call({
-            method: "gold_app.api.pooling.create_pool",
-            args: {
-                pickup_names: Array.from(this.selected),
-                pool_type: "Dealer",
-            },
-        });
+		try {
+			const r = await frappe.call({
+				method: "gold_app.api.pooling.create_pool",
+				args: {
+					pickup_names: Array.from(this.selected),
+					pool_type: "Branch",
+				},
+			});
 
-        if (r.message) {
-            frappe.show_alert({ message: __("Pool Created"), indicator: "green" });
-        }
-    } catch (e) {
-        console.error(e);
-        frappe.msgprint(__("Failed to create pool."));
-        btn.prop("disabled", false).text("Review & Create Pool");
-    }
-}
-
+			if (r.message) {
+				frappe.show_alert({ message: __("Pool Created"), indicator: "green" });
+			}
+		} catch (e) {
+			console.error(e);
+			frappe.msgprint(__("Failed to create pool."));
+			btn.prop("disabled", false).text("Review & Create Pool");
+		}
+	}
 }

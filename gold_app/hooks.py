@@ -44,13 +44,17 @@ doc_events = {
         "validate": [
             # "gold_app.api.stock_entry.validate_break_item_qty",
         ],
-        "on_submit": "gold_app.api.stock_entry.create_material_issue"
+        "on_submit": [
+            "gold_app.api.stock_entry.create_material_issue",
+            "gold_app.api.stock_entry.update_item_from_stock_entry"
+            ]
     },
     "Purchase Receipt": {
         "autoname": "gold_app.api.purchase_receipt.autoname",
         "validate": "gold_app.api.purchase_receipt.set_bank_reference_code",
         "before_submit": [
             "gold_app.gold_app.doctype.item_pickup.item_pickup.create_item_pickups",
+            "gold_app.gold_app.doctype.item_in_hand.item_in_hand.create_item_in_hand_entries",
             "gold_app.api.purchase_receipt.validate_payment_split",
         ],
         "on_submit": [

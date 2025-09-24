@@ -42,7 +42,7 @@ class PoolPage {
 				fieldname: "gold_pool_select",
 				label: "Select Gold Pool",
 				fieldtype: "Select",
-				options: ["Loading..."],
+				options: ["Select Pool..."],
 				reqd: 1,
 			},
 			parent: this.top_bar.find(".select-field-container"),
@@ -105,7 +105,7 @@ class PoolPage {
 
 		let table = $("<table class='table table-bordered'></table>");
 		let thead = $(
-			"<thead><tr><th>Purity</th><th>Total Weight (g)</th><th>AVCO</th><th>Total Cost</th></tr></thead>"
+			"<thead><tr><th>Purity</th><th>Total Weight (g)</th><th>Remaining Weight (g)</th><th>AVCO</th><th>Total Cost</th></tr></thead>"
 		);
 		table.append(thead);
 
@@ -114,6 +114,9 @@ class PoolPage {
 			tbody.append(`<tr>
                 <td>${row["Purity"]}</td>
                 <td>${row["Total Weight (g)"]}</td>
+                <td class="remaining-weight" data-purity="${row["Purity"]}">
+                    ${row["Total Weight (g)"]}
+                </td>
                 <td>${row["AVCO (RM/g)"]}</td>
                 <td>${row["Total Cost (MYR)"]}</td>
             </tr>`);
@@ -152,10 +155,12 @@ class PoolPage {
             <tr>
                 <th>Purity</th>
                 <th>Item Group</th>
-                <th>Qty</th>
+                <th>Weight (g)</th>
                 <th>Item Code</th>
+                <th>Length (CM)</th>
                 <th>Valuation Rate</th>
                 <th>Target WH</th>
+                <th>Print</th>
                 <th></th>
             </tr>
         </thead>
@@ -165,8 +170,55 @@ class PoolPage {
 		let tbody = $("<tbody></tbody>");
 		table.append(tbody);
 
-		this.entry_table_container.append("<h4>Create Stock Entry</h4>");
+		this.entry_table_container.append("<h4>Retail Entry</h4>");
 		this.entry_table_container.append(table);
+
+		let remainingTableContainer = $('<div style="margin-top:20px;"></div>').appendTo(
+			this.entry_table_container
+		);
+
+		// Function to render the remaining stock transfer table
+		const renderRemainingTransferTable = () => {
+			remainingTableContainer.empty();
+
+			if (!this.last_data.length) return;
+
+			let table = $("<table class='table table-bordered remaining-stock-transfer'></table>");
+
+			let thead = $(
+				"<thead><tr><th>Purity</th><th>Source Item</th><th>Weight (g)</th><th>Target Warehouse</th></tr></thead>"
+			);
+			table.append(thead);
+
+			let tbody = $("<tbody></tbody>");
+
+			this.last_data.forEach((row) => {
+				let sourceItem = `Unsorted-${row["Purity"]}`;
+				let targetWarehouseSelect = `<select class="form-control target-warehouse">${wh_options}</select>`;
+
+				// Calculate remaining dynamically
+				let usedQty = 0;
+				$(".entry-table tbody tr").each(function () {
+					let purity = $(this).find("select[name='purity']").val();
+					let qty = parseFloat($(this).find("input[name='qty']").val() || 0);
+					if (purity === row["Purity"]) usedQty += qty;
+				});
+
+				let remainingQty = (parseFloat(row["Total Weight (g)"]) || 0) - usedQty;
+				remainingQty = remainingQty < 0 ? 0 : remainingQty;
+
+				tbody.append(`<tr>
+            <td>${row["Purity"]}</td>
+            <td>${sourceItem}</td>
+            <td>${remainingQty.toFixed(3)}</td>
+            <td>${targetWarehouseSelect}</td>
+        </tr>`);
+			});
+
+			table.append(tbody);
+			remainingTableContainer.append("<h4>Wholesale Entry</h4>");
+			remainingTableContainer.append(table);
+		};
 
 		// Buttons
 		let addRowBtn = $('<button class="btn btn-sm btn-primary mt-2">Add Row</button>');
@@ -186,47 +238,70 @@ class PoolPage {
                         ${purity_options}
                     </select>
                 </td>
-                <td><select class="form-control" name="item_group">${ig_options}</select></td>
+				<td style="display:none">
+            		<input type="text" class="form-control" name="source_item" readonly>
+        		</td>                
+				<td><select class="form-control" name="item_group">${ig_options}</select></td>
                 <td><input type="number" class="form-control" name="qty" min="0"></td>
                 <td><input type="text" class="form-control" name="item_code" readonly></td>
+                <td><input type="number" class="form-control" name="item_length" min="0" step="0.01" placeholder="Length (CM)"></td>
                 <td><input type="number" class="form-control" name="valuation_rate" value="${valuation_rate}" step="0.01" readonly></td>
                 <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
+                <td class="text-center">
+                    <button class="btn btn-success btn-sm print-row">
+                        <i class="fa fa-print"></i>
+                    </button>
+                </td>
                 <td><button class="btn btn-danger btn-sm remove-row">X</button></td>
             </tr>
         `);
+			row.find("select[name='purity']").on("change", function () {
+				let selected = $(this).find("option:selected");
+				let purityVal = selected.val();
+				row.find("input[name='valuation_rate']").val(selected.data("rate") || 0);
+
+				if (purityVal) {
+					row.find("input[name='source_item']").val(`Unsorted-${purityVal}`);
+				} else {
+					row.find("input[name='source_item']").val("");
+				}
+			});
 
 			if (purity) row.find("select[name='purity']").val(purity);
 
 			// Events
 			row.find(".remove-row").on("click", () => row.remove());
 
+			row.find(".print-row").on("click", () => {
+				let itemCode = row.find("input[name='item_code']").val();
+				if (!itemCode) {
+					frappe.msgprint("No Item Code available to print.");
+					return;
+				}
+				frappe.msgprint(`Print action triggered for Item: <b>${itemCode}</b>`);
+				// ✅ Later you can replace with actual print logic
+			});
+
 			row.find("select[name='purity']").on("change", function () {
 				let selected = $(this).find("option:selected");
 				row.find("input[name='valuation_rate']").val(selected.data("rate") || 0);
 			});
 
-			row.find("select[name='item_group']").on("change", async function () {
+			row.find("select[name='item_group']").on("change", function () {
+				// Just update the value in the row, do not create the item now
 				let selected_group = $(this).val();
-				let valuation_rate = row.find("input[name='valuation_rate']").val();
 				if (selected_group) {
-					try {
-						let res = await frappe.xcall("gold_app.api.item.create_item_from_group", {
-							item_group: selected_group,
-							valuation_rate: valuation_rate || 0,
-						});
-						row.find("input[name='item_code']").val(res.item_code);
-						frappe.show_alert({
-							message: `Item <b>${res.item_code}</b> created for group <b>${selected_group}</b>.`,
-							indicator: "green",
-						});
-					} catch (err) {
-						console.error(err);
-						frappe.msgprint("Failed to auto-create item for selected Item Group.");
-					}
+					row.find("input[name='item_code']").val(""); // Clear item_code, will be created on save
 				}
 			});
 
+			row.find("input[name='qty']").on("input", () => {
+				this.update_remaining_weights();
+				renderRemainingTransferTable();
+			});
+
 			tbody.append(row);
+			renderRemainingTransferTable();
 		};
 
 		// Show only ONE blank row on page load
@@ -234,6 +309,7 @@ class PoolPage {
 
 		// Add new empty row button
 		addRowBtn.on("click", () => addRow());
+		renderRemainingTransferTable();
 
 		// Save button logic remains unchanged
 		saveBtn.on("click", async () => {
@@ -242,11 +318,22 @@ class PoolPage {
 				let r = $(this);
 				rows.push({
 					purity: r.find("select[name='purity']").val(),
+					source_item: r.find("input[name='source_item']").val(),
 					qty: r.find("input[name='qty']").val(),
 					item_code: r.find("input[name='item_code']").val(),
+					item_length: r.find("input[name='item_length']").val(),
 					valuation_rate: r.find("input[name='valuation_rate']").val(),
 					target_warehouse: r.find("select[name='target_warehouse']").val(),
 					item_group: r.find("select[name='item_group']").val(),
+				});
+			});
+
+			// Collect remaining transfers
+			let remainingTransfers = [];
+			$(".remaining-stock-transfer tbody tr").each(function () {
+				remainingTransfers.push({
+					purity: $(this).find("td").eq(0).text(),
+					target_warehouse: $(this).find("select.target-warehouse").val(),
 				});
 			});
 
@@ -259,6 +346,7 @@ class PoolPage {
 				let res = await frappe.xcall("gold_app.api.pooling.create_stock_entry_from_pool", {
 					purity_data: JSON.stringify(rows),
 					pool_name: this.pool_name,
+					remaining_transfers: JSON.stringify(remainingTransfers),
 				});
 
 				frappe.msgprint({
@@ -275,6 +363,31 @@ class PoolPage {
 		});
 	}
 
+	update_remaining_weights() {
+		let remainingByPurity = {};
+
+		// 1. Start with total weight for each purity
+		this.last_data.forEach((row) => {
+			remainingByPurity[row["Purity"]] = parseFloat(row["Total Weight (g)"]) || 0;
+		});
+
+		// 2. Subtract qty from Stock Entry rows for matching purity
+		$(".entry-table tbody tr").each(function () {
+			let purity = $(this).find("select[name='purity']").val();
+			let qty = parseFloat($(this).find("input[name='qty']").val() || 0);
+			if (purity && remainingByPurity[purity] !== undefined) {
+				remainingByPurity[purity] -= qty;
+			}
+		});
+
+		// 3. Update UI in summary table
+		this.table_container.find(".remaining-weight").each(function () {
+			let purity = $(this).data("purity");
+			let remaining = remainingByPurity[purity] || 0;
+			$(this).text(remaining >= 0 ? remaining.toFixed(3) : "0.000");
+		});
+	}
+
 	async create_stock_entry_for_row(row) {
 		let purity = row.data("purity");
 		let qty = row.find("input[name='qty']").val();
@@ -283,6 +396,7 @@ class PoolPage {
 		let source_wh = row.find("select[name='source_warehouse']").val();
 		let target_wh = row.find("select[name='target_warehouse']").val();
 		let item_group = row.find("select[name='item_group']").val();
+		let item_length = row.find("input[name='item_length']").val();
 
 		if (!qty || !item_code || !source_wh || !target_wh || !item_group) {
 			frappe.msgprint("Fill all fields before creating entry.");
@@ -297,6 +411,10 @@ class PoolPage {
 						qty,
 						item_code,
 						valuation_rate,
+						item_length:
+							item_length === "" || item_length === null
+								? null
+								: parseFloat(item_length),
 						source_warehouse: source_wh,
 						target_warehouse: target_wh,
 						item_group,

@@ -1,73 +1,73 @@
 frappe.pages["manager-pickup"].on_page_load = function (wrapper) {
-    var page = frappe.ui.make_app_page({
-        parent: wrapper,
-        title: "Manager Pickup",
-        single_column: true,
-    });
-    new ManagerPickupPage(wrapper);
+	var page = frappe.ui.make_app_page({
+		parent: wrapper,
+		title: "Manager Pickup",
+		single_column: true,
+	});
+	new ManagerPickupPage(wrapper);
 };
 
 class ManagerPickupPage {
-    constructor(wrapper) {
-        this.wrapper = wrapper;
-        this.page = wrapper.page;
-        this.container = null;
-        this.current_dealer = null;
-        this.changes = {};
-        this.setup();
-    }
+	constructor(wrapper) {
+		this.wrapper = wrapper;
+		this.page = wrapper.page;
+		this.container = null;
+		this.current_dealer = null;
+		this.changes = {};
+		this.setup();
+	}
 
-    setup() {
-        this.make_toolbar();
-        this.make_container();
-        this.show_summary();
-    }
+	setup() {
+		this.make_toolbar();
+		this.make_container();
+		this.show_summary();
+	}
 
-    make_toolbar() {
-        this.page.set_primary_action(__("Refresh"), () => this.show_summary());
-        this.page.set_secondary_action(__("Save"), () => this.save_changes());
-        this.page.clear_menu();
-    }
+	make_toolbar() {
+		this.page.set_primary_action(__("Refresh"), () => this.show_summary());
+		this.page.set_secondary_action(__("Save"), () => this.save_changes());
+		this.page.clear_menu();
+	}
 
-    make_container() {
-        this.container = $('<div class="manager-pickup-container"></div>').appendTo(this.wrapper);
-    }
+	make_container() {
+		this.container = $('<div class="manager-pickup-container"></div>').appendTo(this.wrapper);
+	}
 
-    async show_summary() {
-        this.container.empty();
+	async show_summary() {
+		this.container.empty();
 
-        let items = [];
-        try {
-            items = await frappe.xcall("gold_app.api.page_api.get_manager_pickup_items", {
-                is_pickup: 1,
-            });
-        } catch (err) {
-            console.error(err);
-            this.container.html('<div class="alert alert-danger">Failed to load data</div>');
-            return;
-        }
+		let items = [];
+		try {
+			items = await frappe.xcall("gold_app.api.page_api.get_manager_pickup_items", {
+				is_pickup: 1,
+			});
+		} catch (err) {
+			console.error(err);
+			this.container.html('<div class="alert alert-danger">Failed to load data</div>');
+			return;
+		}
 
-        if (!items.length) {
-            this.container.html('<div class="alert alert-info">No pickup items found</div>');
-            return;
-        }
+		if (!items.length) {
+			this.container.html('<div class="alert alert-info">No pickup items found</div>');
+			return;
+		}
 
-        const grouped = {};
-        items.forEach((i) => {
-            if (!grouped[i.dealer]) {
-                grouped[i.dealer] = {
-                    dealer: i.dealer,
-                    purities: new Set(),
-                    total_weight: 0,
-                    items: [],
-                };
-            }
-            grouped[i.dealer].purities.add(i.purity);
-            grouped[i.dealer].total_weight += i.total_weight || 0;
-            grouped[i.dealer].items.push(i);
-        });
+		const grouped = {};
+		items.forEach((i) => {
+			if (!grouped[i.dealer]) {
+				grouped[i.dealer] = {
+					dealer: i.dealer,
+					purities: new Set(),
+					total_weight: 0,
+					items: [],
+				};
+			}
+			grouped[i.dealer].purities.add(i.purity);
+			grouped[i.dealer].total_weight += i.total_weight || 0;
+			grouped[i.dealer].items.push(i);
+		});
 
-        const $tbl = $(`
+		const $tbl = $(`
             <table class="table table-sm table-bordered">
                 <thead>
                     <tr>
@@ -82,10 +82,10 @@ class ManagerPickupPage {
             </table>
         `).appendTo(this.container);
 
-        const $tbody = $tbl.find("tbody");
+		const $tbody = $tbl.find("tbody");
 
-        Object.values(grouped).forEach((group) => {
-            const $tr = $(`
+		Object.values(grouped).forEach((group) => {
+			const $tr = $(`
                 <tr data-dealer="${group.dealer}">
                     <td class="toggle-cell" style="cursor:pointer;text-align:center;">
                         <i class="fa fa-chevron-right"></i>
@@ -99,33 +99,33 @@ class ManagerPickupPage {
                 </tr>
             `).appendTo($tbody);
 
-            $tr.find(".toggle-cell").on("click", async () => {
-                this.current_dealer = group.dealer;
-                await this.show_detail(group.items, $tr);
-            });
+			$tr.find(".toggle-cell").on("click", async () => {
+				this.current_dealer = group.dealer;
+				await this.show_detail(group.items, $tr);
+			});
 
-            $tr.find(".dealer-tick-all-ok").on("change", (e) => {
-                const checked = e.target.checked;
-                group.items.forEach((item) => {
-                    this.track_change(item.name, { tick_all_ok: checked ? 1 : 0 });
-                });
+			$tr.find(".dealer-tick-all-ok").on("change", (e) => {
+				const checked = e.target.checked;
+				group.items.forEach((item) => {
+					this.track_change(item.name, { tick_all_ok: checked ? 1 : 0 });
+				});
 
-                if ($tr.next().hasClass("detail-row")) {
-                    $tr.next().find(".tick-all-ok").prop("checked", checked);
-                }
-            });
-        });
-    }
+				if ($tr.next().hasClass("detail-row")) {
+					$tr.next().find(".tick-all-ok").prop("checked", checked);
+				}
+			});
+		});
+	}
 
-    async show_detail(items, $row) {
-        if ($row.next().hasClass("detail-row")) {
-            $row.next().toggle();
-            const icon = $row.find(".toggle-cell i");
-            icon.toggleClass("fa-chevron-right fa-chevron-down");
-            return;
-        }
+	async show_detail(items, $row) {
+		if ($row.next().hasClass("detail-row")) {
+			$row.next().toggle();
+			const icon = $row.find(".toggle-cell i");
+			icon.toggleClass("fa-chevron-right fa-chevron-down");
+			return;
+		}
 
-        const $detailRow = $(`
+		const $detailRow = $(`
             <tr class="detail-row">
                 <td colspan="5">
                     <table class="table table-sm table-bordered">
@@ -147,20 +147,20 @@ class ManagerPickupPage {
             </tr>
         `).insertAfter($row);
 
-        const $tbody = $detailRow.find("tbody");
+		const $tbody = $detailRow.find("tbody");
 
-        items.forEach((i) => {
-            const dstr = i.date ? frappe.datetime.str_to_user(i.date) : "";
-            const checked = i.tick_all_ok ? "checked" : "";
-            const discrepancyOptions = `
+		items.forEach((i) => {
+			const dstr = i.date ? frappe.datetime.str_to_user(i.date) : "";
+			const checked = i.tick_all_ok ? "checked" : "";
+			const discrepancyOptions = `
                 <option value="">Select</option>
                 <option value="Refund Request (ie. Credit Note)" ${
-                    i.discrepancy_action === "Refund Request (ie. Credit Note)" ? "selected" : ""
-                }>
+					i.discrepancy_action === "Refund Request (ie. Credit Note)" ? "selected" : ""
+				}>
                     Refund Request (ie. Credit Note)
                 </option>
             `;
-            const $tr = $(`
+			const $tr = $(`
                 <tr data-name="${i.name}">
                     <td>${dstr}</td>
                     <td>${i.dealer}</td>
@@ -179,72 +179,98 @@ class ManagerPickupPage {
                 </tr>
             `).appendTo($tbody);
 
-            $tr.find(".tick-all-ok").on("change", (e) => {
-                this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
-            });
+			$tr.find(".tick-all-ok").on("change", (e) => {
+				this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
+			});
 
-            // New functionality: prompt for discrepancy_amount
-            $tr.find(".discrepancy-action").on("change", async (e) => {
-                const val = e.target.value;
-                if (val === "Refund Request (ie. Credit Note)") {
-                    const weight = await frappe.prompt(
-                        [
-                            {
-                                fieldname: "discrepancy_amount",
-                                label: "Discrepancy Amount (MYR)",
-                                fieldtype: "Float",
-                                reqd: 1,
-                            },
-                        ],
-                        (values) => {
-                            this.track_change(i.name, {
-                                discrepancy_action: val,
-                                discrepancy_amount: values.discrepancy_amount,
-                            });
-                        },
-                        __("Enter Discrepancy Amount"),
-                        __("Save")
-                    );
-                } else {
-                    this.track_change(i.name, { discrepancy_action: val, discrepancy_amount: null });
-                }
-            });
+			// New functionality: prompt for discrepancy_amount
+			$tr.find(".discrepancy-action").on("change", async (e) => {
+				const val = e.target.value;
+				if (val === "Refund Request (ie. Credit Note)") {
+					const weight = await frappe.prompt(
+						[
+							{
+								fieldname: "discrepancy_amount",
+								label: "Discrepancy Amount (MYR)",
+								fieldtype: "Float",
+								reqd: 1,
+							},
+						],
+						(values) => {
+							this.track_change(i.name, {
+								discrepancy_action: val,
+								discrepancy_amount: values.discrepancy_amount,
+							});
+						},
+						__("Enter Discrepancy Amount"),
+						__("Save")
+					);
+				} else {
+					this.track_change(i.name, {
+						discrepancy_action: val,
+						discrepancy_amount: null,
+					});
+				}
+			});
+		});
+
+		$row.find(".toggle-cell i").removeClass("fa-chevron-right").addClass("fa-chevron-down");
+	}
+
+	track_change(name, update) {
+		if (!this.changes[name]) {
+			this.changes[name] = { name };
+		}
+		Object.assign(this.changes[name], update);
+		this.page.set_indicator(__("Not Saved"), "orange");
+	}
+
+	async save_changes() {
+    const updates = Object.values(this.changes);
+    if (!updates.length) {
+        frappe.show_alert({ message: __("No changes to save"), indicator: "blue" });
+        return;
+    }
+
+    try {
+        const result = await frappe.xcall("gold_app.api.page_api.manager_bulk_update_pickup", {
+            doc_updates: updates,
         });
 
-        $row.find(".toggle-cell i").removeClass("fa-chevron-right").addClass("fa-chevron-down");
-    }
+        // Show success
+        frappe.show_alert({
+            message: __(`${result.updated} records updated`),
+            indicator: "green",
+        });
+        this.page.clear_indicator();
 
-    track_change(name, update) {
-        if (!this.changes[name]) {
-            this.changes[name] = { name };
-        }
-        Object.assign(this.changes[name], update);
-        this.page.set_indicator(__("Not Saved"), "orange");
-    }
+        const selected_pickups = Object.keys(this.changes)
+            .filter(name => this.changes[name].tick_all_ok)
+            .map(name => name);
 
-    async save_changes() {
-        const updates = Object.values(this.changes);
-        if (!updates.length) {
-            frappe.show_alert({ message: __("No changes to save"), indicator: "blue" });
-            return;
-        }
-
-        try {
-            frappe.show_progress(__("Saving Changes"), 20, 100, __("Processing..."));
-            const result = await frappe.xcall("gold_app.api.page_api.manager_bulk_update_pickup", {
-                doc_updates: updates,
+        if (selected_pickups.length) {
+            let res = await frappe.xcall("gold_app.api.page_api.create_manager_pool", {
+                pickup_names: selected_pickups,
+                pool_type: "Dealer",
+                notes: "Auto-created from Manager Pickup Page"
             });
-            frappe.show_progress(__("Saving Changes"), 100, 100, __("Done"));
-            frappe.show_alert({
-                message: __(`${result.updated} records updated`),
-                indicator: "green",
+
+
+            frappe.msgprint({
+                title: __("Pool Created"),
+                message: `New Pool <a href="/app/gold-pool/${res.pool_name}" target="_blank">${res.pool_name}</a> created.<br>
+                          <b>Total Weight:</b> ${res.total_weight.toFixed(2)} g`,
+                indicator: "green"
             });
-            this.page.clear_indicator();
-            this.changes = {};
-            this.show_summary();
-        } catch (err) {
-            console.error(err);
-            frappe.msgprint("Failed to save changes");
         }
+
+        this.changes = {};
+        await this.show_summary();
+
+    } catch (err) {
+        console.error(err);
+        frappe.msgprint("Failed to save changes");
     }
+}
+
 }

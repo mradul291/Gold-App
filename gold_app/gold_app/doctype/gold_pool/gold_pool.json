@@ -16,6 +16,7 @@
   "stock_entry",
   "section_break_ftio",
   "pool_items",
+  "pool_in_hand_items",
   "section_break_nbei",
   "purity_breakdown"
  ],
@@ -70,7 +71,8 @@
    "fieldname": "pool_items",
    "fieldtype": "Table",
    "label": "Pool Items",
-   "options": "Gold Pool Item"
+   "options": "Gold Pool Item",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_nbei",
@@ -81,12 +83,19 @@
    "fieldtype": "Table",
    "label": "Purity Breakdown",
    "options": "Purity Breakdown"
+  },
+  {
+   "fieldname": "pool_in_hand_items",
+   "fieldtype": "Table",
+   "label": "Pool In Hand Items",
+   "options": "Pool In Hand Items",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-19 13:46:55.849170",
+ "modified": "2025-09-23 18:11:05.480583",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Gold Pool",

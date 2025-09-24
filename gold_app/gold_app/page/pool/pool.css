@@ -100,3 +100,14 @@
     background: #dc3545;
     color: #fff;
 }
+.result-tables table {
+    margin-top: 15px;
+}
+.result-tables th {
+    background: #f8f9fa;
+}
+.result-tables td, 
+.result-tables th {
+    text-align: center;
+}
+

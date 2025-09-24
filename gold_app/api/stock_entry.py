@@ -82,3 +82,28 @@ def create_material_issue(doc, method):
 
     frappe.msgprint(_("Mixed Gold weight has been updated successfully. Stock Entry: {0}").format(se.name))
 
+@frappe.whitelist()
+def update_item_from_stock_entry(doc, method):
+    """
+    On submit of Stock Entry, update Item master with
+    purity and item_length from Stock Entry Detail child table.
+    """
+    for row in doc.items:
+        if not row.item_code:
+            continue
+
+        update_data = {}
+
+        # Update purity if present
+        if getattr(row, "purity", None):
+            update_data["purity"] = row.purity
+
+        # Update item_length if present
+        if getattr(row, "item_length", None):
+            update_data["item_length"] = row.item_length
+
+        # Only update if we have data to set
+        if update_data:
+            frappe.db.set_value("Item", row.item_code, update_data)
+
+    frappe.db.commit()

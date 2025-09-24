@@ -1,6 +1,9 @@
 import frappe
 import json
 from frappe import _
+from frappe.utils import nowdate
+
+#-------------------------------------------------------Pickup Items Page-----------------------------------------------------
 
 # Pickup Item Admin Page(4 functions)
 @frappe.whitelist()
@@ -198,7 +201,7 @@ def get_pending_pickup_overview(dealer=None):
 
     return {"total": total_data, "selected": selected_data}
 
-#----------------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------Staff Pickup Items Page--------------------------------------------------
 # Pickup Item Staff Page
 @frappe.whitelist()
 def get_staff_pickup_items(dealer, is_pickup=0):
@@ -237,6 +240,8 @@ def get_staff_pickup_items(dealer, is_pickup=0):
         order_by="date desc, name desc",
         ignore_permissions=False
     )
+
+#-------------------------------------------------------Manager Pickup Page-----------------------------------------------------
 
 # Pickup Item check by Manager
 @frappe.whitelist()
@@ -325,4 +330,85 @@ def manager_bulk_update_pickup(doc_updates):
         "updated_list": updated,
         "skipped": skipped,
         "errors": errors
+    }
+
+# Create Dealer Pool Direct for Manager Veirifcation
+@frappe.whitelist()
+def create_manager_pool(pickup_names, pool_type="Dealer", notes=None):
+    """
+    Creates a Gold Pool directly from selected Manager Pickup items.
+    This is similar to create_pool in pooling.py but kept separate
+    for Manager Pickup UI workflow.
+    """
+    pickup_names = frappe.parse_json(pickup_names) if isinstance(pickup_names, str) else pickup_names
+    if not pickup_names:
+        frappe.throw("No pickups supplied for pool creation")
+
+    # --- Step 1: Create new Gold Pool doc
+    pool = frappe.new_doc("Gold Pool")
+    pool.pool_type = pool_type
+    pool.status = "Pending"
+    pool.date_created = nowdate()
+    pool.notes = notes or ""
+
+    # --- Step 2: Aggregation containers
+    totals_by_purity = {}
+    cost_by_purity = {}
+    total_weight = 0.0
+    total_value = 0.0
+
+    # --- Step 3: Loop through Item Pickups and aggregate
+    for pickup_name in pickup_names:
+        pu = frappe.get_doc("Item Pickup", pickup_name)
+
+        pool.append("pool_items", {
+            "item_pickup": pu.name,
+            "dealer": pu.dealer,
+            "date": pu.date,
+            "purity": pu.purity,
+            "total_weight": pu.total_weight or 0.0,
+            "amount": pu.amount or 0.0,
+            "avco_rate": pu.avco_rate or 0.0
+        })
+
+        weight = pu.total_weight or 0.0
+        amount = pu.amount or 0.0
+
+        totals_by_purity.setdefault(pu.purity, 0.0)
+        totals_by_purity[pu.purity] += weight
+
+        cost_by_purity.setdefault(pu.purity, 0.0)
+        cost_by_purity[pu.purity] += amount
+
+        total_weight += weight
+        total_value += amount
+
+    # --- Step 4: Populate Purity Breakdown
+    for purity, weight in totals_by_purity.items():
+        total_cost = cost_by_purity[purity]
+        avco_rate = total_cost / weight if weight else 0.0
+        pool.append("purity_breakdown", {
+            "purity": purity,
+            "total_weight": weight,
+            "total_cost": total_cost,
+            "avco_rate": avco_rate
+        })
+
+    # --- Step 5: Aggregate totals
+    pool.total_weight = total_weight
+    pool.total_value = total_value
+
+    # --- Step 6: Insert pool doc
+    pool.insert(ignore_permissions=True)
+    
+    for pickup_name in pickup_names:
+        frappe.db.set_value("Item Pickup", pickup_name, {
+            "pooled": 1,
+            "pool_reference": pool.name
+        })
+
+    return {
+        "pool_name": pool.name,
+        "total_weight": total_weight,
+        "total_value": total_value
     }

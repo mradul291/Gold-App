@@ -344,6 +344,17 @@
   },
   {
     "doctype": "Custom Field",
+    "dt": "Stock Entry Detail",
+    "fieldname": "item_length",
+    "label": "Length (CM)",
+    "fieldtype": "Float",
+    "insert_after": "item_code",
+    "reqd": 0,
+    "name": "Stock Entry Detail-item_length",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "supplier_id_number",
     "label": "ID Number",
