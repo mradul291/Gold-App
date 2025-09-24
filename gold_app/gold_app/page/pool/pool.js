@@ -469,7 +469,7 @@ class PoolPage {
             <tr>
                 <th>Purity</th>
                 <th>Item Code</th>
-                <th>Retail Qty</th>
+                <th>Retail Weight (g)</th>
                 <th>Retail Warehouse</th>
                 <th>Wholesale Warehouse</th>
             </tr>
