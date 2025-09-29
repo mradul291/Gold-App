@@ -33,10 +33,7 @@ def autoname(doc, method):
 
 @frappe.whitelist()
 def create_item_from_group(item_group, valuation_rate=None):
-    """
-    Auto-create an Item for a given Item Group using prefix-based autoname
-    and optionally set its valuation rate.
-    """
+  
     if not item_group:
         frappe.throw("Item Group is required to create an Item")
 
@@ -63,7 +60,6 @@ def create_item_from_group(item_group, valuation_rate=None):
         "item_code": new_item.item_code,
         "item_name": new_item.item_name
     }
-
 
 @frappe.whitelist()
 def bulk_create_items(rows):

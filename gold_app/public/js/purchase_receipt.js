@@ -98,3 +98,69 @@ frappe.ui.form.on("Purchase Receipt", {
         }
     }
 });
+
+// Auto fill 2 rows on the Mix payment method section
+frappe.ui.form.on("Purchase Receipt", {
+    payment_method(frm) {
+        if (frm.doc.payment_method === "Mix") {
+            // Show the payment_split child table (if hidden)
+            frm.toggle_display("payment_split", true);
+
+            // Clear any existing rows to avoid duplicates
+            frm.clear_table("payment_split");
+
+            // 1st Row - Bank Transfer
+            let bank_row = frm.add_child("payment_split");
+            bank_row.mode_of_payment = "Bank Transfer";
+            bank_row.amount = 0.0;
+
+            // 2nd Row - Cash
+            let cash_row = frm.add_child("payment_split");
+            cash_row.mode_of_payment = "Cash";
+            cash_row.amount = 0.0;
+
+            // Refresh the table so rows show immediately
+            frm.refresh_field("payment_split");
+        } else {
+            // If not Mix, hide the payment_split table
+            frm.toggle_display("payment_split", false);
+        }
+    }
+});
+
+// Hide Multiple Add + Upload Button from Items
+frappe.ui.form.on('Purchase Receipt', {
+    refresh(frm) {
+        setTimeout(() => {
+            frm.fields_dict.items.grid.wrapper
+                .find('.grid-add-multiple-rows, .grid-upload')
+                .remove();
+        }, 500);
+    }
+});
+
+// Clearing Rate field each Time
+frappe.ui.form.on("Purchase Receipt Item", {
+    item_code: function (frm, cdt, cdn) {
+        let row = frappe.get_doc(cdt, cdn);
+
+        // Small delay so that ERPNext finishes auto-fetch first
+        setTimeout(() => {
+            frappe.model.set_value(cdt, cdn, "rate", 0); // Or leave blank ""
+        }, 200);
+    }
+});
+
+frappe.ui.form.on("Purchase Receipt", {
+    payment_method: function (frm) {
+        if (frm.doc.payment_method === "Customer Payable Account") {
+            frm.set_df_property("customer_payable_account", "hidden", 0);
+        } else {
+            frm.set_df_property("customer_payable_account", "hidden", 1);
+        }
+    },
+    onload: function (frm) {
+        // Run once when form loads
+        frm.trigger("payment_method");
+    }
+});

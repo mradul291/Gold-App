@@ -34,6 +34,17 @@
   },
   {
     "doctype": "Property Setter",
+    "name": "purchase_receipt_item-rate-label",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt Item",
+    "field_name": "rate",
+    "property": "label",
+    "property_type": "Currency",
+    "value": "Rate(MYR/g)",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
     "name": "stock_entry_detail-qty-label",
     "doctype_or_field": "DocField",
     "doc_type": "Stock Entry Detail",
@@ -144,6 +155,17 @@
   },
   {
     "doctype": "Property Setter",
+    "name": "Purchase Receipt-accounting_dimensions_section-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "accounting_dimensions_section",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
     "name": "Purchase Receipt-taxes-hidden",
     "doctype_or_field": "DocField",
     "doc_type": "Purchase Receipt",
@@ -220,26 +242,36 @@
     "module": "Gold App"
   },
   {
-  "doctype": "Property Setter",
-  "name": "Purchase Receipt-section_addresses-label",
-  "doctype_or_field": "DocField",
-  "doc_type": "Purchase Receipt",
-  "field_name": "section_addresses",
-  "property": "label",
-  "property_type": "Data",
-  "value": "Customer Address",
-  "module": "Gold App"
-},
-{
-  "doctype": "Property Setter",
-  "name": "Purchase Receipt-supplier_address-label",
-  "doctype_or_field": "DocField",
-  "doc_type": "Purchase Receipt",
-  "field_name": "supplier_address",
-  "property": "label",
-  "property_type": "Data",
-  "value": "Customer Address",
-  "module": "Gold App"
-}
-
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-section_addresses-label",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "section_addresses",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Customer Address",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-supplier_address-label",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "supplier_address",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Customer Address",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt Item",
+    "field_name": "qty",
+    "property": "precision",
+    "property_type": "float",
+    "value": "2",
+    "name": "Purchase Receipt Item-qty-precision",
+    "module": "Gold App"
+  }
 ]

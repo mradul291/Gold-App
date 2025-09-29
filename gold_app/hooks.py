@@ -67,12 +67,18 @@ doc_events = {
         "on_update": "gold_app.gold_app.doctype.item_pickup.item_pickup.on_update"
     },
     "Supplier": {
+        # "autoname": "gold_app.api.supplier.autoname_supplier",
+        "before_insert": "gold_app.api.supplier.generate_unique_id",
         "after_insert": "gold_app.api.api.sync_customer_with_supplier",
-        "on_update": "gold_app.api.api.sync_customer_with_supplier"
+        "on_update": "gold_app.api.api.sync_customer_with_supplier",
+        # "validate": "gold_app.api.supplier.validate_unique_id",                         
     },
     "Customer": {
+        # "autoname": "gold_app.api.customer.autoname_customer",
+        "before_insert": "gold_app.api.customer.generate_unique_id",
         "after_insert": "gold_app.api.api.sync_supplier_with_customer",
-        "on_update": "gold_app.api.api.sync_supplier_with_customer"
+        "on_update": "gold_app.api.api.sync_supplier_with_customer",
+        # "validate": "gold_app.api.customer.validate_unique_id",
     }
 }
 
