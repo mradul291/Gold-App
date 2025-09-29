@@ -34,13 +34,24 @@
   },
   {
     "doctype": "Property Setter",
-    "name": "purchase_receipt_item-rate-label",
+    "name": "Purchase Receipt Item-rate-label",
     "doctype_or_field": "DocField",
     "doc_type": "Purchase Receipt Item",
     "field_name": "rate",
     "property": "label",
-    "property_type": "Currency",
-    "value": "Rate(MYR/g)",
+    "property_type": "Data",
+    "value": "Rate (MYR/g)",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt Item-base_rate-label",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt Item",
+    "field_name": "base_rate",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Rate (MYR/g)",
     "module": "Gold App"
   },
   {

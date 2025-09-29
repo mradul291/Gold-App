@@ -147,7 +147,7 @@ frappe.ui.form.on("Purchase Receipt Item", {
         // Small delay so that ERPNext finishes auto-fetch first
         setTimeout(() => {
             frappe.model.set_value(cdt, cdn, "rate", 0); // Or leave blank ""
-        }, 200);
+        }, 600);
     }
 });
 
