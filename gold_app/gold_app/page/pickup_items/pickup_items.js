@@ -102,10 +102,15 @@ class PickupItemsPage {
 		const $tbody = $wrapper.find("tbody");
 
 		// Combine purities from both total and selected dealer
-		const purities = new Set([
-			...Object.keys(overview_data.total || {}),
-			...Object.keys(overview_data.selected || {}),
-		]);
+		let purities = [
+			...new Set([
+				...Object.keys(overview_data.total || {}),
+				...Object.keys(overview_data.selected || {}),
+			]),
+		];
+
+		// Sort purities in descending order (e.g., 999 → 916 → 875 → 750)
+		purities.sort((a, b) => parseFloat(b) - parseFloat(a));
 
 		purities.forEach((purity) => {
 			const total = overview_data.total?.[purity] || {};
