@@ -358,11 +358,10 @@
     "dt": "Purchase Receipt",
     "fieldname": "supplier_id_number",
     "label": "ID Number",
-    "fieldtype": "Data",
+    "fieldtype": "Link",
     "insert_after": "supplier",
-    "fetch_from": "supplier.name",
+    "options": "Supplier",
     "reqd": 0,
-    "read_only": 1,
     "name": "Purchase Receipt-supplier_id_number",
     "module": "Gold App"
   },

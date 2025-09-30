@@ -1,19 +1,19 @@
 {
  "content": null,
- "creation": "2025-09-18 18:07:09.366829",
+ "creation": "2025-09-17 21:22:44.242779",
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2025-09-18 18:07:09.366829",
+ "modified": "2025-09-30 18:53:29.227706",
  "modified_by": "Administrator",
  "module": "Gold App",
- "name": "pool",
+ "name": "retail-pool-creation",
  "owner": "Administrator",
- "page_name": "pool",
+ "page_name": "retail-pool-creation",
  "roles": [],
  "script": null,
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Pool"
+ "title": "Retail Pool Creation"
 }

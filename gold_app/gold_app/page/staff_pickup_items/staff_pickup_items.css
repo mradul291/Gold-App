@@ -77,3 +77,9 @@
     height: 16px;
     accent-color: #16a34a;
 }
+
+/* Force dealer name and icon to stay black */
+.toggle-cell, .toggle-cell .dealer-name, .toggle-cell i {
+    color: black !important;
+    font-weight: 300 !important;
+}

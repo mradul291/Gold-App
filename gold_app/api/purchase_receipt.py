@@ -162,3 +162,25 @@ def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, referen
         existing_refs.append(pe.name)
 
     doc.db_set("payment_entry_ref", ",".join(existing_refs))
+
+
+
+
+
+
+
+
+@frappe.whitelist()
+def get_supplier_by_id(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Return list of suppliers filtered by id_number matching the typed value
+    """
+    return frappe.db.get_list(
+        'Supplier',
+        filters = {
+            'id_number': ['like', f"%{txt}%"]
+        },
+        fields=['name as value', 'id_number as description'],
+        limit_page_length=20
+    )
+

@@ -223,6 +223,28 @@
     "doctype": "Property Setter",
     "doctype_or_field": "DocField",
     "doc_type": "Purchase Receipt",
+    "field_name": "supplier_name",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Customer Name",
+    "name": "Purchase Receipt-supplier_name-label",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "supplier",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": 1,
+    "name": "Purchase Receipt-supplier-hidden",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
     "field_name": "is_internal_supplier",
     "property": "label",
     "property_type": "Data",

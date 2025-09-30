@@ -151,6 +151,7 @@ frappe.ui.form.on("Purchase Receipt Item", {
     }
 });
 
+//Payment Method Customer Payable
 frappe.ui.form.on("Purchase Receipt", {
     payment_method: function (frm) {
         if (frm.doc.payment_method === "Customer Payable Account") {
@@ -164,3 +165,23 @@ frappe.ui.form.on("Purchase Receipt", {
         frm.trigger("payment_method");
     }
 });
+
+
+frappe.ui.form.on('Purchase Receipt', {
+    supplier_id_number: function(frm) {
+        frm.set_query('supplier_id_number', function() {
+            return {
+                query: "gold_app.api.purchase_receipt.get_supplier_by_id"
+            };
+        });
+    }
+});
+
+frappe.ui.form.on('Purchase Receipt', {
+    supplier_id_number: function(frm) {
+        if (frm.doc.supplier_id_number) {
+            frm.set_value('supplier', frm.doc.supplier_id_number);
+        }
+    }
+});
+

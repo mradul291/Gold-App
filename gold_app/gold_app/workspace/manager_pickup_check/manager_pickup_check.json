@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"pO4ciYVuZL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Manager Pickup Check</span>\",\"col\":12}},{\"id\":\"gfKrvHsXwk\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pickup Checked\",\"col\":6}},{\"id\":\"kW6xIHAp4r\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pickup Unchecked\",\"col\":6}},{\"id\":\"2p66DVFVIL\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pPhdu5CmPO\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Manager Pickup\",\"col\":3}},{\"id\":\"rvTsGa-A76\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gold Sorting\",\"col\":3}},{\"id\":\"qnUzesqS1W\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Pool\",\"col\":3}}]",
+ "content": "[{\"id\":\"pO4ciYVuZL\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Manager Pickup Check</span>\",\"col\":12}},{\"id\":\"gfKrvHsXwk\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pickup Checked\",\"col\":6}},{\"id\":\"kW6xIHAp4r\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pickup Unchecked\",\"col\":6}},{\"id\":\"2p66DVFVIL\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pPhdu5CmPO\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Manager Pickup\",\"col\":3}},{\"id\":\"J9gfd4SmJ8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Retail Pool Creation\",\"col\":3}},{\"id\":\"7s9y7daRda\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gold Sorting\",\"col\":3}}]",
  "creation": "2025-09-16 20:03:47.474419",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Manager Pickup Check",
  "links": [],
- "modified": "2025-09-22 20:12:17.612127",
+ "modified": "2025-09-30 19:27:44.137793",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Manager Pickup Check",
@@ -44,15 +44,15 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Gold Sorting",
-   "link_to": "gold-sorting",
+   "label": "Retail Pool Creation",
+   "link_to": "retail-pool-creation",
    "type": "Page"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Pool",
-   "link_to": "pool",
+   "label": "Gold Sorting",
+   "link_to": "gold-sorting",
    "type": "Page"
   }
  ],
