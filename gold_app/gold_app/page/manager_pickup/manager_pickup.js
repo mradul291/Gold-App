@@ -33,6 +33,16 @@ class ManagerPickupPage {
 		this.container = $('<div class="manager-pickup-container"></div>').appendTo(this.wrapper);
 	}
 
+	formatCustomDate(dateStr) {
+		if (!dateStr) return "";
+		const date = new Date(dateStr);
+		return date.toLocaleDateString("en-GB", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
+		});
+	}
+
 	async show_summary() {
 		this.container.empty();
 
@@ -150,7 +160,7 @@ class ManagerPickupPage {
 		const $tbody = $detailRow.find("tbody");
 
 		items.forEach((i) => {
-			const dstr = i.date ? frappe.datetime.str_to_user(i.date) : "";
+			const dstr = i.date ? this.formatCustomDate(i.date) : "";
 			const checked = i.tick_all_ok ? "checked" : "";
 			const discrepancyOptions = `
                 <option value="">Select</option>
@@ -226,51 +236,50 @@ class ManagerPickupPage {
 	}
 
 	async save_changes() {
-    const updates = Object.values(this.changes);
-    if (!updates.length) {
-        frappe.show_alert({ message: __("No changes to save"), indicator: "blue" });
-        return;
-    }
+		const updates = Object.values(this.changes);
+		if (!updates.length) {
+			frappe.show_alert({ message: __("No changes to save"), indicator: "blue" });
+			return;
+		}
 
-    try {
-        const result = await frappe.xcall("gold_app.api.page_api.manager_bulk_update_pickup", {
-            doc_updates: updates,
-        });
+		try {
+			const result = await frappe.xcall("gold_app.api.page_api.manager_bulk_update_pickup", {
+				doc_updates: updates,
+			});
 
-        // Show success
-        frappe.show_alert({
-            message: __(`${result.updated} records updated`),
-            indicator: "green",
-        });
-        this.page.clear_indicator();
+			// Show success
+			frappe.show_alert({
+				message: __(`${result.updated} records updated`),
+				indicator: "green",
+			});
+			this.page.clear_indicator();
 
-        const selected_pickups = Object.keys(this.changes)
-            .filter(name => this.changes[name].tick_all_ok)
-            .map(name => name);
+			const selected_pickups = Object.keys(this.changes)
+				.filter((name) => this.changes[name].tick_all_ok)
+				.map((name) => name);
 
-        if (selected_pickups.length) {
-            let res = await frappe.xcall("gold_app.api.page_api.create_manager_pool", {
-                pickup_names: selected_pickups,
-                pool_type: "Dealer",
-                notes: "Auto-created from Manager Pickup Page"
-            });
+			if (selected_pickups.length) {
+				let res = await frappe.xcall("gold_app.api.page_api.create_manager_pool", {
+					pickup_names: selected_pickups,
+					pool_type: "Dealer",
+					notes: "Auto-created from Manager Pickup Page",
+				});
 
-
-            frappe.msgprint({
-                title: __("Pool Created"),
-                message: `New Pool <a href="/app/gold-pool/${res.pool_name}" target="_blank">${res.pool_name}</a> created.<br>
+				frappe.msgprint({
+					title: __("Pool Created"),
+					message: `New Pool <a href="/app/gold-pool/${res.pool_name}" target="_blank">${
+						res.pool_name
+					}</a> created.<br>
                           <b>Total Weight:</b> ${res.total_weight.toFixed(2)} g`,
-                indicator: "green"
-            });
-        }
+					indicator: "green",
+				});
+			}
 
-        this.changes = {};
-        await this.show_summary();
-
-    } catch (err) {
-        console.error(err);
-        frappe.msgprint("Failed to save changes");
-    }
-}
-
+			this.changes = {};
+			await this.show_summary();
+		} catch (err) {
+			console.error(err);
+			frappe.msgprint("Failed to save changes");
+		}
+	}
 }

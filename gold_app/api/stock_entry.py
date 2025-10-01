@@ -34,29 +34,6 @@ def set_zero_valuation_flag(doc, method):
     for d in doc.items or []:
         d.allow_zero_valuation_rate = 1
 
-def validate_break_item_qty(doc, method):
-    """Ensure child qty never exceeds source item qty"""
-    if doc.stock_entry_type != "Break Item":
-        return
-
-    source_qty = doc.item_quantity or 0   # total available source qty
-    child_total = 0
-
-    for row in doc.items or []:
-        if row.item_code != doc.source_item:
-            child_total += flt(row.qty)
-
-    if child_total > source_qty:
-        frappe.throw(
-            _("The total weight of new items ({0} gm) cannot exceed the available Mixed Gold weight ({1} gm).")
-            .format(child_total, source_qty)
-        )
-
-    # If less, that’s fine — balance remains in stock
-    remaining = source_qty - child_total
-    doc.remaining_quantity = remaining
-    frappe.msgprint(_("Updated balance: {0} gm of Mixed Gold remaining").format(remaining))
-
 def create_material_issue(doc, method):
     if doc.stock_entry_type != "Break Item":
         return
@@ -101,6 +78,10 @@ def update_item_from_stock_entry(doc, method):
         # Update item_length if present
         if getattr(row, "item_length", None):
             update_data["item_length"] = row.item_length
+            
+         # Update item_size if present
+        if getattr(row, "item_size", None):
+            update_data["item_size"] = row.item_size
 
         # Only update if we have data to set
         if update_data:

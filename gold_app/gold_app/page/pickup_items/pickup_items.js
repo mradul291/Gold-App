@@ -13,6 +13,7 @@ class PickupItemsPage {
 		this.page = wrapper.page;
 		this.selected = new Set();
 		this.current_dealer = null;
+		this.selected_dealers = new Set();
 		this.only_nonpickup = false;
 		this.setup();
 	}
@@ -45,14 +46,58 @@ class PickupItemsPage {
 		);
 	}
 
-	async show_overview(selectedDealer = null) {
+	formatCustomDate(dateInput) {
+		if (!dateInput) return "";
+
+		const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+
+		if (isNaN(date)) return "";
+
+		return date.toLocaleDateString("en-GB", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
+		});
+	}
+	formatDateRange(rangeStr) {
+		if (!rangeStr) return "";
+
+		// split by " - " (with spaces around dash)
+		const parts = rangeStr.split(" - ");
+		if (parts.length !== 2) return this.formatCustomDate(rangeStr);
+
+		// parts[0] = "30-09-2025"
+		// parts[1] = "30-09-2025"
+
+		const parseDMY = (str) => {
+			const [day, month, year] = str.split("-");
+			return new Date(`${year}-${month}-${day}`); // convert to YYYY-MM-DD
+		};
+
+		const start = this.formatCustomDate(parseDMY(parts[0]));
+		const end = this.formatCustomDate(parseDMY(parts[1]));
+
+		return `${start} – ${end}`; // en dash
+	}
+
+	async show_overview(selectedDealers = null) {
 		this.overview_container.empty();
+
+		let dealerArg = null;
+		if (selectedDealers) {
+			if (Array.isArray(selectedDealers)) {
+				dealerArg = selectedDealers.join(",");
+			} else {
+				dealerArg = selectedDealers;
+				selectedDealers = [selectedDealers];
+			}
+		}
 
 		let overview_data = {};
 		try {
 			overview_data = await frappe.xcall(
 				"gold_app.api.page_api.get_pending_pickup_overview",
-				{ dealer: selectedDealer }
+				{ dealer: dealerArg }
 			);
 		} catch (err) {
 			console.error(err);
@@ -69,7 +114,7 @@ class PickupItemsPage {
 			return;
 		}
 
-		// Table wrapper for styling
+		// Table wrapper
 		const $wrapper = $(`
         <div class="overview-table-wrapper">
             <table class="table table-hover table-sm modern-overview-table">
@@ -79,9 +124,14 @@ class PickupItemsPage {
                     </tr>
                     <tr>
                         <th colspan="4" class="text-center table-subtitle">Total Overview</th>
-                        <th colspan="4" class="text-center table-subtitle">
-    						${selectedDealer ? `Selected Dealer Overview (${selectedDealer})` : "Selected Dealer Overview"}
-						</th>
+                       <th colspan="4" class="text-center table-subtitle">
+    ${
+		selectedDealers
+			? `Selected Dealer Overview (${selectedDealers.join(", ")})`
+			: "Selected Dealer Overview"
+	}
+</th>
+
                     </tr>
                     <tr>
                         <th>Purity</th>
@@ -101,7 +151,6 @@ class PickupItemsPage {
 
 		const $tbody = $wrapper.find("tbody");
 
-		// Combine purities from both total and selected dealer
 		let purities = [
 			...new Set([
 				...Object.keys(overview_data.total || {}),
@@ -109,15 +158,14 @@ class PickupItemsPage {
 			]),
 		];
 
-		// Sort purities in descending order (e.g., 999 → 916 → 875 → 750)
 		purities.sort((a, b) => parseFloat(b) - parseFloat(a));
 
 		purities.forEach((purity) => {
 			const total = overview_data.total?.[purity] || {};
 			const selected = overview_data.selected?.[purity] || {};
 
-			// Skip rows where selected.weight is 0 (only for Selected Dealer)
-			if (selectedDealer && (!selected.weight || selected.weight === 0)) return;
+			// Skip rows where selected.weight is 0
+			if (selectedDealers && (!selected.weight || selected.weight === 0)) return;
 
 			$tbody.append(`
             <tr>
@@ -159,6 +207,9 @@ class PickupItemsPage {
           <thead>
             <tr>
               <th style="width:36px"></th>
+			  <th style="width:36px; text-align:center;">
+      <input type="checkbox" id="select-all-dealers" title="Select All Dealers" />
+    </th>
               <th>Date Range</th>
               <th>Dealer</th>
               <th>Purities</th>
@@ -180,17 +231,22 @@ class PickupItemsPage {
               <td style="text-align:center;">
                 <i class="fa fa-chevron-right toggle-purity" style="cursor:pointer;"></i>
               </td>
-              <td>${frappe.utils.escape_html(d.date_range || "")}</td>
+			  <td style="text-align:center;">
+  <input type="checkbox" class="select-dealer" data-dealer="${frappe.utils.escape_html(
+		d.dealer
+  )}" />
+</td>
+			  <td>${this.formatDateRange(d.date_range)}</td>
               <td>${frappe.utils.escape_html(d.dealer)}</td>
               <td>${frappe.utils.escape_html(d.purities || "")}</td>
               <td class="text-right">${(d.total_weight || 0).toFixed(2)}</td>
               <td class="text-right">${(d.avco_rate || 0).toFixed(2)}</td>
-               <td class="text-right">RM ${(d.amount || 0).toFixed(2)}</td>
-      <td class="text-center">
-        <span class="toggle-transactions" style="cursor:pointer; text-decoration:underline; color:#007bff;" title="View Transactions">
-            View
-        </span>
-      </td>
+              <td class="text-right">RM ${(d.amount || 0).toFixed(2)}</td>
+              <td class="text-center">
+               <span class="toggle-transactions" style="cursor:pointer; text-decoration:underline; color:#007bff;" title="View Transactions">
+                View
+               </span>
+              </td>
             </tr>
         `).appendTo($tbody);
 
@@ -198,7 +254,7 @@ class PickupItemsPage {
             <tr class="dealer-transactions d-none" data-dealer="${frappe.utils.escape_html(
 				d.dealer
 			)}">
-                <td colspan="8">
+                <td colspan="9">
                     <div class="transactions-container">Loading transactions...</div>
                 </td>
             </tr>
@@ -222,7 +278,7 @@ class PickupItemsPage {
 
 			const $details = $(`
             <tr class="dealer-detail d-none" data-dealer="${frappe.utils.escape_html(d.dealer)}">
-                <td colspan="8"><div class="purity-container">Loading...</div></td>
+                <td colspan="9"><div class="purity-container">Loading...</div></td>
             </tr>
         `).appendTo($tbody);
 
@@ -235,7 +291,17 @@ class PickupItemsPage {
 					icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
 				} else {
 					icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
-					await this.show_overview(d.dealer);
+
+					// Add or remove dealer from selected_dealers
+					const dealerName = d.dealer;
+					if (this.selected_dealers.has(dealerName)) {
+						this.selected_dealers.delete(dealerName); // Deselect dealer
+					} else {
+						this.selected_dealers.add(dealerName); // Select dealer
+					}
+
+					// Call show_overview with all selected dealers
+					await this.show_overview(Array.from(this.selected_dealers));
 
 					const $container = $details.find(".purity-container");
 					if (!$container.data("loaded")) {
@@ -243,7 +309,7 @@ class PickupItemsPage {
 						let rows = [];
 						try {
 							rows = await frappe.xcall("gold_app.api.page_api.get_summary", {
-								dealer: d.dealer,
+								dealer: dealerName,
 							});
 						} catch (err) {
 							console.error(err);
@@ -253,10 +319,36 @@ class PickupItemsPage {
 							$container.data("loaded", true);
 							return;
 						}
-						this.render_purities($container, d.dealer, rows);
+						this.render_purities($container, dealerName, rows);
 						$container.data("loaded", true);
 					}
 					$details.removeClass("d-none");
+				}
+			});
+
+			$tr.find(".select-dealer").on("change", async (e) => {
+				const dealerName = $(e.target).data("dealer");
+				const $dealerRow = $tbl.find(`.dealer-row[data-dealer='${dealerName}']`);
+				const $transactionsRow = $tbl.find(
+					`.dealer-transactions[data-dealer='${dealerName}']`
+				);
+				const $toggle = $dealerRow.find(".toggle-transactions");
+
+				if (e.target.checked) {
+					// Open transactions if not already visible
+					if ($transactionsRow.hasClass("d-none")) {
+						$toggle.trigger("click");
+					}
+
+					// Select all transactions for this dealer
+					$transactionsRow.find(".select-transaction").each(function () {
+						$(this).prop("checked", true).trigger("change");
+					});
+				} else {
+					// Deselect all transactions for this dealer
+					$transactionsRow.find(".select-transaction").each(function () {
+						$(this).prop("checked", false).trigger("change");
+					});
 				}
 			});
 		});
@@ -400,7 +492,7 @@ class PickupItemsPage {
 				<td class="text-center">
                 	<input type="checkbox" class="select-transaction" data-id="${item.name}">
            	 	</td>
-                <td>${item.date ? frappe.datetime.str_to_user(item.date) : ""}</td>
+                <td>${this.formatCustomDate(item.date)}</td>
                 <td>${frappe.utils.escape_html(item.item_code)}</td>
                 <td>${frappe.utils.escape_html(item.purity)}</td>
                 <td class="text-right">${(item.total_weight || 0).toFixed(2)}</td>
@@ -605,7 +697,7 @@ class PickupItemsPage {
 		const $tbody = $tbl.find("tbody");
 
 		items.forEach((it) => {
-			const dstr = it.date ? frappe.datetime.str_to_user(it.date) : "";
+			const dstr = this.formatCustomDate(it.date);
 			const $tr = $(`
                 <tr>
                   <td>${frappe.utils.escape_html(dstr)}</td>

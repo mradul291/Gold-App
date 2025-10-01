@@ -66,6 +66,16 @@ class StaffPickupItemsPage {
 		this.container = $('<div class="staff-pickup-container"></div>').appendTo(this.wrapper);
 	}
 
+	formatCustomDate(dateStr) {
+		if (!dateStr) return "";
+		const date = new Date(dateStr);
+		return date.toLocaleDateString("en-GB", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
+		});
+	}
+
 	async show_summary() {
 		this.container.empty();
 		this.current_dealer = null;
@@ -179,7 +189,7 @@ class StaffPickupItemsPage {
 		const $detailTbody = $detailRow.find("tbody");
 
 		items.forEach((i) => {
-			const dstr = i.date ? frappe.datetime.str_to_user(i.date) : "";
+			const dstr = i.date ? this.formatCustomDate(i.date) : "";
 			$detailTbody.append(`
                 <tr>
                     <td><input type="checkbox" class="item-select" data-name="${i.name}"/></td>

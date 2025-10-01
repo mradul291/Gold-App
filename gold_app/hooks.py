@@ -41,9 +41,6 @@ doc_events = {
         "before_save": "gold_app.api.item.set_item_group_prefix"
     },
     "Stock Entry": {
-        "validate": [
-            # "gold_app.api.stock_entry.validate_break_item_qty",
-        ],
         "on_submit": [
             "gold_app.api.stock_entry.create_material_issue",
             "gold_app.api.stock_entry.update_item_from_stock_entry"

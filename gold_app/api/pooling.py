@@ -208,6 +208,7 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             "qty": flt(r.get("qty") or 0),
             "item_code": r.get("item_code"),
             "item_length": r.get("item_length"),
+            "item_size": r.get("item_size"),
             "valuation_rate": flt(r.get("valuation_rate") or 0),
             "target_warehouse": r.get("target_warehouse"),
             "item_group": r.get("item_group"),
@@ -279,6 +280,7 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
                 "t_warehouse": r["target_warehouse"],
                 "purity": r["purity"],
                 "item_length": flt(r.get("item_length")) if r.get("item_length") not in (None, "", "null") else None,
+                "item_size": r.get("item_size") if r.get("item_size") not in (None, "", "null") else None,
                 "valuation_rate": r["valuation_rate"],
                 "allow_zero_valuation_rate": 1 if r["valuation_rate"] == 0 else 0
             })

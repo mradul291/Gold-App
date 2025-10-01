@@ -355,6 +355,26 @@
   },
   {
     "doctype": "Custom Field",
+    "name": "Item-item_size",
+    "dt": "Item",
+    "fieldname": "item_size",
+    "fieldtype": "Float",
+    "label": "Item Size",
+    "insert_after": "item_length"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Stock Entry Detail",
+    "fieldname": "item_size",
+    "label": "Size",
+    "fieldtype": "Float",
+    "insert_after": "item_code",
+    "reqd": 0,
+    "name": "Stock Entry Detail-item_size",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
     "dt": "Purchase Receipt",
     "fieldname": "supplier_id_number",
     "label": "ID Number",
