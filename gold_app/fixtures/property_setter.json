@@ -306,5 +306,27 @@
     "value": "2",
     "name": "Purchase Receipt Item-qty-precision",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Supplier",
+    "field_name": "supplier_name",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Customer Name",
+    "name": "Supplier-supplier_name-label",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Supplier",
+    "field_name": "supplier_type",
+    "property": "label",
+    "property_type": "Data",
+    "value": "Customer Type",
+    "name": "Supplier-supplier_type-label",
+    "module": "Gold App"
   }
 ]
