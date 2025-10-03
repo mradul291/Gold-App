@@ -465,7 +465,7 @@
     "label": "Payment Method",
     "fieldtype": "Select",
     "options": "Cash\nBank Transfer\nMix\nCustomer Payable Account",
-    "insert_after": "set_posting_time",
+    "insert_after": "company",
     "reqd": 1,
     "name": "Purchase Receipt-payment_method",
     "module": "Gold App"
