@@ -72,7 +72,7 @@ doc_events = {
         "autoname": "gold_app.api.customer.autoname",
         "after_insert": "gold_app.api.api.sync_supplier_with_customer",
         "on_update": "gold_app.api.api.sync_supplier_with_customer",
-    }
+    },
 }
 
 permission_query_conditions = {

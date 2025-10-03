@@ -237,7 +237,7 @@
     "field_name": "supplier",
     "property": "hidden",
     "property_type": "Check",
-    "value": 1,
+    "value": 0,
     "name": "Purchase Receipt-supplier-hidden",
     "module": "Gold App"
   },

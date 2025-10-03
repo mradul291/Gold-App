@@ -163,24 +163,22 @@ def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, referen
 
     doc.db_set("payment_entry_ref", ",".join(existing_refs))
 
-
-
-
-
-
-
-
+# Show Customer Id Numbers as Option and Auto Select Customer field
 @frappe.whitelist()
-def get_supplier_by_id(doctype, txt, searchfield, start, page_len, filters):
-    """
-    Return list of suppliers filtered by id_number matching the typed value
-    """
-    return frappe.db.get_list(
-        'Supplier',
-        filters = {
-            'id_number': ['like', f"%{txt}%"]
-        },
-        fields=['name as value', 'id_number as description'],
-        limit_page_length=20
+def get_suppliers_with_id(txt=None):
+    suppliers = frappe.get_all(
+        "Supplier",
+        filters={"name": ["like", f"%{txt}%"]},
+        fields=["name", "supplier_name", "id_number"],
+        limit=20
     )
-
+    return [
+        {
+            "label": f"{d.id_number} - {d.supplier_name}",
+            "value": d.id_number,       # what goes in supplier_id_number
+            "supplier_name": d.supplier_name,
+            "supplier_id": d.name       # actual link value for Supplier field
+        }
+        for d in suppliers
+    ]
+    
