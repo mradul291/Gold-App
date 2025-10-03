@@ -43,13 +43,14 @@ class GoldSortingPage {
                             <thead>
                                 <tr>
                                     <th style="width:40px;"></th>
-                                    <th>Dealer</th>
+									<th style="width:60px;" class="text-center">
+                                        <input type="checkbox" class="select-all" />
+                                    </th>
+                                    <th>Purchase Receipt</th>
                                     <th>Purities</th>
                                     <th class="text-end">Total Weight (g)</th>
                                     <th class="text-end">Total Amount (MYR)</th>
-                                    <th style="width:60px;" class="text-center">
-                                        <input type="checkbox" class="select-all" />
-                                    </th>
+                                    
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -57,6 +58,7 @@ class GoldSortingPage {
                                 <tr class="summary-row">
                                     <td colspan="3" class="text-end fw-bold">TOTAL</td>
                                     <td class="text-end total-weight">0.00</td>
+                                    <td></td>
                                     <td class="text-end total-amount">0.00</td>
                                     <td></td>
                                 </tr>
@@ -99,12 +101,12 @@ class GoldSortingPage {
 
 	async load_pickups() {
 		const tbody = this.container.find("tbody");
-		tbody.html('<tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>');
+		tbody.html('<tr><td colspan="7" class="text-center text-muted py-3">Loading...</td></tr>');
 
 		try {
 			const r = await frappe.call({
 				method: "gold_app.api.pooling.get_unpooled_pickups",
-				args: { pool_type: "Dealer" },
+				args: { pool_type: "Dealer" }, // pool_type param kept for compatibility
 			});
 
 			this.all_rows = r.message || [];
@@ -112,43 +114,46 @@ class GoldSortingPage {
 
 			if (!this.all_rows.length) {
 				tbody.html(
-					'<tr><td colspan="6" class="text-center text-muted py-3">No unpooled pickups found.</td></tr>'
+					'<tr><td colspan="7" class="text-center text-muted py-3">No unpooled pickups found.</td></tr>'
 				);
 				return;
 			}
 
-			// 🔹 Group by dealer
+			// 🔹 Group by Purchase Receipt
 			const grouped = {};
 			this.all_rows.forEach((row) => {
-				if (!grouped[row.dealer]) {
-					grouped[row.dealer] = {
-						dealer: row.dealer,
+				if (!grouped[row.purchase_receipt]) {
+					grouped[row.purchase_receipt] = {
+						pr: row.purchase_receipt,
 						purities: new Set(),
 						total_weight: 0,
 						total_amount: 0,
 						items: [],
 					};
 				}
-				grouped[row.dealer].purities.add(row.purity);
-				grouped[row.dealer].total_weight += row.total_weight || 0;
-				grouped[row.dealer].total_amount += row.amount || 0;
-				grouped[row.dealer].items.push(row);
+				grouped[row.purchase_receipt].purities.add(row.purity);
+				grouped[row.purchase_receipt].total_weight += row.total_weight || 0;
+				grouped[row.purchase_receipt].total_amount += row.amount || 0;
+				grouped[row.purchase_receipt].items.push(row);
 			});
 
-			// 🔹 Render dealer summary rows
+			// 🔹 Render Purchase Receipt summary rows
 			Object.values(grouped).forEach((group) => {
+				const avg_cost = group.total_weight ? group.total_amount / group.total_weight : 0;
+
 				const $tr = $(`
-                    <tr class="dealer-row" data-dealer="${group.dealer}">
+                    <tr class="pr-row" data-pr="${group.pr}">
                         <td class="toggle-cell text-center" style="cursor:pointer;">
                             <i class="fa fa-chevron-right"></i>
                         </td>
-                        <td>${group.dealer || ""}</td>
+						<td class="text-center">
+                            <input type="checkbox" class="pr-select" />
+                        </td>
+                        <td>${group.pr || ""}</td>
                         <td>${Array.from(group.purities).join(", ")}</td>
                         <td class="text-end">${group.total_weight.toFixed(2)}</td>
                         <td class="text-end">${group.total_amount.toFixed(2)}</td>
-                        <td class="text-center">
-                            <input type="checkbox" class="dealer-select" />
-                        </td>
+                        
                     </tr>
                 `).appendTo(tbody);
 
@@ -157,8 +162,8 @@ class GoldSortingPage {
 					await this.show_detail(group.items, $tr);
 				});
 
-				// Dealer select-all
-				$tr.find(".dealer-select").on("change", (e) => {
+				// PR select-all
+				$tr.find(".pr-select").on("change", (e) => {
 					const checked = e.target.checked;
 					group.items.forEach((item) => {
 						if (checked) {
@@ -176,7 +181,7 @@ class GoldSortingPage {
 		} catch (e) {
 			console.error(e);
 			tbody.html(
-				'<tr><td colspan="6" class="text-center text-danger py-3">Failed to load pickups.</td></tr>'
+				'<tr><td colspan="7" class="text-center text-danger py-3">Failed to load pickups.</td></tr>'
 			);
 		}
 	}
@@ -191,12 +196,13 @@ class GoldSortingPage {
 
 		const $detailRow = $(`
             <tr class="detail-row">
-                <td colspan="6">
+                <td colspan="7">
                     <table class="table table-sm table-bordered">
                         <thead>
                             <tr>
                                 <th style="width:40px;" class="text-center"></th>
                                 <th>Date</th>
+                                <th>Dealer</th>
                                 <th>Purity</th>
                                 <th class="text-end">Weight (g)</th>
                                 <th class="text-end">Amount (MYR)</th>
@@ -219,6 +225,7 @@ class GoldSortingPage {
 						}/>
                     </td>
                     <td>${this.formatCustomDate(row.date) || ""}</td>
+                    <td>${row.dealer || ""}</td>
                     <td><span class="badge bg-light text-dark">${row.purity || ""}</span></td>
                     <td class="text-end">${(row.total_weight || 0).toFixed(2)}</td>
                     <td class="text-end">${(row.amount || 0).toFixed(2)}</td>
@@ -334,7 +341,7 @@ class GoldSortingPage {
 
 	async create_pool() {
 		const btn = this.container.find(".create-pool-btn");
-		btn.prop("disabled", true).text("Created");
+		btn.prop("disabled", true).text("Creating...");
 
 		try {
 			const r = await frappe.call({
@@ -347,6 +354,10 @@ class GoldSortingPage {
 
 			if (r.message) {
 				frappe.show_alert({ message: __("Pool Created"), indicator: "green" });
+
+				setTimeout(() => {
+					window.location.reload();
+				}, 500);
 			}
 		} catch (e) {
 			console.error(e);

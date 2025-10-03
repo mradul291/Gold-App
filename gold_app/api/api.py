@@ -39,7 +39,6 @@ def generate_id_number():
 
     return f"CUS-{str(next_num).zfill(5)}"
 
-
 def sync_customer_with_supplier(doc, method):
     if frappe.flags.in_auto_creation:
         return
@@ -79,7 +78,6 @@ def sync_customer_with_supplier(doc, method):
         customer.save(ignore_permissions=True)
     finally:
         frappe.flags.in_auto_creation = False
-
 
 def sync_supplier_with_customer(doc, method):
     if frappe.flags.in_auto_creation:
@@ -121,7 +119,6 @@ def sync_supplier_with_customer(doc, method):
     finally:
         frappe.flags.in_auto_creation = False
 
-
 @frappe.whitelist()
 def link_dynamic(doctype, docname, link_doctype, link_name):
     linked_doc = frappe.get_doc(doctype, docname)
@@ -133,3 +130,11 @@ def link_dynamic(doctype, docname, link_doctype, link_name):
             "link_title": link_name,
         })
         linked_doc.save(ignore_permissions=True)
+
+#****************************************************************************************************
+
+
+
+
+
+

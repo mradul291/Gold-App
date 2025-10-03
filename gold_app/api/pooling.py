@@ -3,7 +3,20 @@ from frappe import _
 from frappe.utils import flt, nowdate, nowtime
 from gold_app.api.item import bulk_create_items
 
-#-------------------------------------------------------Gold - Sorting Page-----------------------------------------------------
+#-------------------------------------------------------Retail Pool Page-----------------------------------------------------
+
+# Unpooled Items from Item In Hand
+# @frappe.whitelist()
+# def get_unpooled_pickups(pool_type="Branch"):
+#     """
+#     Fetch all unpooled Item In Hand entries
+#     """
+#     pickups = frappe.get_all("Item In Hand",
+#         filters={"pooled": 0},
+#         fields=["name","dealer","date","purity","total_weight","amount","avco_rate","purchase_receipt"],
+#         order_by="date desc"
+#     )
+#     return pickups
 
 # Unpooled Items from Item In Hand
 @frappe.whitelist()
@@ -11,9 +24,19 @@ def get_unpooled_pickups(pool_type="Branch"):
     """
     Fetch all unpooled Item In Hand entries
     """
-    pickups = frappe.get_all("Item In Hand",
+    pickups = frappe.get_all(
+        "Item In Hand",
         filters={"pooled": 0},
-        fields=["name","dealer","date","purity","total_weight","amount","avco_rate","purchase_receipt"],
+        fields=[
+            "name",
+            "dealer",
+            "date",
+            "purity",
+            "total_weight",
+            "amount",
+            "avco_rate",
+            "purchase_receipt",
+        ],
         order_by="date desc"
     )
     return pickups
@@ -129,7 +152,7 @@ def get_pool_summary(pickup_names):
         "count": len(pickup_names)
     }
 
-#-----------------------------------------------------------Pool Page---------------------------------------------------------
+#-----------------------------------------------------------Gold Sorting Page---------------------------------------------------------
 
 # Getting the List of Gold Pools
 @frappe.whitelist()
@@ -302,29 +325,43 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         se.submit()
         created_entries.append(se.name)
 
-    # Handle remaining weights ONLY for processed purities
-    for row_pb in pool_doc.purity_breakdown:
-        if str(row_pb.purity) not in processed_purities:
-            continue  # skip purities not in this transaction
-
-        if flt(row_pb.total_weight) > 0:
-            source_item = f"Unsorted-{row_pb.purity}"
-            if not frappe.db.exists("Item", {"item_code": source_item, "item_group": "MG - Mixed Gold"}):
+        # Handle remaining weights FOR ALL purities (create Material Transfer for any remaining weight)
+        for row_pb in pool_doc.purity_breakdown:
+            # If nothing remains for this purity, skip
+            if flt(row_pb.total_weight) <= 0:
                 continue
 
+            source_item = f"Unsorted-{row_pb.purity}"
+
+            # If source item for this purity doesn't exist in MG - Mixed Gold, skip (or optionally create)
+            if not frappe.db.exists("Item", {"item_code": source_item, "item_group": "MG - Mixed Gold"}):
+                # Skip so we don't fail the whole operation; log for debugging
+                frappe.log_error(
+                    title=f"Missing source Item for remaining transfer: {source_item}",
+                    message=f"create_stock_entry_from_pool: {source_item} missing in Item table for pool {pool_name}"
+                )
+                continue
+
+            # find source warehouse for the source_item
             source_warehouse = frappe.db.get_value("Bin", {"item_code": source_item}, "warehouse")
             if not source_warehouse:
+                # no source warehouse found -> skip with a log (can't move if we don't know from where)
+                frappe.log_error(
+                    title=f"No Bin (warehouse) for source Item: {source_item}",
+                    message=f"create_stock_entry_from_pool: no Bin found for {source_item} while creating remaining transfer for pool {pool_name}"
+                )
                 continue
-            
-            # Find the user-selected target warehouse from remaining_transfers
-            target_wh = WHOLESALE_WAREHOUSE  # fallback
+
+            # Default to WHOLESALE_WAREHOUSE unless user selected otherwise for this purity
+            target_wh = WHOLESALE_WAREHOUSE
             if remaining_transfers:
                 for rt in remaining_transfers:
+                    # match purity as string for robust comparison
                     if str(rt.get("purity")) == str(row_pb.purity):
                         target_wh = rt.get("target_warehouse") or WHOLESALE_WAREHOUSE
                         break
 
-            # Create Material Transfer for remaining weight
+            # Create Material Transfer for the remaining weight
             se_transfer = frappe.new_doc("Stock Entry")
             se_transfer.stock_entry_type = "Material Transfer"
             se_transfer.company = company
@@ -339,16 +376,17 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             })
             se_transfer.insert(ignore_permissions=True)
             se_transfer.submit()
-            
+
             row_pb.total_weight = 0
             row_pb.total_cost = 0
+
 
     pool_doc.save(ignore_permissions=True)
 
     if all(flt(r.total_weight) <= 0 for r in pool_doc.purity_breakdown):
         pool_doc.status = "Completed"
         pool_doc.save(ignore_permissions=True)
-    # ✅ Collect created item rows for frontend display
+        
     created_items = []
     for se_name in created_entries:
             se_doc = frappe.get_doc("Stock Entry", se_name)
@@ -365,6 +403,6 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         "name": created_entries[0] if created_entries else None,
         "all_names": created_entries,
         "stock_entry_type": "Break Item",
-        "created_items": created_items
+        "created_items": created_items,
     }
 

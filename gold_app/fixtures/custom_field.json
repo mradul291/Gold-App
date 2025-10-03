@@ -534,7 +534,7 @@
     "label": "Bank Name",
     "fieldtype": "Data",
     "insert_after": "is_transporter",
-    "reqd": 1,
+    "reqd": 0,
     "name": "Supplier-bank_name",
     "module": "Gold App"
   },
@@ -545,7 +545,7 @@
     "label": "Bank Account Number",
     "fieldtype": "Data",
     "insert_after": "bank_name",
-    "reqd": 1,
+    "reqd": 0,
     "name": "Supplier-bank_account_number",
     "module": "Gold App"
   },
@@ -578,7 +578,7 @@
     "label": "Bank Name",
     "fieldtype": "Data",
     "insert_after": "territory",
-    "reqd": 1,
+    "reqd": 0,
     "name": "Customer-bank_name",
     "module": "Gold App"
   },
@@ -589,7 +589,7 @@
     "label": "Bank Account Number",
     "fieldtype": "Data",
     "insert_after": "bank_name",
-    "reqd": 1,
+    "reqd": 0,
     "name": "Customer-bank_account_number",
     "module": "Gold App"
   }
