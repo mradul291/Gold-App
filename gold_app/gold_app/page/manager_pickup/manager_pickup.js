@@ -81,7 +81,12 @@ class ManagerPickupPage {
             <table class="table table-sm table-bordered">
                 <thead>
                     <tr>
-                        <th style="width:36px"></th>
+                         <th style="width:110px; text-align:center;">
+                    <span class="toggle-all" 
+                          style="cursor:pointer; color:#007bff; text-decoration:underline; user-select:none; text-transform:none;">
+                        Expand All
+                    </span>
+                </th>
                         <th>Dealer</th>
                         <th>Purities</th>
                         <th>Total Weight (g)</th>
@@ -93,6 +98,34 @@ class ManagerPickupPage {
         `).appendTo(this.container);
 
 		const $tbody = $tbl.find("tbody");
+		const $toggleAll = $tbl.find(".toggle-all");
+
+		$toggleAll.on("click", async () => {
+			const isExpand = $toggleAll.text() === "Expand All";
+			$toggleAll.text(isExpand ? "Collapse All" : "Expand All");
+
+			const $rows = $tbody.find("tr[data-dealer]");
+			for (const row of $rows) {
+				const $tr = $(row);
+				const $icon = $tr.find(".toggle-cell i");
+
+				if (isExpand) {
+					// Expand all dealers
+					if (!$tr.next().hasClass("detail-row")) {
+						await this.show_detail(grouped[$tr.data("dealer")].items, $tr);
+					} else if (!$tr.next().is(":visible")) {
+						$tr.next().show();
+					}
+					$icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
+				} else {
+					// Collapse all dealers
+					if ($tr.next().hasClass("detail-row") && $tr.next().is(":visible")) {
+						$tr.next().hide();
+					}
+					$icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
+				}
+			}
+		});
 
 		Object.values(grouped).forEach((group) => {
 			const $tr = $(`

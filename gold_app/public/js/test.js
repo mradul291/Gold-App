@@ -80,95 +80,6 @@ class PickupItemsPage {
 		return `${start} – ${end}`; // en dash
 	}
 
-	// async show_overview(selectedDealer = null) {
-	// 	this.overview_container.empty();
-
-	// 	let overview_data = {};
-	// 	try {
-	// 		overview_data = await frappe.xcall(
-	// 			"gold_app.api.page_api.get_pending_pickup_overview",
-	// 			{ dealer: selectedDealer }
-	// 		);
-	// 	} catch (err) {
-	// 		console.error(err);
-	// 		this.overview_container.html(
-	// 			'<div class="alert alert-danger">Failed to load overview</div>'
-	// 		);
-	// 		return;
-	// 	}
-
-	// 	if (!overview_data || (!overview_data.total && !overview_data.selected)) {
-	// 		this.overview_container.html(
-	// 			'<div class="alert alert-info">No overview data found</div>'
-	// 		);
-	// 		return;
-	// 	}
-
-	// 	// Table wrapper for styling
-	// 	const $wrapper = $(`
-	//     <div class="overview-table-wrapper">
-	//         <table class="table table-hover table-sm modern-overview-table">
-	//             <thead>
-	//                 <tr>
-	//                     <th colspan="8" class="text-center table-title">Pending Pick-up Items Overview</th>
-	//                 </tr>
-	//                 <tr>
-	//                     <th colspan="4" class="text-center table-subtitle">Total Overview</th>
-	//                     <th colspan="4" class="text-center table-subtitle">
-	// 						${selectedDealer ? `Selected Dealer Overview (${selectedDealer})` : "Selected Dealer Overview"}
-	// 					</th>
-	//                 </tr>
-	//                 <tr>
-	//                     <th>Purity</th>
-	//                     <th>Weight (g)</th>
-	//                     <th>Avco (RM/g)</th>
-	//                     <th>Amount (RM)</th>
-	//                     <th>Purity</th>
-	//                     <th>Weight (g)</th>
-	//                     <th>Avco (RM/g)</th>
-	//                     <th>Amount (RM)</th>
-	//                 </tr>
-	//             </thead>
-	//             <tbody></tbody>
-	//         </table>
-	//     </div>
-	// `).appendTo(this.overview_container);
-
-	// 	const $tbody = $wrapper.find("tbody");
-
-	// 	// Combine purities from both total and selected dealer
-	// 	let purities = [
-	// 		...new Set([
-	// 			...Object.keys(overview_data.total || {}),
-	// 			...Object.keys(overview_data.selected || {}),
-	// 		]),
-	// 	];
-
-	// 	// Sort purities in descending order (e.g., 999 → 916 → 875 → 750)
-	// 	purities.sort((a, b) => parseFloat(b) - parseFloat(a));
-
-	// 	purities.forEach((purity) => {
-	// 		const total = overview_data.total?.[purity] || {};
-	// 		const selected = overview_data.selected?.[purity] || {};
-
-	// 		// Skip rows where selected.weight is 0 (only for Selected Dealer)
-	// 		if (selectedDealer && (!selected.weight || selected.weight === 0)) return;
-
-	// 		$tbody.append(`
-	//         <tr>
-	//             <td>${purity}</td>
-	//             <td>${(total.weight || 0).toFixed(2)}</td>
-	//             <td>${total.avco ? "RM" + total.avco.toFixed(2) : ""}</td>
-	//             <td>${total.amount ? "RM" + total.amount.toLocaleString() : ""}</td>
-	//             <td>${purity}</td>
-	//             <td>${(selected.weight || 0).toFixed(2)}</td>
-	//             <td>${selected.avco ? "RM" + selected.avco.toFixed(2) : ""}</td>
-	//             <td>${selected.amount ? "RM" + selected.amount.toLocaleString() : ""}</td>
-	//         </tr>
-	//     `);
-	// 	});
-	// }
-
 	async show_overview(selectedDealers = null) {
 		this.overview_container.empty();
 
@@ -296,6 +207,11 @@ class PickupItemsPage {
           <thead>
             <tr>
               <th style="width:36px"></th>
+			  <th style="width:36px; text-align:center;">
+  				<span id="expand-all-dealers" style="cursor:pointer; color:#007bff; text-decoration:underline;">
+    				Expand
+  				</span>
+			  </th>
               <th>Date Range</th>
               <th>Dealer</th>
               <th>Purities</th>
@@ -317,6 +233,11 @@ class PickupItemsPage {
               <td style="text-align:center;">
                 <i class="fa fa-chevron-right toggle-purity" style="cursor:pointer;"></i>
               </td>
+			  <td style="text-align:center;">
+  				<input type="checkbox" class="select-dealer" data-dealer="${frappe.utils.escape_html(
+					d.dealer
+				)}" />
+			  </td>
 			  <td>${this.formatDateRange(d.date_range)}</td>
               <td>${frappe.utils.escape_html(d.dealer)}</td>
               <td>${frappe.utils.escape_html(d.purities || "")}</td>
@@ -335,11 +256,12 @@ class PickupItemsPage {
             <tr class="dealer-transactions d-none" data-dealer="${frappe.utils.escape_html(
 				d.dealer
 			)}">
-                <td colspan="8">
+                <td colspan="9">
                     <div class="transactions-container">Loading transactions...</div>
                 </td>
             </tr>
         `).appendTo($tbody);
+
 
 			$tr.find(".toggle-transactions").on("click", async (e) => {
 				e.stopPropagation();
@@ -355,11 +277,11 @@ class PickupItemsPage {
 					}
 					$transactionsRow.removeClass("d-none");
 				}
-			});
+			});	
 
 			const $details = $(`
             <tr class="dealer-detail d-none" data-dealer="${frappe.utils.escape_html(d.dealer)}">
-                <td colspan="8"><div class="purity-container">Loading...</div></td>
+                <td colspan="9"><div class="purity-container">Loading...</div></td>
             </tr>
         `).appendTo($tbody);
 
@@ -404,6 +326,32 @@ class PickupItemsPage {
 						$container.data("loaded", true);
 					}
 					$details.removeClass("d-none");
+				}
+			});
+
+			$tr.find(".select-dealer").on("change", async (e) => {
+				const dealerName = $(e.target).data("dealer");
+				const $dealerRow = $tbl.find(`.dealer-row[data-dealer='${dealerName}']`);
+				const $transactionsRow = $tbl.find(
+					`.dealer-transactions[data-dealer='${dealerName}']`
+				);
+				const $toggle = $dealerRow.find(".toggle-transactions");
+
+				if (e.target.checked) {
+					// Open transactions if not already visible
+					if ($transactionsRow.hasClass("d-none")) {
+						$toggle.trigger("click");
+					}
+
+					// Select all transactions for this dealer
+					$transactionsRow.find(".select-transaction").each(function () {
+						$(this).prop("checked", true).trigger("change");
+					});
+				} else {
+					// Deselect all transactions for this dealer
+					$transactionsRow.find(".select-transaction").each(function () {
+						$(this).prop("checked", false).trigger("change");
+					});
 				}
 			});
 		});
@@ -861,3 +809,7 @@ class PickupItemsPage {
 		d.show();
 	}
 }
+
+
+
+

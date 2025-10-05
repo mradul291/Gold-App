@@ -177,31 +177,6 @@ def bulk_update_pickup(docnames, is_pickup=None, assigned_to=None):
         "errors": errors
     }
 
-# @frappe.whitelist()
-# def get_pending_pickup_overview(dealer=None):
-#     filters = {"is_pickup": 0, "docstatus": ["<", 2]}
-#     total_data = {}
-#     selected_data = {}
-
-#     items = frappe.get_all("Item Pickup", filters=filters, fields=["purity", "total_weight", "avco_rate", "amount", "dealer"])
-
-#     for i in items:
-#         # total overview
-#         total_data.setdefault(i.purity, {"weight":0, "avco":0, "amount":0})
-#         total_data[i.purity]["weight"] += i.total_weight or 0
-#         total_data[i.purity]["avco"] = i.avco_rate or 0
-#         total_data[i.purity]["amount"] += i.amount or 0
-
-#         # selected dealer overview
-#         if dealer and i.dealer == dealer:
-#             selected_data.setdefault(i.purity, {"weight":0, "avco":0, "amount":0})
-#             selected_data[i.purity]["weight"] += i.total_weight or 0
-#             selected_data[i.purity]["avco"] = i.avco_rate or 0
-#             selected_data[i.purity]["amount"] += i.amount or 0
-
-#     return {"total": total_data, "selected": selected_data}
-
-
 @frappe.whitelist()
 def get_pending_pickup_overview(dealer=None):
     """
