@@ -177,6 +177,17 @@
   },
   {
     "doctype": "Property Setter",
+    "name": "Purchase Receipt-currency_and_price_list-hidden",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "currency_and_price_list",
+    "property": "hidden",
+    "property_type": "Check",
+    "value": "1",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
     "name": "Purchase Receipt-taxes-hidden",
     "doctype_or_field": "DocField",
     "doc_type": "Purchase Receipt",

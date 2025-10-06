@@ -83,6 +83,15 @@ class PickupItemsPage {
 	async show_overview(selectedDealers = null) {
 		this.overview_container.empty(); // only empty after fade out
 
+		const $loading = $(`
+        <div class="loading-state text-center p-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <div class="mt-2 text-muted">Loading overview...</div>
+        </div>
+    `).appendTo(this.overview_container);
+
 		let dealerArg = null;
 		if (selectedDealers) {
 			if (Array.isArray(selectedDealers)) {
@@ -106,6 +115,7 @@ class PickupItemsPage {
 				.fadeIn(200);
 			return;
 		}
+		this.overview_container.empty();
 
 		if (!overview_data || (!overview_data.total && !overview_data.selected)) {
 			this.overview_container
