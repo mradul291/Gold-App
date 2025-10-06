@@ -307,25 +307,24 @@ class PickupItemsPage {
 				if (showing) {
 					$details.addClass("d-none");
 					icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
-					this.selected_dealers.delete(d.dealer);
-
-					// Only update overview if NOT expanding all
+					this.selected_dealers.delete(d.dealer); // remove dealer when collapsed
 					if (!this.isExpandingAll) {
 						await this.show_overview(Array.from(this.selected_dealers));
 					}
 				} else {
 					icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
-					// toggle dealer selection
+
 					const dealerName = d.dealer;
-					if (this.selected_dealers.has(dealerName))
-						this.selected_dealers.delete(dealerName);
-					else this.selected_dealers.add(dealerName);
+					if (this.selected_dealers.has(dealerName)) {
+						this.selected_dealers.delete(dealerName); // Deselect dealer
+					} else {
+						this.selected_dealers.add(dealerName); // Select dealer
+					}
 
 					if (!this.isExpandingAll) {
 						await this.show_overview(Array.from(this.selected_dealers));
 					}
 
-					// Load purities
 					const $container = $details.find(".purity-container");
 					if (!$container.data("loaded")) {
 						$container.html('<div class="text-muted">Loading purities...</div>');
@@ -345,7 +344,6 @@ class PickupItemsPage {
 						this.render_purities($container, dealerName, rows);
 						$container.data("loaded", true);
 					}
-
 					$details.removeClass("d-none");
 				}
 			});
@@ -386,75 +384,79 @@ class PickupItemsPage {
 
 			if (!allExpanded) {
 				this.isExpandingAll = true;
-
-				// Show spinner
-				this.overview_container.html(`
-        <div class="loading-state text-center p-4">
-            <div class="spinner-border text-primary" role="status"></div>
-            <div class="mt-2 text-muted">Loading all dealers...</div>
-        </div>
-    `);
-
-				// Let browser render the spinner
+				this.overview_container.empty().append(`
+		    <div class="loading-state text-center p-4">
+		        <div class="spinner-border text-primary" role="status"></div>
+		        <div class="mt-2 text-muted">Loading all dealers...</div>
+		    </div>
+		`);
 				await new Promise((resolve) => requestAnimationFrame(resolve));
-
-				const dealerPromises = dealerRows
-					.map((i, row) => {
-						const $row = $(row);
-						const dealerName = $row.data("dealer");
-						const $purityToggle = $row.find(".toggle-purity");
-						const $details = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
-						const $container = $details.find(".purity-container");
-
-						if (!$container.data("loaded")) {
-							return (async () => {
-								if ($details.hasClass("d-none")) {
-									// Skip show_overview during expand all
-									this.isExpandingAll = true;
-									$purityToggle.trigger("click");
-								}
-
-								// Wait until purities are loaded
-								await new Promise((resolve2) => {
-									const interval = setInterval(() => {
-										if ($container.data("loaded")) {
-											clearInterval(interval);
-											resolve2();
-										}
-									}, 50);
-								});
-							})();
-						} else {
-							return Promise.resolve();
-						}
-					})
-					.get();
-
-				// Wait for all dealers
-				await Promise.all(dealerPromises);
-
-				// Show overview only once
-				this.selected_dealers = new Set(
-					dealerRows.map((i, r) => $(r).data("dealer")).get()
-				);
-				await this.show_overview(Array.from(this.selected_dealers));
-
-				this.isExpandingAll = false;
-				allExpanded = true;
-				$("#expand-all-dealers").text("Collapse All");
-			} else {
-				// Collapse All logic stays mostly same
+				// ---- EXPAND ALL ----
 				for (let i = 0; i < dealerRows.length; i++) {
 					const $row = $(dealerRows[i]);
 					const dealerName = $row.data("dealer");
-
+					const $toggle = $row.find(".toggle-transactions");
 					const $transactionsRow = $tbl.find(
 						`.dealer-transactions[data-dealer='${dealerName}']`
 					);
 					const $purityToggle = $row.find(".toggle-purity");
 					const $purityDetail = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
 
-					// Collapse items inside purities
+					if ($transactionsRow.hasClass("d-none")) await $toggle.trigger("click");
+					if ($purityDetail.hasClass("d-none")) await $purityToggle.trigger("click");
+
+					// Wait for purities to load
+					const $purityContainers = $purityDetail.find(".purity-container");
+					await Promise.all(
+						$purityContainers
+							.map((idx, el) => {
+								const $el = $(el);
+								return new Promise((resolve) => {
+									if ($el.data("loaded")) resolve();
+									else {
+										const interval = setInterval(() => {
+											if ($el.data("loaded")) {
+												clearInterval(interval);
+												resolve();
+											}
+										}, 50);
+									}
+								});
+							})
+							.get()
+					);
+
+					// Expand all items inside purities
+					const $purityRows = $purityDetail.find(".purity-row");
+					for (let j = 0; j < $purityRows.length; j++) {
+						const $purityRow = $($purityRows[j]);
+						const $itemToggle = $purityRow.find(".toggle-cell");
+						const $itemsRow = $purityDetail.find(
+							`.purity-detail[data-purity='${$purityRow.data("purity")}']`
+						);
+						if ($itemsRow.hasClass("d-none")) await $itemToggle.trigger("click");
+					}
+
+					this.selected_dealers.add(dealerName);
+				}
+				this.isExpandingAll = false;
+				await this.show_overview(Array.from(this.selected_dealers));
+
+				allExpanded = true;
+				$("#expand-all-dealers").text("Collapse All");
+			} else {
+				// ---- COLLAPSE ALL ----
+				for (let i = 0; i < dealerRows.length; i++) {
+					const $row = $(dealerRows[i]);
+					const dealerName = $row.data("dealer");
+					const $toggle = $row.find(".toggle-transactions");
+					const $transactionsRow = $tbl.find(
+						`.dealer-transactions[data-dealer='${dealerName}']`
+					);
+					const $purityToggle = $row.find(".toggle-purity");
+					const $purityDetail = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
+
+					// Collapse items inside purities first
 					const $purityRows = $purityDetail.find(".purity-row");
 					for (let j = 0; j < $purityRows.length; j++) {
 						const $purityRow = $($purityRows[j]);
@@ -469,16 +471,15 @@ class PickupItemsPage {
 					if (!$purityDetail.hasClass("d-none")) await $purityToggle.trigger("click");
 
 					// Collapse transactions
-					const $toggle = $row.find(".toggle-transactions");
 					if (!$transactionsRow.hasClass("d-none")) await $toggle.trigger("click");
 				}
 
 				allExpanded = false;
 				$("#expand-all-dealers").text("Expand All");
 
-				// Clear selected dealers and reload default overview once
+				// Reset selected dealers and refresh overview table
 				this.selected_dealers.clear();
-				await this.show_overview();
+				await this.show_overview(); // Show default overview
 			}
 		});
 	}
