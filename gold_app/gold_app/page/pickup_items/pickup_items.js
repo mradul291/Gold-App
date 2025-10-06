@@ -307,22 +307,25 @@ class PickupItemsPage {
 				if (showing) {
 					$details.addClass("d-none");
 					icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
-					this.selected_dealers.delete(d.dealer); // remove dealer when collapsed
-					await this.show_overview(Array.from(this.selected_dealers));
+					this.selected_dealers.delete(d.dealer);
+
+					// Only update overview if NOT expanding all
+					if (!this.isExpandingAll) {
+						await this.show_overview(Array.from(this.selected_dealers));
+					}
 				} else {
 					icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
-
-					// Add or remove dealer from selected_dealers
+					// toggle dealer selection
 					const dealerName = d.dealer;
-					if (this.selected_dealers.has(dealerName)) {
-						this.selected_dealers.delete(dealerName); // Deselect dealer
-					} else {
-						this.selected_dealers.add(dealerName); // Select dealer
+					if (this.selected_dealers.has(dealerName))
+						this.selected_dealers.delete(dealerName);
+					else this.selected_dealers.add(dealerName);
+
+					if (!this.isExpandingAll) {
+						await this.show_overview(Array.from(this.selected_dealers));
 					}
 
-					// Call show_overview with all selected dealers
-					await this.show_overview(Array.from(this.selected_dealers));
-
+					// Load purities
 					const $container = $details.find(".purity-container");
 					if (!$container.data("loaded")) {
 						$container.html('<div class="text-muted">Loading purities...</div>');
@@ -342,6 +345,7 @@ class PickupItemsPage {
 						this.render_purities($container, dealerName, rows);
 						$container.data("loaded", true);
 					}
+
 					$details.removeClass("d-none");
 				}
 			});
@@ -383,7 +387,7 @@ class PickupItemsPage {
 			if (!allExpanded) {
 				this.isExpandingAll = true;
 
-				// Show spinner immediately
+				// Show spinner
 				this.overview_container.html(`
         <div class="loading-state text-center p-4">
             <div class="spinner-border text-primary" role="status"></div>
@@ -391,8 +395,8 @@ class PickupItemsPage {
         </div>
     `);
 
-				// Allow browser to render the spinner
-				await new Promise((resolve) => setTimeout(resolve, 50));
+				// Let browser render the spinner
+				await new Promise((resolve) => requestAnimationFrame(resolve));
 
 				const dealerPromises = dealerRows
 					.map((i, row) => {
@@ -404,8 +408,11 @@ class PickupItemsPage {
 
 						if (!$container.data("loaded")) {
 							return (async () => {
-								// Show details row
-								if ($details.hasClass("d-none")) $purityToggle.trigger("click");
+								if ($details.hasClass("d-none")) {
+									// Skip show_overview during expand all
+									this.isExpandingAll = true;
+									$purityToggle.trigger("click");
+								}
 
 								// Wait until purities are loaded
 								await new Promise((resolve2) => {
@@ -423,10 +430,10 @@ class PickupItemsPage {
 					})
 					.get();
 
-				// Wait for all dealers' purities to load in parallel
+				// Wait for all dealers
 				await Promise.all(dealerPromises);
 
-				// Only now update overview once
+				// Show overview only once
 				this.selected_dealers = new Set(
 					dealerRows.map((i, r) => $(r).data("dealer")).get()
 				);
