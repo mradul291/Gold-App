@@ -382,6 +382,8 @@ class PickupItemsPage {
 
 			if (!allExpanded) {
 				this.isExpandingAll = true;
+
+				// Show spinner immediately
 				this.overview_container.html(`
         <div class="loading-state text-center p-4">
             <div class="spinner-border text-primary" role="status"></div>
@@ -389,38 +391,42 @@ class PickupItemsPage {
         </div>
     `);
 
-				// Preload all purities/items without updating overview yet
-				const dealerPromises = [];
-				dealerRows.each((i, row) => {
-					const $row = $(row);
-					const dealerName = $row.data("dealer");
-					const $purityToggle = $row.find(".toggle-purity");
-					const $details = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
-					const $container = $details.find(".purity-container");
+				// Allow browser to render the spinner
+				await new Promise((resolve) => setTimeout(resolve, 50));
 
-					// Only load if not already loaded
-					if (!$container.data("loaded")) {
-						dealerPromises.push(
-							(async () => {
-								if ($details.hasClass("d-none"))
-									await $purityToggle.trigger("click");
-								await new Promise((resolve) => {
+				const dealerPromises = dealerRows
+					.map((i, row) => {
+						const $row = $(row);
+						const dealerName = $row.data("dealer");
+						const $purityToggle = $row.find(".toggle-purity");
+						const $details = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
+						const $container = $details.find(".purity-container");
+
+						if (!$container.data("loaded")) {
+							return (async () => {
+								// Show details row
+								if ($details.hasClass("d-none")) $purityToggle.trigger("click");
+
+								// Wait until purities are loaded
+								await new Promise((resolve2) => {
 									const interval = setInterval(() => {
 										if ($container.data("loaded")) {
 											clearInterval(interval);
-											resolve();
+											resolve2();
 										}
 									}, 50);
 								});
-							})()
-						);
-					}
-				});
+							})();
+						} else {
+							return Promise.resolve();
+						}
+					})
+					.get();
 
-				// Wait for all dealer purities to load
+				// Wait for all dealers' purities to load in parallel
 				await Promise.all(dealerPromises);
 
-				// Now update overview once
+				// Only now update overview once
 				this.selected_dealers = new Set(
 					dealerRows.map((i, r) => $(r).data("dealer")).get()
 				);
