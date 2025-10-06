@@ -15,6 +15,7 @@ class PickupItemsPage {
 		this.current_dealer = null;
 		this.selected_dealers = new Set();
 		this.only_nonpickup = false;
+		this.isExpandingAll = false;
 		this.setup();
 	}
 
@@ -83,7 +84,8 @@ class PickupItemsPage {
 	async show_overview(selectedDealers = null) {
 		this.overview_container.empty(); // only empty after fade out
 
-		const $loading = $(`
+		if (!this.isExpandingAll) {
+			const $loading = $(`
         <div class="loading-state text-center p-4">
             <div class="spinner-border text-primary" role="status">
                 <span class="sr-only">Loading...</span>
@@ -91,6 +93,7 @@ class PickupItemsPage {
             <div class="mt-2 text-muted">Loading overview...</div>
         </div>
     `).appendTo(this.overview_container);
+		}
 
 		let dealerArg = null;
 		if (selectedDealers) {
@@ -378,70 +381,67 @@ class PickupItemsPage {
 			const dealerRows = $tbl.find(".dealer-row");
 
 			if (!allExpanded) {
-				// ---- EXPAND ALL ----
-				for (let i = 0; i < dealerRows.length; i++) {
-					const $row = $(dealerRows[i]);
+				this.isExpandingAll = true;
+				this.overview_container.html(`
+        <div class="loading-state text-center p-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-2 text-muted">Loading all dealers...</div>
+        </div>
+    `);
+
+				// Preload all purities/items without updating overview yet
+				const dealerPromises = [];
+				dealerRows.each((i, row) => {
+					const $row = $(row);
 					const dealerName = $row.data("dealer");
-					const $toggle = $row.find(".toggle-transactions");
-					const $transactionsRow = $tbl.find(
-						`.dealer-transactions[data-dealer='${dealerName}']`
-					);
 					const $purityToggle = $row.find(".toggle-purity");
-					const $purityDetail = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
+					const $details = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
+					const $container = $details.find(".purity-container");
 
-					if ($transactionsRow.hasClass("d-none")) await $toggle.trigger("click");
-					if ($purityDetail.hasClass("d-none")) await $purityToggle.trigger("click");
-
-					// Wait for purities to load
-					const $purityContainers = $purityDetail.find(".purity-container");
-					await Promise.all(
-						$purityContainers
-							.map((idx, el) => {
-								const $el = $(el);
-								return new Promise((resolve) => {
-									if ($el.data("loaded")) resolve();
-									else {
-										const interval = setInterval(() => {
-											if ($el.data("loaded")) {
-												clearInterval(interval);
-												resolve();
-											}
-										}, 50);
-									}
+					// Only load if not already loaded
+					if (!$container.data("loaded")) {
+						dealerPromises.push(
+							(async () => {
+								if ($details.hasClass("d-none"))
+									await $purityToggle.trigger("click");
+								await new Promise((resolve) => {
+									const interval = setInterval(() => {
+										if ($container.data("loaded")) {
+											clearInterval(interval);
+											resolve();
+										}
+									}, 50);
 								});
-							})
-							.get()
-					);
-
-					// Expand all items inside purities
-					const $purityRows = $purityDetail.find(".purity-row");
-					for (let j = 0; j < $purityRows.length; j++) {
-						const $purityRow = $($purityRows[j]);
-						const $itemToggle = $purityRow.find(".toggle-cell");
-						const $itemsRow = $purityDetail.find(
-							`.purity-detail[data-purity='${$purityRow.data("purity")}']`
+							})()
 						);
-						if ($itemsRow.hasClass("d-none")) await $itemToggle.trigger("click");
 					}
+				});
 
-					this.selected_dealers.add(dealerName);
-				}
+				// Wait for all dealer purities to load
+				await Promise.all(dealerPromises);
 
+				// Now update overview once
+				this.selected_dealers = new Set(
+					dealerRows.map((i, r) => $(r).data("dealer")).get()
+				);
+				await this.show_overview(Array.from(this.selected_dealers));
+
+				this.isExpandingAll = false;
 				allExpanded = true;
 				$("#expand-all-dealers").text("Collapse All");
 			} else {
-				// ---- COLLAPSE ALL ----
+				// Collapse All logic stays mostly same
 				for (let i = 0; i < dealerRows.length; i++) {
 					const $row = $(dealerRows[i]);
 					const dealerName = $row.data("dealer");
-					const $toggle = $row.find(".toggle-transactions");
+
 					const $transactionsRow = $tbl.find(
 						`.dealer-transactions[data-dealer='${dealerName}']`
 					);
 					const $purityToggle = $row.find(".toggle-purity");
 					const $purityDetail = $tbl.find(`.dealer-detail[data-dealer='${dealerName}']`);
 
-					// Collapse items inside purities first
+					// Collapse items inside purities
 					const $purityRows = $purityDetail.find(".purity-row");
 					for (let j = 0; j < $purityRows.length; j++) {
 						const $purityRow = $($purityRows[j]);
@@ -456,15 +456,16 @@ class PickupItemsPage {
 					if (!$purityDetail.hasClass("d-none")) await $purityToggle.trigger("click");
 
 					// Collapse transactions
+					const $toggle = $row.find(".toggle-transactions");
 					if (!$transactionsRow.hasClass("d-none")) await $toggle.trigger("click");
 				}
 
 				allExpanded = false;
 				$("#expand-all-dealers").text("Expand All");
 
-				// Reset selected dealers and refresh overview table
+				// Clear selected dealers and reload default overview once
 				this.selected_dealers.clear();
-				await this.show_overview(); // Show default overview
+				await this.show_overview();
 			}
 		});
 	}
