@@ -382,5 +382,16 @@
     "value": "Customer Type",
     "name": "Supplier-supplier_type-label",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "doctype_or_field": "DocField",
+    "doc_type": "Supplier",
+    "field_name": "mobile_no",
+    "property": "allow_in_quick_entry",
+    "property_type": "Check",
+    "value": "1",
+    "name": "Supplier-mobile_no-allow_in_quick_entry",
+    "module": "Gold App"
   }
 ]

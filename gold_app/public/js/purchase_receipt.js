@@ -163,64 +163,17 @@ frappe.ui.form.on("Purchase Receipt", {
 
 // ID number selection field
 frappe.ui.form.on("Purchase Receipt", {
-	refresh: function (frm) {
-		if (frm.fields_dict.supplier_id_number) {
-			let field = frm.fields_dict.supplier_id_number;
-
-			if (!field.awesomplete) {
-				field.awesomplete = new Awesomplete(field.$input[0], {
-					minChars: 1,
-					autoFirst: true,
-				});
-
-				// Keep a reference list
-				field.supplier_list = [];
-
-				// On typing → fetch Supplier list with ID numbers
-				field.$input.on("input", function () {
-					frappe.call({
-						method: "gold_app.api.purchase_receipt.get_suppliers_with_id",
-						args: { txt: this.value },
-						callback: function (r) {
-							if (r.message) {
-								field.supplier_list = r.message; // store full objects
-								field.awesomplete.list = r.message.map((d) => d.label);
-							}
-						},
-					});
-				});
-
-				// On selecting suggestion → set fields
-				field.$input.on("awesomplete-selectcomplete", function (e) {
-					let selected_label = e.originalEvent.text.value;
-
-					// Find the selected object
-					let selected = field.supplier_list.find((d) => d.label === selected_label);
-
-					if (selected) {
-						// Set ID number field
-						frm.set_value("supplier_id_number", selected.value);
-
-						// Set actual Supplier link field
-						frm.set_value("supplier", selected.supplier_id);
-					}
-				});
-			}
-		}
-	},
-	supplier: function (frm) {
+	supplier: function(frm) {
 		if (frm.doc.supplier) {
-			frappe.db.get_value("Supplier", frm.doc.supplier, "id_number").then((r) => {
-				if (r.message && r.message.id_number) {
-					frm.set_value("supplier_id_number", r.message.id_number);
-				} else {
-					frm.set_value("supplier_id_number", "");
-				}
+			frappe.db.get_doc("Supplier", frm.doc.supplier).then(supplier => {
+				// If Malaysian ID exists, use it; else use Other ID Number
+				const id_number = supplier.malaysian_id || supplier.other_id_number || "";
+				frm.set_value("supplier_id_number", id_number);
 			});
 		} else {
 			frm.set_value("supplier_id_number", "");
 		}
-	},
+	}
 });
 
 // Client Script for Purchase Receipt

@@ -11,7 +11,6 @@ fixtures = [
     {"dt": "Property Setter", "filters": [["module", "=", "Gold App"]]}
 ]
 
-
 doctype_js = {
     "Sales Invoice": "public/js/sales_invoice_item.js",
     "Purchase Invoice": "public/js/purchase_invoice_item.js",
@@ -19,7 +18,12 @@ doctype_js = {
     "Purchase Order": "public/js/purchase_order_item.js",
     "Stock Entry": "public/js/stock_entry.js",
     "Purchase Receipt": "public/js/purchase_receipt.js",
+    "Supplier": "public/js/supplier.js",
 }
+
+app_include_js = [
+    "assets/gold_app/js/supplier_quick_entry.js",
+]
 
 doc_events = {
     "Item": {
