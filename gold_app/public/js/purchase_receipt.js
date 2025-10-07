@@ -103,26 +103,21 @@ frappe.ui.form.on("Purchase Receipt", {
 frappe.ui.form.on("Purchase Receipt", {
 	payment_method(frm) {
 		if (frm.doc.payment_method === "Mix") {
-			// Show the payment_split child table (if hidden)
 			frm.toggle_display("payment_split", true);
 
-			// Clear any existing rows to avoid duplicates
-			frm.clear_table("payment_split");
+			// Only add default rows if table is empty
+			if (!frm.doc.payment_split || frm.doc.payment_split.length === 0) {
+				let bank_row = frm.add_child("payment_split");
+				bank_row.mode_of_payment = "Bank Transfer";
+				bank_row.amount = 0.0;
 
-			// 1st Row - Bank Transfer
-			let bank_row = frm.add_child("payment_split");
-			bank_row.mode_of_payment = "Bank Transfer";
-			bank_row.amount = 0.0;
+				let cash_row = frm.add_child("payment_split");
+				cash_row.mode_of_payment = "Cash";
+				cash_row.amount = 0.0;
 
-			// 2nd Row - Cash
-			let cash_row = frm.add_child("payment_split");
-			cash_row.mode_of_payment = "Cash";
-			cash_row.amount = 0.0;
-
-			// Refresh the table so rows show immediately
-			frm.refresh_field("payment_split");
+				frm.refresh_field("payment_split");
+			}
 		} else {
-			// If not Mix, hide the payment_split table
 			frm.toggle_display("payment_split", false);
 		}
 	},
@@ -230,68 +225,132 @@ frappe.ui.form.on("Purchase Receipt", {
 
 // Client Script for Purchase Receipt
 frappe.ui.form.on("Purchase Receipt", {
-    onload_post_render: function (frm) {
-        hide_supplier_name_field(frm);
-        setTimeout(() => hide_supplier_name_field(frm), 250);
-    },
+	onload_post_render: function (frm) {
+		hide_supplier_name_field(frm);
+		setTimeout(() => hide_supplier_name_field(frm), 250);
+	},
 
-    refresh: function (frm) {
-        hide_supplier_name_field(frm);
-    },
+	refresh: function (frm) {
+		hide_supplier_name_field(frm);
+	},
 
-    supplier: function (frm) {
-        setTimeout(() => hide_supplier_name_field(frm), 100);
-    }
+	supplier: function (frm) {
+		setTimeout(() => hide_supplier_name_field(frm), 100);
+	},
 });
 
 // Function to hide and enforce hidden property (scoped to Purchase Receipt)
 function hide_supplier_name_field(frm) {
-    try {
-        if (!frm || frm.doc.doctype !== "Purchase Receipt") return;
+	try {
+		if (!frm || frm.doc.doctype !== "Purchase Receipt") return;
 
-        // 1) Update Frappe's metadata to hidden
-        frm.set_df_property("supplier_name", "hidden", 1);
+		// 1) Update Frappe's metadata to hidden
+		frm.set_df_property("supplier_name", "hidden", 1);
 
-        // 2) Restrict to this form only — use the wrapper of the current form
-        const wrapper = frm.$wrapper;
-        if (!wrapper) return;
+		// 2) Restrict to this form only — use the wrapper of the current form
+		const wrapper = frm.$wrapper;
+		if (!wrapper) return;
 
-        // 3) Selector limited to this form wrapper
-        const selector = '[data-fieldname="supplier_name"], .form-group.field-supplier_name';
+		// 3) Selector limited to this form wrapper
+		const selector = '[data-fieldname="supplier_name"], .form-group.field-supplier_name';
 
-        wrapper.find(selector).each(function () {
-            $(this).hide();
-        });
+		wrapper.find(selector).each(function () {
+			$(this).hide();
+		});
 
-        // 4) Hide field wrapper if accessible via fields_dict
-        if (frm.fields_dict?.supplier_name?.$wrapper) {
-            frm.fields_dict.supplier_name.$wrapper.hide();
-        }
+		// 4) Hide field wrapper if accessible via fields_dict
+		if (frm.fields_dict?.supplier_name?.$wrapper) {
+			frm.fields_dict.supplier_name.$wrapper.hide();
+		}
 
-        // 5) Scoped MutationObserver (only once per Purchase Receipt form)
-        if (!frm._hideSupplierNameObserverAttached) {
-            const observer = new MutationObserver((mutations) => {
-                for (const mut of mutations) {
-                    for (const node of mut.addedNodes || []) {
-                        const $node = $(node);
-                        if ($node.closest(wrapper).length) {
-                            if (
-                                $node.is(selector) ||
-                                $node.find(selector).length
-                            ) {
-                                $node.find(selector).addBack(selector).hide();
-                            }
-                        }
-                    }
-                }
-            });
+		// 5) Scoped MutationObserver (only once per Purchase Receipt form)
+		if (!frm._hideSupplierNameObserverAttached) {
+			const observer = new MutationObserver((mutations) => {
+				for (const mut of mutations) {
+					for (const node of mut.addedNodes || []) {
+						const $node = $(node);
+						if ($node.closest(wrapper).length) {
+							if ($node.is(selector) || $node.find(selector).length) {
+								$node.find(selector).addBack(selector).hide();
+							}
+						}
+					}
+				}
+			});
 
-            observer.observe(wrapper[0], { childList: true, subtree: true });
-            frm._hideSupplierNameObserverAttached = true;
-            frm._hideSupplierNameObserver = observer;
-        }
-    } catch (err) {
-        console.error("hide_supplier_name_field error:", err);
-    }
+			observer.observe(wrapper[0], { childList: true, subtree: true });
+			frm._hideSupplierNameObserverAttached = true;
+			frm._hideSupplierNameObserver = observer;
+		}
+	} catch (err) {
+		console.error("hide_supplier_name_field error:", err);
+	}
 }
 
+// Pop up Bank Details field if Not Found for the customer to Add and Do Bank Transfer
+frappe.ui.form.on("Purchase Receipt", {
+	payment_method: function (frm) {
+		if (frm.doc.payment_method === "Bank Transfer" && frm.doc.supplier) {
+			frappe.db
+				.get_value("Supplier", frm.doc.supplier, ["bank_name", "bank_account_number"])
+				.then((r) => {
+					if (r && r.message) {
+						let { bank_name, bank_account_number } = r.message;
+
+						if (bank_name && bank_account_number) {
+							// Case 1: Supplier has existing bank details
+							frm.set_value("supplier_bank_name", bank_name);
+							frm.set_value("supplier_bank_account_number", bank_account_number);
+						} else {
+							// Case 2: Missing details → ask user to input
+							frappe.prompt(
+								[
+									{
+										label: "Bank Name",
+										fieldname: "bank_name",
+										fieldtype: "Data",
+										reqd: 1,
+									},
+									{
+										label: "Bank Account Number",
+										fieldname: "bank_account_number",
+										fieldtype: "Data",
+										reqd: 1,
+									},
+								],
+								function (values) {
+									// Update PR fields
+									frm.set_value("supplier_bank_name", values.bank_name);
+									frm.set_value(
+										"supplier_bank_account_number",
+										values.bank_account_number
+									);
+
+									// Update Supplier record as well
+									frappe.db
+										.set_value("Supplier", frm.doc.supplier, {
+											bank_name: values.bank_name,
+											bank_account_number: values.bank_account_number,
+										})
+										.then(() => {
+											frappe.show_alert({
+												message: __(
+													"Supplier bank details saved successfully."
+												),
+												indicator: "green",
+											});
+										});
+								},
+								__("Enter Supplier Bank Details"),
+								__("Save")
+							);
+						}
+					}
+				});
+		} else {
+			// Clear if other method chosen
+			frm.set_value("supplier_bank_name", "");
+			frm.set_value("supplier_bank_account_number", "");
+		}
+	},
+});

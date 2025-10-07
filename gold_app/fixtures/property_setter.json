@@ -242,6 +242,17 @@
   },
   {
     "doctype": "Property Setter",
+    "name": "Supplier-supplier_type-default",
+    "doctype_or_field": "DocField",
+    "doc_type": "Supplier",
+    "field_name": "supplier_type",
+    "property": "default",
+    "property_type": "Data",
+    "value": "Individual",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
     "doctype_or_field": "DocField",
     "doc_type": "Purchase Receipt",
     "field_name": "supplier_name",

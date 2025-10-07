@@ -216,8 +216,8 @@ class PoolPage {
 				let sourceItem = `Unsorted-${purity}`;
 				let targetWarehouseSelect = `<select class="form-control target-warehouse">${wh_options}</select>`;
 				let purityData = this.last_data.find((d) => d["Purity"] === purity) || {};
-				let avco = purityData["AVCO (RM/g)"] || 0;
-				let totalCost = purityData["Total Cost (MYR)"] || 0;
+				let avco = parseFloat(purityData["AVCO (RM/g)"]) || 0;
+				let totalCost = remainingQty * avco;
 
 				tbody.append(`
             <tr>
@@ -290,13 +290,24 @@ class PoolPage {
 				let purityVal = selected.val();
 
 				let purityData = this.last_data.find((d) => d["Purity"] === purityVal) || {};
-				row.find("input[name='avco_rate']").val(purityData["AVCO (RM/g)"] || 0);
-				row.find("input[name='total_cost']").val(purityData["Total Cost (MYR)"] || 0);
+				let avco = parseFloat(purityData["AVCO (RM/g)"]) || 0;
+				row.find("input[name='avco_rate']").val(avco);
+
+				// Recalculate total cost if qty is present
+				let qty = parseFloat(row.find("input[name='qty']").val()) || 0;
+				let totalCost = qty * avco;
+				row.find("input[name='total_cost']").val(totalCost.toFixed(2));
 
 				renderRemainingTransferTable();
 			});
 
 			row.find("input[name='qty']").on("input", () => {
+				let qty = parseFloat(row.find("input[name='qty']").val()) || 0;
+				let avco = parseFloat(row.find("input[name='avco_rate']").val()) || 0;
+				let totalCost = qty * avco;
+
+				row.find("input[name='total_cost']").val(totalCost.toFixed(2));
+
 				this.update_remaining_weights();
 				renderRemainingTransferTable();
 			});

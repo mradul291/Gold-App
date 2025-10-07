@@ -465,6 +465,8 @@ class PickupItemsPage {
 				this.isExpandingAll = false;
 			} else {
 				// ---- COLLAPSE ALL ----
+				this.isExpandingAll = true; // prevent per-dealer toggles from triggering render
+
 				for (let i = 0; i < dealerRows.length; i++) {
 					const $row = $(dealerRows[i]);
 					const dealerName = $row.data("dealer");
@@ -496,10 +498,10 @@ class PickupItemsPage {
 				allExpanded = false;
 				$("#expand-all-dealers").text("Expand All");
 
-				// Reset selected dealers and refresh overview table
+				// Clear selected dealers before updating overview
 				this.selected_dealers.clear();
-				await this.render_selected_overview(); // Show default overview
-				this.isExpandingAll = false;
+				await this.render_selected_overview([]); // correctly show "No dealers selected"
+				this.isExpandingAll = false; // re-enable per-dealer updates
 			}
 		});
 	}
