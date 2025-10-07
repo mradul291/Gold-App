@@ -159,8 +159,9 @@ class PoolPage {
                 <th>Weight (g)</th>
                 <th class="length-col">Length (CM)</th>
                 <th class="size-col" style="display:none">Size</th>
-                <th>Valuation Rate</th>
                 <th>Target WH</th>
+				 <th>AVCO</th>
+        		<th>Total Cost</th>
                 <th>Print</th>
                 <th></th>
             </tr>
@@ -188,7 +189,7 @@ class PoolPage {
 
 			let table = $("<table class='table table-bordered remaining-stock-transfer'></table>");
 			table.append(
-				"<thead><tr><th>Purity</th><th>Source Item</th><th>Weight (g)</th><th>Target Warehouse</th></tr></thead>"
+				"<thead><tr><th>Purity</th><th>Source Item</th><th>Weight (g)</th><th>Target Warehouse</th><th>AVCO</th><th>Total Cost</th></tr></thead>"
 			);
 			let tbody = $("<tbody></tbody>");
 			table.append(tbody);
@@ -214,6 +215,9 @@ class PoolPage {
 				let remainingQty = remainingByPurity[purity] < 0 ? 0 : remainingByPurity[purity];
 				let sourceItem = `Unsorted-${purity}`;
 				let targetWarehouseSelect = `<select class="form-control target-warehouse">${wh_options}</select>`;
+				let purityData = this.last_data.find((d) => d["Purity"] === purity) || {};
+				let avco = purityData["AVCO (RM/g)"] || 0;
+				let totalCost = purityData["Total Cost (MYR)"] || 0;
 
 				tbody.append(`
             <tr>
@@ -221,6 +225,8 @@ class PoolPage {
                 <td>${sourceItem}</td>
                 <td>${remainingQty.toFixed(3)}</td>
                 <td>${targetWarehouseSelect}</td>
+				 <td><input type="number" class="form-control avco-rate" value="${avco}" readonly></td>
+    			<td><input type="number" class="form-control total-cost" value="${totalCost}" readonly></td>
             </tr>
         `);
 			});
@@ -242,8 +248,9 @@ class PoolPage {
                 <td><input type="number" class="form-control" name="qty" min="0"></td>
                 <td class="length-col-td"><input type="number" class="form-control" name="item_length" min="0" step="0.01" placeholder="Length (CM)"></td>
                 <td class="size-col-td" style="display:none"><input type="text" class="form-control" name="item_size" placeholder="Size"></td>
-                <td><input type="number" class="form-control" name="valuation_rate" value="${valuation_rate}" step="0.01" readonly></td>
                 <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
+				<td><input type="number" class="form-control" name="avco_rate" value="0" step="0.01" readonly></td>
+    			<td><input type="number" class="form-control" name="total_cost" value="0" step="0.01" readonly></td>
                 <td class="text-center"><button class="btn btn-success btn-sm print-row"><i class="fa fa-print"></i></button></td>
                 <td><button class="btn btn-danger btn-sm remove-row">X</button></td>
             </tr>
@@ -278,10 +285,14 @@ class PoolPage {
 				}
 			};
 
-			row.find("select[name='purity']").on("change", function () {
-				let selected = $(this).find("option:selected");
+			row.find("select[name='purity']").on("change", () => {
+				let selected = row.find("select[name='purity'] option:selected");
 				let purityVal = selected.val();
-				row.find("input[name='valuation_rate']").val(selected.data("rate") || 0);
+
+				let purityData = this.last_data.find((d) => d["Purity"] === purityVal) || {};
+				row.find("input[name='avco_rate']").val(purityData["AVCO (RM/g)"] || 0);
+				row.find("input[name='total_cost']").val(purityData["Total Cost (MYR)"] || 0);
+
 				renderRemainingTransferTable();
 			});
 

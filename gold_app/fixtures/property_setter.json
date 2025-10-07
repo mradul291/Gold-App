@@ -29,7 +29,7 @@
     "field_name": "qty",
     "property": "label",
     "property_type": "float",
-    "value": "Qty (in GMs)",
+    "value": "Weight (g)",
     "module": "Gold App"
   },
   {
@@ -232,14 +232,13 @@
   },
   {
     "doctype": "Property Setter",
+    "name": "Supplier-mobile_no-reqd",
     "doctype_or_field": "DocField",
-    "doc_type": "Purchase Receipt",
-    "field_name": "supplier_name",
-    "property": "label",
-    "property_type": "Data",
-    "value": "Customer Name",
-    "name": "Purchase Receipt-supplier_name-label",
-    "module": "Gold App"
+    "doc_type": "Supplier",
+    "field_name": "mobile_no",
+    "property": "reqd",
+    "property_type": "Check",
+    "value": "0"
   },
   {
     "doctype": "Property Setter",
@@ -250,6 +249,28 @@
     "property_type": "Check",
     "value": "1",
     "name": "Purchase Receipt-supplier_name-hidden",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-supplier_name-fetch_from-clear",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "supplier_name",
+    "property": "fetch_from",
+    "property_type": "Data",
+    "value": "",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Property Setter",
+    "name": "Purchase Receipt-supplier_name-depends_on-clear",
+    "doctype_or_field": "DocField",
+    "doc_type": "Purchase Receipt",
+    "field_name": "supplier_name",
+    "property": "depends_on",
+    "property_type": "Data",
+    "value": "",
     "module": "Gold App"
   },
   {

@@ -24,7 +24,8 @@ class PickupItemsPage {
 		this.make_toolbar();
 		this.make_filters();
 		this.make_container();
-		this.show_overview();
+		this.render_total_overview();
+		this.render_selected_overview();
 		this.show_dealer_summary();
 	}
 
@@ -38,9 +39,34 @@ class PickupItemsPage {
 
 	make_container() {
 		this.container = $('<div class="pickup-items-container"></div>').appendTo(this.wrapper);
-		this.overview_container = $(
-			'<div class="pickup-overview-container mb-4 fade-container"></div>'
-		).appendTo(this.container);
+
+		// Main Title
+		this.container.append(`
+        <div class="table-title text-center mb-3">
+            Pending Pick-up Items Overview
+        </div>
+    `);
+
+		// Overview container (flex row)
+		this.overview_container = $(`
+        <div class="pickup-overview-container mb-4 fade-container"></div>
+    `).appendTo(this.container);
+
+		// Total overview wrapper
+		this.total_overview_container = $(`
+        <div class="total-overview-container overview-table-wrapper">
+            <div class="table-subtitle text-center mb-2">Total Overview</div>
+            <div class="table-content"></div>
+        </div>
+    `).appendTo(this.overview_container);
+
+		// Selected overview wrapper
+		this.selected_overview_container = $(`
+        <div class="selected-overview-container overview-table-wrapper">
+            <div class="table-subtitle text-center mb-2">Selected Dealer Overview</div>
+            <div class="table-content"></div>
+        </div>
+    `).appendTo(this.overview_container);
 
 		this.summary_container = $('<div class="pickup-summary-container"></div>').appendTo(
 			this.container
@@ -81,121 +107,90 @@ class PickupItemsPage {
 		return `${start} – ${end}`; // en dash
 	}
 
-	async show_overview(selectedDealers = null) {
-		this.overview_container.empty(); // only empty after fade out
+	build_overview_table(data) {
+		const $table = $(`
+        <table class="table table-hover table-sm modern-overview-table">
+            <thead>
+                <tr>
+                    <th>Purity</th>
+                    <th>Weight (g)</th>
+                    <th>Avco (RM/g)</th>
+                    <th>Amount (RM)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    `);
 
-		if (!this.isExpandingAll) {
-			const $loading = $(`
-        <div class="loading-state text-center p-4">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading...</span>
-            </div>
-            <div class="mt-2 text-muted">Loading overview...</div>
-        </div>
-    `).appendTo(this.overview_container);
+		const $tbody = $table.find("tbody");
+
+		Object.keys(data || {})
+			.sort((a, b) => parseFloat(b) - parseFloat(a))
+			.forEach((purity) => {
+				const row = data[purity];
+				$tbody.append(`
+                <tr>
+                    <td>${purity}</td>
+                    <td>${(row.weight || 0).toFixed(2)}</td>
+                    <td>${row.avco ? "RM" + row.avco.toFixed(2) : ""}</td>
+                    <td>${row.amount ? "RM" + row.amount.toLocaleString() : ""}</td>
+                </tr>
+            `);
+			});
+
+		return $table;
+	}
+
+	// ---- Total Overview (Static) ----
+	async render_total_overview() {
+		let overview_data = {};
+		try {
+			overview_data = await frappe.xcall(
+				"gold_app.api.page_api.get_pending_pickup_overview"
+			);
+		} catch (err) {
+			console.error(err);
+			this.total_overview_container
+				.find(".table-content")
+				.html('<div class="alert alert-danger">Failed to load total overview</div>');
+			return;
 		}
 
-		let dealerArg = null;
-		if (selectedDealers) {
-			if (Array.isArray(selectedDealers)) {
-				dealerArg = selectedDealers.join(",");
-			} else {
-				dealerArg = selectedDealers;
-				selectedDealers = [selectedDealers];
-			}
+		const $table = this.build_overview_table(overview_data.total);
+		this.total_overview_container.find(".table-content").empty().append($table);
+	}
+	// ---- Selected Dealer Overview (Dynamic) ----
+	async render_selected_overview(selectedDealers = []) {
+		const $subtitle = this.selected_overview_container.find(".table-subtitle");
+
+		if (!selectedDealers.length) {
+			$subtitle.text("Selected Dealer Overview");
+			this.selected_overview_container
+				.find(".table-content")
+				.html('<div class="text-muted">No dealers selected</div>');
+			return;
 		}
+
+		$subtitle.text(`Selected Dealer Overview (${selectedDealers.join(", ")})`);
 
 		let overview_data = {};
 		try {
 			overview_data = await frappe.xcall(
 				"gold_app.api.page_api.get_pending_pickup_overview",
-				{ dealer: dealerArg }
+				{ dealer: selectedDealers.join(",") }
 			);
 		} catch (err) {
 			console.error(err);
-			this.overview_container
-				.html('<div class="alert alert-danger">Failed to load overview</div>')
-				.fadeIn(200);
-			return;
-		}
-		this.overview_container.empty();
-
-		if (!overview_data || (!overview_data.total && !overview_data.selected)) {
-			this.overview_container
-				.html('<div class="alert alert-info">No overview data found</div>')
-				.fadeIn(200);
+			this.selected_overview_container
+				.find(".table-content")
+				.html(
+					'<div class="alert alert-danger">Failed to load selected dealer overview</div>'
+				);
 			return;
 		}
 
-		// Table wrapper
-		const $wrapper = $(`
-        <div class="overview-table-wrapper">
-            <table class="table table-hover table-sm modern-overview-table">
-                <thead>
-                    <tr>
-                        <th colspan="8" class="text-center table-title">Pending Pick-up Items Overview</th>
-                    </tr>
-                    <tr>
-                        <th colspan="4" class="text-center table-subtitle">Total Overview</th>
-                       <th colspan="4" class="text-center table-subtitle">
-    ${
-		selectedDealers
-			? `Selected Dealer Overview (${selectedDealers.join(", ")})`
-			: "Selected Dealer Overview"
-	}
-</th>
-
-                    </tr>
-                    <tr>
-                        <th>Purity</th>
-                        <th>Weight (g)</th>
-                        <th>Avco (RM/g)</th>
-                        <th>Amount (RM)</th>
-                        <th>Purity</th>
-                        <th>Weight (g)</th>
-                        <th>Avco (RM/g)</th>
-                        <th>Amount (RM)</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    `);
-		this.overview_container.empty();
-		$wrapper.appendTo(this.overview_container).hide().fadeIn(220);
-
-		const $tbody = $wrapper.find("tbody");
-
-		let purities = [
-			...new Set([
-				...Object.keys(overview_data.total || {}),
-				...Object.keys(overview_data.selected || {}),
-			]),
-		];
-
-		purities.sort((a, b) => parseFloat(b) - parseFloat(a));
-
-		purities.forEach((purity) => {
-			const total = overview_data.total?.[purity] || {};
-			const selected = overview_data.selected?.[purity] || {};
-
-			// Skip rows where selected.weight is 0
-			if (selectedDealers && (!selected.weight || selected.weight === 0)) return;
-
-			$tbody.append(`
-            <tr>
-                <td>${purity}</td>
-                <td>${(total.weight || 0).toFixed(2)}</td>
-                <td>${total.avco ? "RM" + total.avco.toFixed(2) : ""}</td>
-                <td>${total.amount ? "RM" + total.amount.toLocaleString() : ""}</td>
-                <td>${purity}</td>
-                <td>${(selected.weight || 0).toFixed(2)}</td>
-                <td>${selected.avco ? "RM" + selected.avco.toFixed(2) : ""}</td>
-                <td>${selected.amount ? "RM" + selected.amount.toLocaleString() : ""}</td>
-            </tr>
-        `);
-		});
-		this.overview_container.fadeIn(200);
+		const $table = this.build_overview_table(overview_data.selected);
+		this.selected_overview_container.find(".table-content").empty().append($table);
 	}
 
 	async show_dealer_summary() {
@@ -309,7 +304,7 @@ class PickupItemsPage {
 					icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
 					this.selected_dealers.delete(d.dealer); // remove dealer when collapsed
 					if (!this.isExpandingAll) {
-						await this.show_overview(Array.from(this.selected_dealers));
+						await this.render_selected_overview(Array.from(this.selected_dealers));
 					}
 				} else {
 					icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
@@ -322,7 +317,7 @@ class PickupItemsPage {
 					}
 
 					if (!this.isExpandingAll) {
-						await this.show_overview(Array.from(this.selected_dealers));
+						await this.render_selected_overview(Array.from(this.selected_dealers));
 					}
 
 					const $container = $details.find(".purity-container");
@@ -357,21 +352,38 @@ class PickupItemsPage {
 				const $toggle = $dealerRow.find(".toggle-transactions");
 
 				if (e.target.checked) {
-					// Open transactions if not already visible
+					// Add dealer to selected_dealers
+					this.selected_dealers.add(dealerName);
+
+					// Open transactions if not visible
 					if ($transactionsRow.hasClass("d-none")) {
 						$toggle.trigger("click");
+						await new Promise((resolve) => {
+							const $container = $transactionsRow.find(".transactions-container");
+							const checkLoaded = () => {
+								if ($container.data("loaded")) resolve();
+								else setTimeout(checkLoaded, 50);
+							};
+							checkLoaded();
+						});
 					}
 
-					// Select all transactions for this dealer
+					// Select all transactions
 					$transactionsRow.find(".select-transaction").each(function () {
 						$(this).prop("checked", true).trigger("change");
 					});
 				} else {
-					// Deselect all transactions for this dealer
+					// Remove dealer from selected_dealers
+					this.selected_dealers.delete(dealerName);
+
+					// Uncheck all transactions
 					$transactionsRow.find(".select-transaction").each(function () {
 						$(this).prop("checked", false).trigger("change");
 					});
 				}
+
+				// Update selected dealer overview table
+				await this.render_selected_overview(Array.from(this.selected_dealers));
 			});
 		});
 
@@ -384,12 +396,16 @@ class PickupItemsPage {
 
 			if (!allExpanded) {
 				this.isExpandingAll = true;
-				this.overview_container.empty().append(`
-		    <div class="loading-state text-center p-4">
-		        <div class="spinner-border text-primary" role="status"></div>
-		        <div class="mt-2 text-muted">Loading all dealers...</div>
-		    </div>
-		`);
+
+				const $loader = $(`
+    <div class="loading-overlay text-center p-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-2 text-muted">Loading all dealers...</div>
+    </div>
+`).appendTo(this.overview_container);
+
+				// Hide existing tables while loading
+				this.overview_container.children().not($loader).css("opacity", "0.3");
 				await new Promise((resolve) => requestAnimationFrame(resolve));
 				// ---- EXPAND ALL ----
 				for (let i = 0; i < dealerRows.length; i++) {
@@ -425,7 +441,6 @@ class PickupItemsPage {
 							})
 							.get()
 					);
-
 					// Expand all items inside purities
 					const $purityRows = $purityDetail.find(".purity-row");
 					for (let j = 0; j < $purityRows.length; j++) {
@@ -439,11 +454,15 @@ class PickupItemsPage {
 
 					this.selected_dealers.add(dealerName);
 				}
-				this.isExpandingAll = false;
-				await this.show_overview(Array.from(this.selected_dealers));
+
+				await this.render_selected_overview(Array.from(this.selected_dealers));
+				$loader.remove();
+				this.overview_container.children().css("opacity", "1");
 
 				allExpanded = true;
 				$("#expand-all-dealers").text("Collapse All");
+
+				this.isExpandingAll = false;
 			} else {
 				// ---- COLLAPSE ALL ----
 				for (let i = 0; i < dealerRows.length; i++) {
@@ -479,7 +498,8 @@ class PickupItemsPage {
 
 				// Reset selected dealers and refresh overview table
 				this.selected_dealers.clear();
-				await this.show_overview(); // Show default overview
+				await this.render_selected_overview(); // Show default overview
+				this.isExpandingAll = false;
 			}
 		});
 	}
@@ -597,7 +617,6 @@ class PickupItemsPage {
                 <tr>
 				    <th><input type="checkbox" id="select-all-transactions" /></th>
                     <th>Date</th>
-                    <th>Item Code</th>
                     <th>Purity</th>
                     <th>Weight (g)</th>
                     <th>Avco (RM/g)</th>
@@ -623,7 +642,6 @@ class PickupItemsPage {
                 	<input type="checkbox" class="select-transaction" data-id="${item.name}">
            	 	</td>
                 <td>${this.formatCustomDate(item.date)}</td>
-                <td>${frappe.utils.escape_html(item.item_code)}</td>
                 <td>${frappe.utils.escape_html(item.purity)}</td>
                 <td class="text-right">${(item.total_weight || 0).toFixed(2)}</td>
                 <td class="text-right">${
@@ -666,7 +684,7 @@ class PickupItemsPage {
 	async refresh() {
 		this.selected.clear();
 		this.summary_container.empty();
-		await this.show_overview(this.current_dealer);
+		await this.render_total_overview(this.current_dealer);
 
 		const dealer = this.current_dealer;
 		if (!dealer) {
@@ -812,7 +830,6 @@ class PickupItemsPage {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Item Code</th>
                   <th style="text-align:right">Weight (g)</th>
                   <th style="text-align:right">AvCo (RM/g)</th>
                   <th style="text-align:right">Amount (MYR)</th>
@@ -831,7 +848,6 @@ class PickupItemsPage {
 			const $tr = $(`
                 <tr>
                   <td>${frappe.utils.escape_html(dstr)}</td>
-                  <td>${frappe.utils.escape_html(it.item_code || "")}</td>
                   <td style="text-align:right">${(it.total_weight || 0).toFixed(2)}</td>
                   <td style="text-align:right">${(it.avco_rate || 0).toFixed(2)}</td>
                   <td style="text-align:right">${(it.amount || 0).toFixed(2)}</td>

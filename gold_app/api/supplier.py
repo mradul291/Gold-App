@@ -8,3 +8,12 @@ def autoname(doc, method):
 
     # Set the document name = id_number
     doc.name = doc.id_number
+
+
+def set_supplier_group_before_save(doc, method):
+    """
+    Automatically set supplier_group = supplier_type
+    before saving Supplier, if not already set.
+    """
+    if doc.supplier_type and not doc.supplier_group:
+        doc.supplier_group = doc.supplier_type

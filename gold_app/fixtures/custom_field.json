@@ -535,6 +535,7 @@
     "fieldtype": "Data",
     "insert_after": "is_transporter",
     "reqd": 0,
+    "allow_in_quick_entry": 1,
     "name": "Supplier-bank_name",
     "module": "Gold App"
   },
@@ -546,6 +547,7 @@
     "fieldtype": "Data",
     "insert_after": "bank_name",
     "reqd": 0,
+    "allow_in_quick_entry": 1,
     "name": "Supplier-bank_account_number",
     "module": "Gold App"
   },

@@ -228,3 +228,70 @@ frappe.ui.form.on("Purchase Receipt", {
 	},
 });
 
+// Client Script for Purchase Receipt
+frappe.ui.form.on("Purchase Receipt", {
+    onload_post_render: function (frm) {
+        hide_supplier_name_field(frm);
+        setTimeout(() => hide_supplier_name_field(frm), 250);
+    },
+
+    refresh: function (frm) {
+        hide_supplier_name_field(frm);
+    },
+
+    supplier: function (frm) {
+        setTimeout(() => hide_supplier_name_field(frm), 100);
+    }
+});
+
+// Function to hide and enforce hidden property (scoped to Purchase Receipt)
+function hide_supplier_name_field(frm) {
+    try {
+        if (!frm || frm.doc.doctype !== "Purchase Receipt") return;
+
+        // 1) Update Frappe's metadata to hidden
+        frm.set_df_property("supplier_name", "hidden", 1);
+
+        // 2) Restrict to this form only — use the wrapper of the current form
+        const wrapper = frm.$wrapper;
+        if (!wrapper) return;
+
+        // 3) Selector limited to this form wrapper
+        const selector = '[data-fieldname="supplier_name"], .form-group.field-supplier_name';
+
+        wrapper.find(selector).each(function () {
+            $(this).hide();
+        });
+
+        // 4) Hide field wrapper if accessible via fields_dict
+        if (frm.fields_dict?.supplier_name?.$wrapper) {
+            frm.fields_dict.supplier_name.$wrapper.hide();
+        }
+
+        // 5) Scoped MutationObserver (only once per Purchase Receipt form)
+        if (!frm._hideSupplierNameObserverAttached) {
+            const observer = new MutationObserver((mutations) => {
+                for (const mut of mutations) {
+                    for (const node of mut.addedNodes || []) {
+                        const $node = $(node);
+                        if ($node.closest(wrapper).length) {
+                            if (
+                                $node.is(selector) ||
+                                $node.find(selector).length
+                            ) {
+                                $node.find(selector).addBack(selector).hide();
+                            }
+                        }
+                    }
+                }
+            });
+
+            observer.observe(wrapper[0], { childList: true, subtree: true });
+            frm._hideSupplierNameObserverAttached = true;
+            frm._hideSupplierNameObserver = observer;
+        }
+    } catch (err) {
+        console.error("hide_supplier_name_field error:", err);
+    }
+}
+
