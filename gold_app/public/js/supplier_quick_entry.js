@@ -86,3 +86,5 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 		return fields;
 	}
 };
+
+//

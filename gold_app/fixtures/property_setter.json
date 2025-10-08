@@ -232,16 +232,6 @@
   },
   {
     "doctype": "Property Setter",
-    "name": "Supplier-mobile_no-reqd",
-    "doctype_or_field": "DocField",
-    "doc_type": "Supplier",
-    "field_name": "mobile_no",
-    "property": "reqd",
-    "property_type": "Check",
-    "value": "0"
-  },
-  {
-    "doctype": "Property Setter",
     "name": "Supplier-supplier_type-default",
     "doctype_or_field": "DocField",
     "doc_type": "Supplier",
