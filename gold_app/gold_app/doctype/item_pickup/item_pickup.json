@@ -14,6 +14,7 @@
   "purchase_receipt",
   "discrepancy_action",
   "discrepancy_amount",
+  "discrepancy_note",
   "column_break_xymh",
   "total_weight",
   "avco_rate",
@@ -131,12 +132,17 @@
    "fieldname": "dealer_name",
    "fieldtype": "Data",
    "label": "Dealer Name"
+  },
+  {
+   "fieldname": "discrepancy_note",
+   "fieldtype": "Small Text",
+   "label": "Discrepancy Note"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-08 17:09:03.640231",
+ "modified": "2025-10-08 21:24:17.711077",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

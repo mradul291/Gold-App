@@ -133,7 +133,11 @@ class ManagerPickupPage {
                     <td class="toggle-cell" style="cursor:pointer;text-align:center;">
                         <i class="fa fa-chevron-right"></i>
                     </td>
-                    <td>${group.items[0].dealer_name ? group.items[0].dealer_name + " - " + group.dealer : group.dealer}</td>
+                    <td>${
+						group.items[0].dealer_name
+							? group.items[0].dealer_name + " - " + group.dealer
+							: group.dealer
+					}</td>
                     <td>${Array.from(group.purities).join(", ")}</td>
                     <td>${group.total_weight.toFixed(2)}</td>
                     <td style="text-align:center;">
@@ -179,6 +183,7 @@ class ManagerPickupPage {
                                 <th>Purity</th>
                                 <th>Total Weight (g)</th>
                                  <th>Discrepancy (MYR)</th>
+								 <th>Discrepancy Note</th>
                                 <th>Amount</th>
                                 <th style="text-align:center;">Tick if ok</th>
                                 <th style="width:200px;">Any discrepancies?</th>
@@ -204,23 +209,28 @@ class ManagerPickupPage {
                 </option>
             `;
 			const $tr = $(`
-                <tr data-name="${i.name}">
-                    <td>${dstr}</td>
-                    <td>${i.dealer_name ? i.dealer_name + " - " + i.dealer : i.dealer}</td>
-                    <td>${i.purity}</td>
-                    <td>${(i.total_weight || 0).toFixed(2)}</td>
-					<td>${frappe.format(i.discrepancy_amount, { fieldtype: "Currency" })}</td>
-                    <td>${frappe.format(i.amount, { fieldtype: "Currency" })}</td>
-                    <td style="text-align:center;">
-                        <input type="checkbox" class="tick-all-ok" ${checked} />
-                    </td>
-                    <td>
-                        <select class="discrepancy-action form-control form-control-sm">
-                            ${discrepancyOptions}
-                        </select>
-                    </td>
-                </tr>
-            `).appendTo($tbody);
+<tr data-name="${i.name}">
+    <td>${dstr}</td> 
+    <td>${i.dealer_name ? i.dealer_name + " - " + i.dealer : i.dealer}</td> 
+    <td>${i.purity}</td> 
+    <td>${(i.total_weight || 0).toFixed(2)}</td> 
+    <td>${frappe.format(i.discrepancy_amount || 0, { fieldtype: "Currency" })}</td> 
+    <td>${i.discrepancy_note || ""}</td> 
+    <td>${frappe.format(i.amount || 0, { fieldtype: "Currency" })}</td> 
+    <td style="text-align:center;">
+        <input type="checkbox" class="tick-all-ok" ${i.tick_all_ok ? "checked" : ""} />
+    </td> 
+    <td>
+        <select class="discrepancy-action form-control form-control-sm">
+            <option value="">Select</option>
+            <option value="Refund Request (ie. Credit Note)" ${i.discrepancy_action === "Refund Request (ie. Credit Note)" ? "selected" : ""}>
+                Refund Request (ie. Credit Note)
+            </option>
+        </select>
+    </td> 
+</tr>
+`).appendTo($tbody);
+
 
 			$tr.find(".tick-all-ok").on("change", (e) => {
 				this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
@@ -238,28 +248,40 @@ class ManagerPickupPage {
 								fieldtype: "Float",
 								reqd: 1,
 							},
+							{
+								fieldname: "discrepancy_note",
+								label: "Discrepancy Note",
+								fieldtype: "Data",
+								reqd: 0,
+							},
 						],
 						(values) => {
 							// Track changes
 							this.track_change(i.name, {
 								discrepancy_action: val,
 								discrepancy_amount: values.discrepancy_amount,
+								discrepancy_note: values.discrepancy_note,
 							});
 
-							// Update the table cell immediately
-							$tr.find("td").eq(4).text(values.discrepancy_amount.toFixed(2));
+							// Update the table cells immediately
+							$tr.find("td").eq(4).text(values.discrepancy_amount.toFixed(2)); // Discrepancy amount
+							$tr.find("td")
+								.eq(5)
+								.text(values.discrepancy_note || ""); // Discrepancy note
 						},
-						__("Enter Discrepancy Amount"),
+						__("Enter Discrepancy Details"),
 						__("OK")
 					);
 				} else {
 					this.track_change(i.name, {
 						discrepancy_action: val,
 						discrepancy_amount: null,
+						discrepancy_note: null,
 					});
 
-					// Clear the table cell immediately
-					$tr.find("td").eq(4).text("0");
+					// Clear the table cells immediately
+					$tr.find("td").eq(4).text("0"); // Discrepancy amount
+					$tr.find("td").eq(5).text(""); // Discrepancy note
 				}
 			});
 		});

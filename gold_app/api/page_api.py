@@ -290,6 +290,7 @@ def get_manager_pickup_items(dealer=None, is_pickup=None):
             "purity",
             "total_weight",
             "discrepancy_amount",
+            "discrepancy_note",
             "amount",
             "purchase_receipt",
             "tick_all_ok",      
@@ -338,6 +339,8 @@ def manager_bulk_update_pickup(doc_updates):
                 doc.discrepancy_action = update["discrepancy_action"]
             if "discrepancy_amount" in update:
                 doc.discrepancy_amount = update["discrepancy_amount"]
+            if "discrepancy_note" in update:
+                doc.discrepancy_note = update["discrepancy_note"]
 
             doc.save()
             updated.append(name)
