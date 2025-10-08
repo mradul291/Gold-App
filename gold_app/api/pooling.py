@@ -6,19 +6,6 @@ from gold_app.api.item import bulk_create_items
 #-------------------------------------------------------Retail Pool Page-----------------------------------------------------
 
 # Unpooled Items from Item In Hand
-# @frappe.whitelist()
-# def get_unpooled_pickups(pool_type="Branch"):
-#     """
-#     Fetch all unpooled Item In Hand entries
-#     """
-#     pickups = frappe.get_all("Item In Hand",
-#         filters={"pooled": 0},
-#         fields=["name","dealer","date","purity","total_weight","amount","avco_rate","purchase_receipt"],
-#         order_by="date desc"
-#     )
-#     return pickups
-
-# Unpooled Items from Item In Hand
 @frappe.whitelist()
 def get_unpooled_pickups(pool_type="Branch"):
     """
@@ -30,6 +17,7 @@ def get_unpooled_pickups(pool_type="Branch"):
         fields=[
             "name",
             "dealer",
+            "dealer_name",
             "date",
             "purity",
             "total_weight",

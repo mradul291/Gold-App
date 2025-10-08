@@ -65,6 +65,11 @@ def sync_customer_with_supplier(doc, method):
         customer.customer_group = getattr(doc, "supplier_group", None)
         customer.bank_name = getattr(doc, "bank_name", None)
         customer.bank_account_number = getattr(doc, "bank_account_number", None)
+        
+        customer.customer_nationality = getattr(doc, "customer_nationality", None)
+        customer.malaysian_id = getattr(doc, "malaysian_id", None)
+        customer.other_id_type = getattr(doc, "other_id_type", None)
+        customer.other_id_number = getattr(doc, "other_id_number", None)
 
         # Address / Contact sync
         if doc.supplier_primary_address:

@@ -1,4 +1,4 @@
-frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends frappe.ui.form.QuickEntryForm {
+frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends frappe.ui.form.ContactAddressQuickEntryForm {
 	constructor(doctype, after_insert, init_callback, doc, force) {
 		super(doctype, after_insert, init_callback, doc, force);
 		this.skip_redirect_on_error = true;
@@ -7,8 +7,7 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 	render_dialog() {
 		super.render_dialog();
 		const dialog = this.dialog;
-
-        dialog.set_title(__('New Customer'));
+		dialog.set_title(__('New Customer'));
 
 		// --- Nationality toggle ---
 		const toggle_nationality = () => {
@@ -37,7 +36,6 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 			}
 		};
 
-		// Bind on change & initial toggle
 		frappe.after_ajax(() => {
 			const nationality_field = dialog.get_field("customer_nationality");
 			if (nationality_field && nationality_field.$input) {
@@ -61,7 +59,6 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 			});
 		}
 
-		// --- Save button properly overridden ---
 		dialog.set_primary_action(__("Save"), async () => {
 			const nationality = dialog.get_value("customer_nationality");
 			const mid_val = dialog.get_value("malaysian_id");
@@ -74,34 +71,18 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 				}
 			}
 
-			// Call the original QuickEntry insert method
 			await this.insert();
 		});
 	}
 
 	get_variant_fields() {
-		const fields = super.get_variant_fields();
-		const needed = ["customer_nationality", "malaysian_id", "other_id_type", "other_id_number"];
-		const present = fields.map(f => f.fieldname);
-
-		if (!present.includes("customer_nationality")) {
-			fields.push({
-				fieldtype: "Select",
-				label: __("Customer Nationality"),
-				fieldname: "customer_nationality",
-				options: "Malaysian\nOthers",
-				reqd: 1
-			});
-		}
-		if (!present.includes("malaysian_id")) {
-			fields.push({ fieldtype: "Data", label: __("Malaysian ID"), fieldname: "malaysian_id" });
-		}
-		if (!present.includes("other_id_type")) {
-			fields.push({ fieldtype: "Select", label: __("Other ID Type"), fieldname: "other_id_type", options: "Aadhar\nPassport" });
-		}
-		if (!present.includes("other_id_number")) {
-			fields.push({ fieldtype: "Data", label: __("Other ID Number"), fieldname: "other_id_number" });
-		}
+		let fields = [
+			{
+				label: __("Mobile Number"),
+				fieldname: "mobile_number",
+				fieldtype: "Data",
+			},
+		];
 		return fields;
 	}
 };

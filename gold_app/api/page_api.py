@@ -69,7 +69,7 @@ def get_dealer_summary():
 
     records = frappe.get_all(
         "Item Pickup",
-        fields=["dealer", "purity", "total_weight", "avco_rate", "amount", "date"],
+        fields=["dealer", "dealer_name", "purity", "total_weight", "avco_rate", "amount", "date"],
         filters=filters,
         ignore_permissions=False
     )
@@ -81,6 +81,7 @@ def get_dealer_summary():
         if r.dealer not in summary:
             summary[r.dealer] = {
                 "dealer": r.dealer,
+                "dealer_name": r.dealer_name or "",
                 "total_weight": 0,
                 "amount": 0,
                 "purities": set(),
@@ -105,6 +106,7 @@ def get_dealer_summary():
             date_range = f"{frappe.utils.formatdate(start)} - {frappe.utils.formatdate(end)}"
         result.append({
             "dealer": dealer,
+            "dealer_name": data["dealer_name"],
             "purities": ", ".join(sorted(data["purities"])),
             "total_weight": data["total_weight"],
             "avco_rate": avg_rate,
@@ -251,7 +253,8 @@ def get_staff_pickup_items(dealer, is_pickup=0):
             "purchase_receipt",
             "assigned_to",
             "is_pickup",
-            "dealer"
+            "dealer",
+            "dealer_name"
         ],
         filters=filters,
         order_by="date desc, name desc",
@@ -283,6 +286,7 @@ def get_manager_pickup_items(dealer=None, is_pickup=None):
             "name",
             "date",
             "dealer",
+            "dealer_name",
             "purity",
             "total_weight",
             "discrepancy_amount",

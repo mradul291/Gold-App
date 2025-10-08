@@ -63,7 +63,7 @@ class PickupItemsPage {
 		// Selected overview wrapper
 		this.selected_overview_container = $(`
         <div class="selected-overview-container overview-table-wrapper">
-            <div class="table-subtitle text-center mb-2">Selected Dealer Overview</div>
+            <div class="table-subtitle text-center mb-2">Selected Customer Overview</div>
             <div class="table-content"></div>
         </div>
     `).appendTo(this.overview_container);
@@ -164,14 +164,14 @@ class PickupItemsPage {
 		const $subtitle = this.selected_overview_container.find(".table-subtitle");
 
 		if (!selectedDealers.length) {
-			$subtitle.text("Selected Dealer Overview");
+			$subtitle.text("Selected Customer Overview");
 			this.selected_overview_container
 				.find(".table-content")
-				.html('<div class="text-muted">No dealers selected</div>');
+				.html('<div class="text-muted">No customers selected</div>');
 			return;
 		}
 
-		$subtitle.text(`Selected Dealer Overview (${selectedDealers.join(", ")})`);
+		$subtitle.text(`Selected Customer Overview (${selectedDealers.join(", ")})`);
 
 		let overview_data = {};
 		try {
@@ -203,13 +203,15 @@ class PickupItemsPage {
 		} catch (err) {
 			console.error(err);
 			this.container.html(
-				'<div class="alert alert-danger ml-5 mr-5">Failed to load dealers</div>'
+				'<div class="alert alert-danger ml-5 mr-5">Failed to load customers</div>'
 			);
 			return;
 		}
 
 		if (!dealers || dealers.length === 0) {
-			this.container.html('<div class="alert alert-info ml-5 mr-5">No dealers found.</div>');
+			this.container.html(
+				'<div class="alert alert-info ml-5 mr-5">No customers found.</div>'
+			);
 			return;
 		}
 
@@ -224,7 +226,7 @@ class PickupItemsPage {
   				</span>
 			  </th>
               <th>Date Range</th>
-              <th>Dealer</th>
+              <th>Customer Name</th>
               <th>Purities</th>
               <th style="text-align:right">Total Weight (g)</th>
               <th style="text-align:right">Avg AvCo (RM/g)</th>
@@ -250,7 +252,13 @@ class PickupItemsPage {
 				)}" />
 			  </td>
 			  <td>${this.formatDateRange(d.date_range)}</td>
-              <td>${frappe.utils.escape_html(d.dealer)}</td>
+              <td>${
+					d.dealer_name
+						? `${frappe.utils.escape_html(d.dealer_name)} - ${frappe.utils.escape_html(
+								d.dealer
+						  )}`
+						: frappe.utils.escape_html(d.dealer)
+				}</td>
               <td>${frappe.utils.escape_html(d.purities || "")}</td>
               <td class="text-right">${(d.total_weight || 0).toFixed(2)}</td>
               <td class="text-right">${(d.avco_rate || 0).toFixed(2)}</td>
@@ -349,26 +357,13 @@ class PickupItemsPage {
 				const $transactionsRow = $tbl.find(
 					`.dealer-transactions[data-dealer='${dealerName}']`
 				);
-				const $toggle = $dealerRow.find(".toggle-transactions");
+				// const $toggle = $dealerRow.find(".toggle-transactions"); // No longer needed
 
 				if (e.target.checked) {
 					// Add dealer to selected_dealers
 					this.selected_dealers.add(dealerName);
 
-					// Open transactions if not visible
-					if ($transactionsRow.hasClass("d-none")) {
-						$toggle.trigger("click");
-						await new Promise((resolve) => {
-							const $container = $transactionsRow.find(".transactions-container");
-							const checkLoaded = () => {
-								if ($container.data("loaded")) resolve();
-								else setTimeout(checkLoaded, 50);
-							};
-							checkLoaded();
-						});
-					}
-
-					// Select all transactions
+					// Select all transactions WITHOUT expanding the row
 					$transactionsRow.find(".select-transaction").each(function () {
 						$(this).prop("checked", true).trigger("change");
 					});
@@ -400,7 +395,7 @@ class PickupItemsPage {
 				const $loader = $(`
     <div class="loading-overlay text-center p-4">
         <div class="spinner-border text-primary" role="status"></div>
-        <div class="mt-2 text-muted">Loading all dealers...</div>
+        <div class="mt-2 text-muted">Loading all customers...</div>
     </div>
 `).appendTo(this.overview_container);
 
@@ -723,7 +718,7 @@ class PickupItemsPage {
 		// header
 		$(`
             <div class="mb-2 ml-5">
-              <h5>Dealer: ${frappe.utils.escape_html(dealer)}</h5>
+              <h5>Customer: ${frappe.utils.escape_html(dealer)}</h5>
             </div>
         `).appendTo(this.container);
 
@@ -742,7 +737,7 @@ class PickupItemsPage {
 		});
 
 		$(
-			`<div class="mb-3 mr-5 text-right text-muted">Dealer Totals — Weight: ${dealer_weight.toFixed(
+			`<div class="mb-3 mr-5 text-right text-muted">Customer Totals — Weight: ${dealer_weight.toFixed(
 				2
 			)} g, Amount: ${dealer_amount.toFixed(2)} MYR</div>`
 		).appendTo(this.container);

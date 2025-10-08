@@ -70,7 +70,10 @@ doc_events = {
     "Supplier": {
         "autoname": "gold_app.api.supplier.autoname",
         "before_save": "gold_app.api.supplier.set_supplier_group_before_save",
-        "after_insert": "gold_app.api.api.sync_customer_with_supplier",
+        "after_insert": [
+        "gold_app.api.api.sync_customer_with_supplier",
+        "gold_app.api.supplier.create_supplier_bank_account"
+    ],
         "on_update": "gold_app.api.api.sync_customer_with_supplier",
     },
     "Customer": {

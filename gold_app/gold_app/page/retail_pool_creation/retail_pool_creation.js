@@ -103,24 +103,17 @@ class GoldSortingPage {
 			this.update_totals(this.all_rows);
 		});
 
-		this.container.find(".select-all").on("change", async (e) => {
+		this.container.find(".select-all").on("change", (e) => {
 			const is_checked = e.target.checked;
 
-			// Expand all first if not already
-			const $toggleAll = this.container.find(".toggle-all");
-			if ($toggleAll.text().trim() === "Expand All") {
-				$toggleAll.trigger("click");
-			}
-
-			// Select/deselect all items in all PRs
-			const $tbody = this.container.find("tbody");
-			$tbody.find("tr.detail-row").each((i, tr) => {
-				$(tr).find(".pickup-select").prop("checked", is_checked).trigger("change");
+			// Mark all main PR checkboxes
+			this.container.find("tbody tr.pr-row").each((i, tr) => {
+				$(tr).find(".pr-select").prop("checked", is_checked).trigger("change");
 			});
 
-			// Also mark main PR checkboxes
-			$tbody.find("tr.pr-row").each((i, tr) => {
-				$(tr).find(".pr-select").prop("checked", is_checked).trigger("change");
+			// Mark all detail-row pickups if already loaded
+			this.container.find("tbody tr.detail-row").each((i, tr) => {
+				$(tr).find(".pickup-select").prop("checked", is_checked).trigger("change");
 			});
 		});
 	}
@@ -182,7 +175,7 @@ class GoldSortingPage {
         <input type="checkbox" class="pr-select" />
     </td>
     <td>${first_date ? this.formatCustomDate(first_date) : ""}</td>
-    <td>${first_dealer || ""}</td>
+    <td>${group.items[0].dealer_name ? group.items[0].dealer_name + " - " + first_dealer : first_dealer}</td>
     <td>${Array.from(group.purities).join(", ")}</td>
     <td class="text-end">${group.total_weight.toFixed(2)}</td>
     <td class="text-end">${group.total_amount.toFixed(2)}</td>

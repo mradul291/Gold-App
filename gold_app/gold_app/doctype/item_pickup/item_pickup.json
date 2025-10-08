@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "dealer",
+  "dealer_name",
   "date",
   "item_code",
   "purity",
@@ -124,12 +125,18 @@
    "fieldname": "pool_reference",
    "fieldtype": "Data",
    "label": "Pool Reference"
+  },
+  {
+   "fetch_from": "dealer.supplier_name",
+   "fieldname": "dealer_name",
+   "fieldtype": "Data",
+   "label": "Dealer Name"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-17 21:11:34.938600",
+ "modified": "2025-10-08 17:09:03.640231",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item Pickup",

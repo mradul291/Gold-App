@@ -8,6 +8,7 @@
  "field_order": [
   "purchase_receipt",
   "dealer",
+  "dealer_name",
   "date",
   "item_code",
   "purity",
@@ -78,12 +79,18 @@
    "fieldtype": "Link",
    "label": "Pool Reference",
    "options": "Gold Pool"
+  },
+  {
+   "fetch_from": "dealer.supplier_name",
+   "fieldname": "dealer_name",
+   "fieldtype": "Data",
+   "label": "Dealer Name"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-23 16:01:30.590053",
+ "modified": "2025-10-08 17:08:26.843820",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Item In Hand",

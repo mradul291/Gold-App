@@ -87,7 +87,7 @@ class ManagerPickupPage {
                         Expand All
                     </span>
                 </th>
-                        <th>Dealer</th>
+                        <th>Customer Name</th>
                         <th>Purities</th>
                         <th>Total Weight (g)</th>
                         <th>Tick if all ok</th>
@@ -133,7 +133,7 @@ class ManagerPickupPage {
                     <td class="toggle-cell" style="cursor:pointer;text-align:center;">
                         <i class="fa fa-chevron-right"></i>
                     </td>
-                    <td>${group.dealer}</td>
+                    <td>${group.items[0].dealer_name ? group.items[0].dealer_name + " - " + group.dealer : group.dealer}</td>
                     <td>${Array.from(group.purities).join(", ")}</td>
                     <td>${group.total_weight.toFixed(2)}</td>
                     <td style="text-align:center;">
@@ -174,8 +174,8 @@ class ManagerPickupPage {
                     <table class="table table-sm table-bordered">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Dealer</th>
+                               <th style="width:90px;">Date</th>
+								<th style="width:220px;">Customer Name</th>
                                 <th>Purity</th>
                                 <th>Total Weight (g)</th>
                                  <th>Discrepancy (MYR)</th>
@@ -206,10 +206,10 @@ class ManagerPickupPage {
 			const $tr = $(`
                 <tr data-name="${i.name}">
                     <td>${dstr}</td>
-                    <td>${i.dealer}</td>
+                    <td>${i.dealer_name ? i.dealer_name + " - " + i.dealer : i.dealer}</td>
                     <td>${i.purity}</td>
                     <td>${(i.total_weight || 0).toFixed(2)}</td>
-                    <td>${i.discrepancy_amount || 0}</td>
+					<td>${frappe.format(i.discrepancy_amount, { fieldtype: "Currency" })}</td>
                     <td>${frappe.format(i.amount, { fieldtype: "Currency" })}</td>
                     <td style="text-align:center;">
                         <input type="checkbox" class="tick-all-ok" ${checked} />
@@ -230,7 +230,7 @@ class ManagerPickupPage {
 			$tr.find(".discrepancy-action").on("change", async (e) => {
 				const val = e.target.value;
 				if (val === "Refund Request (ie. Credit Note)") {
-					const weight = await frappe.prompt(
+					await frappe.prompt(
 						[
 							{
 								fieldname: "discrepancy_amount",
@@ -240,19 +240,26 @@ class ManagerPickupPage {
 							},
 						],
 						(values) => {
+							// Track changes
 							this.track_change(i.name, {
 								discrepancy_action: val,
 								discrepancy_amount: values.discrepancy_amount,
 							});
+
+							// Update the table cell immediately
+							$tr.find("td").eq(4).text(values.discrepancy_amount.toFixed(2));
 						},
 						__("Enter Discrepancy Amount"),
-						__("Save")
+						__("OK")
 					);
 				} else {
 					this.track_change(i.name, {
 						discrepancy_action: val,
 						discrepancy_amount: null,
 					});
+
+					// Clear the table cell immediately
+					$tr.find("td").eq(4).text("0");
 				}
 			});
 		});
