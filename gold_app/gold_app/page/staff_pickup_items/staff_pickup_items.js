@@ -170,11 +170,10 @@ class StaffPickupItemsPage {
 				await this.show_detail(d.dealer, $tr);
 			});
 
-			// Dealer-level select all
-			$tr.find(".dealer-select").on("change", (e) => {
+			$tr.find(".dealer-select").on("change", async (e) => {
 				const checked = $(e.currentTarget).is(":checked");
 
-				// If detail row exists, apply selection directly (no auto-expand)
+				// Case 1: Detail row already exists
 				if ($tr.next().hasClass("detail-row")) {
 					$tr.next()
 						.find(".item-select")
@@ -182,6 +181,61 @@ class StaffPickupItemsPage {
 							cb.checked = checked;
 						});
 					$tr.next().find(".select-all").prop("checked", checked);
+					return;
+				}
+
+				// Case 2: Detail row not loaded yet — fetch silently
+				try {
+					let items = await frappe.xcall(
+						"gold_app.api.page_api.get_staff_pickup_items",
+						{
+							dealer: d.dealer,
+						}
+					);
+
+					// Create a hidden detail row to hold checkboxes
+					const $detailRow = $(`
+			<tr class="detail-row" style="display:none">
+				<td colspan="5">
+					<table class="table table-sm table-bordered">
+						<thead>
+							<tr>
+								<th style="width:36px"><input type="checkbox" class="select-all" ${checked ? "checked" : ""}/></th>
+								<th>Date</th>
+								<th>Purity</th>
+								<th>Total Weight (g)</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</td>
+			</tr>
+		`).insertAfter($tr);
+
+					const $detailTbody = $detailRow.find("tbody");
+
+					// Populate and mark checkboxes
+					items.forEach((i) => {
+						const dstr = i.date
+							? new Date(i.date).toLocaleDateString("en-GB", {
+									day: "numeric",
+									month: "short",
+									year: "numeric",
+							  })
+							: "";
+						$detailTbody.append(`
+				<tr>
+					<td><input type="checkbox" class="item-select" data-name="${i.name}" ${
+							checked ? "checked" : ""
+						}/></td>
+					<td>${dstr}</td>
+					<td>${i.purity}</td>
+					<td>${(i.total_weight || 0).toFixed(2)}</td>
+				</tr>
+			`);
+					});
+				} catch (err) {
+					console.warn(`Failed to fetch items for dealer ${d.dealer}`, err);
 				}
 			});
 		});
