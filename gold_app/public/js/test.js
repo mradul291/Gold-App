@@ -1,507 +1,393 @@
-frappe.pages["gold-sorting"].on_page_load = function (wrapper) {
-	new PoolPage(wrapper);
+frappe.pages["manager-pickup"].on_page_load = function (wrapper) {
+	var page = frappe.ui.make_app_page({
+		parent: wrapper,
+		title: "Manager Pickup",
+		single_column: true,
+	});
+	new ManagerPickupPage(wrapper);
 };
 
-class PoolPage {
+class ManagerPickupPage {
 	constructor(wrapper) {
-		this.wrapper = $(wrapper);
-		this.page = frappe.ui.make_app_page({
-			parent: wrapper,
-			title: "Gold Sorting",
-			single_column: true,
-		});
-
-		this.container = $('<div class="pool-container"></div>').appendTo(this.page.main);
-		this.table_container = $('<div style="margin-top:20px;"></div>').appendTo(this.container);
-		this.entry_table_container = $('<div style="margin-top:30px;"></div>').appendTo(
-			this.container
-		);
-		this.final_table_container = $('<div style="margin-top:30px;"></div>').appendTo(
-			this.container
-		);
-
-		this.make_select_field();
-		this.last_data = [];
-		this.pool_name = null;
+		this.wrapper = wrapper;
+		this.page = wrapper.page;
+		this.container = null;
+		this.current_dealer = null;
+		this.changes = {};
+		this.setup();
 	}
 
-	make_select_field() {
-		let me = this;
+	setup() {
+		this.make_toolbar();
+		this.make_container();
+		this.show_summary();
+	}
 
-		if (!this.container.find(".pool-top-bar").length) {
-			this.top_bar = $(`
-            <div class="pool-top-bar">
-                <div class="select-field-container"></div>
-                <div class="pool-status">
-                    Status: <span class="status-value">--</span>
-                </div>
-            </div>
-        `);
-			this.container.prepend(this.top_bar);
-		}
+	make_toolbar() {
+		this.page.set_primary_action(__("Refresh"), () => this.show_summary());
+		this.page.set_secondary_action(__("Save"), () => this.save_changes());
+		this.page.clear_menu();
+	}
 
-		this.select_field = new frappe.ui.form.ControlSelect({
-			df: {
-				fieldname: "gold_pool_select",
-				label: "Select Gold Pool",
-				fieldtype: "Select",
-				options: ["Select Pool..."],
-				reqd: 1,
-			},
-			parent: this.top_bar.find(".select-field-container"),
-		});
-		this.select_field.make_input();
+	make_container() {
+		this.container = $('<div class="manager-pickup-container"></div>').appendTo(this.wrapper);
+	}
 
-		$(this.select_field.input).addClass("pool-select-input");
-
-		$(this.select_field.input).on("focus", async function () {
-			let options = await frappe.xcall("gold_app.api.pooling.get_gold_pool_options");
-			me.select_field.df.options = options.length ? options : ["No Gold Pool Found"];
-			me.select_field.refresh();
-		});
-
-		$(this.select_field.input).on("change", async function () {
-			me.pool_name = me.select_field.get_value();
-			if (me.pool_name) {
-				await me.fetch_and_render_pool_data(me.pool_name);
-				me.update_pool_status(me.pool_name);
-			}
+	formatCustomDate(dateStr) {
+		if (!dateStr) return "";
+		const date = new Date(dateStr);
+		return date.toLocaleDateString("en-GB", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
 		});
 	}
 
-	async update_pool_status(pool_name) {
+	async show_summary() {
+		this.container.empty();
+
+		let items = [];
 		try {
-			let pool_doc = await frappe.db.get_doc("Gold Pool", pool_name);
-			let statusEl = this.container.find(".status-value");
-			statusEl.text(pool_doc.status || "--");
-			statusEl.removeClass("status-green status-yellow status-red");
-
-			if (pool_doc.status === "Completed") statusEl.addClass("status-green");
-			else if (pool_doc.status === "In Progress") statusEl.addClass("status-yellow");
-			else statusEl.addClass("status-red");
-		} catch (err) {
-			console.error("Failed to fetch pool status:", err);
-			this.container.find(".status-value").text("Error").addClass("status-red");
-		}
-	}
-
-	async fetch_and_render_pool_data(pool_name) {
-		try {
-			let data = await frappe.xcall("gold_app.api.pooling.get_gold_pool_data", {
-				pool_name,
+			items = await frappe.xcall("gold_app.api.page_api.get_manager_pickup_items", {
+				is_pickup: 1,
 			});
-			this.last_data = data.purity_breakdown || [];
-			this.render_summary_table();
-			this.render_entry_table();
 		} catch (err) {
-			frappe.msgprint("Failed to fetch Gold Pool data");
 			console.error(err);
-		}
-	}
-
-	render_summary_table() {
-		this.table_container.empty();
-		if (!this.last_data.length) {
-			this.table_container.html("<p>No purity breakdown data found.</p>");
+			this.container.html('<div class="alert alert-danger">Failed to load data</div>');
 			return;
 		}
 
-		let table = $("<table class='table table-bordered'></table>");
-		let thead = $(
-			"<thead><tr><th>Purity</th><th>Total Weight (g)</th><th>Remaining Weight (g)</th><th>AVCO</th><th>Total Cost</th></tr></thead>"
-		);
-		table.append(thead);
+		if (!items.length) {
+			this.container.html('<div class="alert alert-info">No pickup items found</div>');
+			return;
+		}
 
-		let tbody = $("<tbody></tbody>");
-		this.last_data.forEach((row) => {
-			tbody.append(`<tr>
-                <td>${row["Purity"]}</td>
-                <td>${row["Total Weight (g)"]}</td>
-                <td class="remaining-weight" data-purity="${row["Purity"]}">
-                    ${row["Total Weight (g)"]}
-                </td>
-                <td>${row["AVCO (RM/g)"]}</td>
-                <td>${row["Total Cost (MYR)"]}</td>
-            </tr>`);
+		const grouped = {};
+		items.forEach((i) => {
+			if (!grouped[i.dealer]) {
+				grouped[i.dealer] = {
+					dealer: i.dealer,
+					purities: new Set(),
+					total_weight: 0,
+					items: [],
+				};
+			}
+			grouped[i.dealer].purities.add(i.purity);
+			grouped[i.dealer].total_weight += i.total_weight || 0;
+			grouped[i.dealer].items.push(i);
 		});
-		table.append(tbody);
-		this.table_container.append("<h4>Purity Summary</h4>");
-		this.table_container.append(table);
-	}
 
-	async render_entry_table() {
-		this.entry_table_container.empty();
+		const $tbl = $(`
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                         <th style="width:110px; text-align:center;">
+                    <span class="toggle-all" 
+                          style="cursor:pointer; color:#007bff; text-decoration:underline; user-select:none; text-transform:none;">
+                        Expand All
+                    </span>
+                </th>
+				 <th style="width:36px; text-align:center;">
+            <input type="checkbox" id="select-all-dealers" title="Tick if all ok" />
+        </th>
+                        <th>Customer Name</th>
+                        <th>Purities</th>
+                        <th>Total Weight (g)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        `).appendTo(this.container);
 
-		// Preload select options
-		let warehouses = await frappe.db.get_list("Warehouse", { fields: ["name"], limit: 100 });
-		let item_groups = await frappe.db.get_list("Item Group", { fields: ["name"], limit: 100 });
+		const $tbody = $tbl.find("tbody");
+		const $toggleAll = $tbl.find(".toggle-all");
 
-		let wh_options = warehouses
-			.map((w) => `<option value="${w.name}">${w.name}</option>`)
-			.join("");
-		let ig_options = item_groups
-			.map((g) => `<option value="${g.name}">${g.name}</option>`)
-			.join("");
+		// --- Place the master "select-all-dealers" handler HERE ---
+		$("#select-all-dealers").on("change", async (e) => {
+			const allChecked = $(e.currentTarget).is(":checked");
 
-		let purity_options = this.last_data
-			.map(
-				(row) =>
-					`<option value="${row["Purity"]}" data-rate="${row["AVCO (RM/g)"]}">${row["Purity"]}</option>`
-			)
-			.join("");
+			$(".dealer-tick-all-ok").prop("checked", allChecked);
 
-		let table = $("<table class='table table-bordered entry-table'></table>");
-		let thead = $(`
-        <thead>
-            <tr>
-                <th>Purity</th>
-                <th>Item Group</th>
-                <th>Weight (g)</th>
-                <th class="length-col">Length (CM)</th>
-                <th class="size-col" style="display:none">Size</th>
-                <th>Valuation Rate</th>
-                <th>Target WH</th>
-                <th>Print</th>
-                <th></th>
-            </tr>
-        </thead>
-    `);
-		table.append(thead);
+			for (const row of $tbody.find("tr[data-dealer]")) {
+				const $row = $(row);
+				const dealerName = $row.data("dealer");
+				const group = grouped[dealerName];
 
-		let tbody = $("<tbody></tbody>");
-		table.append(tbody);
-		this.entry_table_container.append("<h4>Retail Entry</h4>");
-		this.entry_table_container.append(table);
-
-		let addRowBtn = $('<button class="btn btn-sm btn-primary mt-2">Add Row</button>');
-		let saveBtn = $(
-			'<button class="btn btn-sm btn-success mt-2 ms-2 ml-1">Save Stock Entry</button>'
-		);
-		this.entry_table_container.append(addRowBtn).append(saveBtn);
-
-		let remainingTableContainer = $('<div style="margin-top:20px;"></div>').appendTo(
-			this.entry_table_container
-		);
-
-		const renderRemainingTransferTable = () => {
-			remainingTableContainer.empty();
-
-			let table = $("<table class='table table-bordered remaining-stock-transfer'></table>");
-			table.append(
-				"<thead><tr><th>Purity</th><th>Source Item</th><th>Weight (g)</th><th>Target Warehouse</th></tr></thead>"
-			);
-			let tbody = $("<tbody></tbody>");
-			table.append(tbody);
-
-			let remainingByPurity = {};
-
-			// Initialize from purity summary
-			this.last_data.forEach((d) => {
-				remainingByPurity[d["Purity"]] = parseFloat(d["Total Weight (g)"]) || 0;
-			});
-
-			// Subtract retail entries
-			this.entry_table_container.find(".entry-table tbody tr").each((_, r) => {
-				let purity = $(r).find("select[name='purity']").val();
-				let qty = parseFloat($(r).find("input[name='qty']").val() || 0);
-				if (purity && remainingByPurity[purity] !== undefined)
-					remainingByPurity[purity] -= qty;
-			});
-
-			// ALWAYS include ALL purities in remainingTransfers
-			this.last_data.forEach((d) => {
-				let purity = d["Purity"];
-				let remainingQty = remainingByPurity[purity] < 0 ? 0 : remainingByPurity[purity];
-				let sourceItem = `Unsorted-${purity}`;
-				let targetWarehouseSelect = `<select class="form-control target-warehouse">${wh_options}</select>`;
-
-				tbody.append(`
-            <tr>
-                <td>${purity}</td>
-                <td>${sourceItem}</td>
-                <td>${remainingQty.toFixed(3)}</td>
-                <td>${targetWarehouseSelect}</td>
-            </tr>
-        `);
-			});
-
-			remainingTableContainer.append("<h4>Wholesale Entry</h4>");
-			remainingTableContainer.append(table);
-		};
-
-		let addRow = (purity = "", valuation_rate = 0) => {
-			let row = $(`
-            <tr>
-                <td>
-                    <select class="form-control" name="purity">
-                        <option value="">Select Purity</option>
-                        ${purity_options}
-                    </select>
-                </td>
-                <td><select class="form-control" name="item_group">${ig_options}</select></td>
-                <td><input type="number" class="form-control" name="qty" min="0"></td>
-                <td class="length-col-td"><input type="number" class="form-control" name="item_length" min="0" step="0.01" placeholder="Length (CM)"></td>
-                <td class="size-col-td" style="display:none"><input type="text" class="form-control" name="item_size" placeholder="Size"></td>
-                <td><input type="number" class="form-control" name="valuation_rate" value="${valuation_rate}" step="0.01" readonly></td>
-                <td><select class="form-control" name="target_warehouse">${wh_options}</select></td>
-                <td class="text-center"><button class="btn btn-success btn-sm print-row"><i class="fa fa-print"></i></button></td>
-                <td><button class="btn btn-danger btn-sm remove-row">X</button></td>
-            </tr>
-        `);
-
-			let thLength = this.entry_table_container.find("th.length-col");
-			let thSize = this.entry_table_container.find("th.size-col");
-
-			const updateLengthSizeVisibility = (selected_group) => {
-				if (
-					["RL - Rantai Leher", "RT - Rantai Tangan", "GT - Gelang Tangan"].includes(
-						selected_group
-					)
-				) {
-					// Show only length
-					row.find(".length-col-td").show();
-					row.find("input[name='item_length']").show();
-					row.find(".size-col-td").hide();
-					row.find("input[name='item_size']").hide();
-
-					thLength.show();
-					thSize.hide();
-				} else {
-					// Show only size
-					row.find(".length-col-td").hide();
-					row.find("input[name='item_length']").hide();
-					row.find(".size-col-td").show();
-					row.find("input[name='item_size']").show();
-
-					thLength.hide();
-					thSize.show();
-				}
-			};
-
-			row.find("select[name='purity']").on("change", function () {
-				let selected = $(this).find("option:selected");
-				let purityVal = selected.val();
-				row.find("input[name='valuation_rate']").val(selected.data("rate") || 0);
-				renderRemainingTransferTable();
-			});
-
-			row.find("input[name='qty']").on("input", () => {
-				this.update_remaining_weights();
-				renderRemainingTransferTable();
-			});
-
-			row.find(".remove-row").on("click", () => row.remove());
-			row.find(".print-row").on("click", () => {
-				frappe.msgprint("Print functionality here");
-			});
-
-			row.find("select[name='item_group']").on("change", function () {
-				updateLengthSizeVisibility($(this).val());
-			});
-
-			tbody.append(row);
-			row.find("select[name='target_warehouse']").val("Retail - AGSB");
-			renderRemainingTransferTable();
-		};
-
-		addRow();
-		addRowBtn.on("click", () => addRow());
-		renderRemainingTransferTable();
-
-		saveBtn.on("click", async () => {
-			let rows = [];
-			tbody.find("tr").each(function () {
-				let r = $(this);
-				rows.push({
-					purity: r.find("select[name='purity']").val(),
-					qty: r.find("input[name='qty']").val(),
-					valuation_rate: r.find("input[name='valuation_rate']").val(),
-					target_warehouse: r.find("select[name='target_warehouse']").val(),
-					item_group: r.find("select[name='item_group']").val(),
-					item_length: r.find("input[name='item_length']").val() || null,
-					item_size: r.find("input[name='item_size']").val() || null,
+				group.items.forEach((item) => {
+					this.track_change(item.name, { tick_all_ok: allChecked ? 1 : 0 });
 				});
-			});
 
-			let remainingTransfers = [];
-			$(".remaining-stock-transfer tbody tr").each((_, tr) => {
-				let $tr = $(tr);
-				let purity = $tr.find("td").eq(0).text();
-				let weight = parseFloat($tr.find("td").eq(2).text()) || 0;
-				let target_warehouse = $tr.find("select.target-warehouse").val();
-				let source_item = `Unsorted-${purity}`; // matches backend source_item
-
-				if (weight > 0) {
-					remainingTransfers.push({
-						purity,
-						qty: weight, // important for backend
-						target_warehouse,
-						source_item, // important for backend
-					});
+				if ($row.next().hasClass("detail-row")) {
+					$row.next().find(".tick-all-ok").prop("checked", allChecked);
 				}
-			});
-
-			if (!rows.length) {
-				frappe.msgprint("Please add at least one row before saving.");
-				return;
 			}
 
-			try {
-				let res = await frappe.xcall("gold_app.api.pooling.create_stock_entry_from_pool", {
-					purity_data: JSON.stringify(rows),
-					pool_name: this.pool_name,
-					remaining_transfers: JSON.stringify(remainingTransfers),
+			frappe.show_alert({
+				message: allChecked ? "All dealers ticked" : "All dealers unticked",
+				indicator: allChecked ? "green" : "orange",
+			});
+		});
+
+		$toggleAll.on("click", async () => {
+			const isExpand = $toggleAll.text() === "Expand All";
+			$toggleAll.text(isExpand ? "Collapse All" : "Expand All");
+
+			const $rows = $tbody.find("tr[data-dealer]");
+			for (const row of $rows) {
+				const $tr = $(row);
+				const $icon = $tr.find(".toggle-cell i");
+
+				if (isExpand) {
+					// Expand all dealers
+					if (!$tr.next().hasClass("detail-row")) {
+						await this.show_detail(grouped[$tr.data("dealer")].items, $tr);
+					} else if (!$tr.next().is(":visible")) {
+						$tr.next().show();
+					}
+					$icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
+				} else {
+					// Collapse all dealers
+					if ($tr.next().hasClass("detail-row") && $tr.next().is(":visible")) {
+						$tr.next().hide();
+					}
+					$icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
+				}
+			}
+		});
+
+		Object.values(grouped).forEach((group) => {
+			const $tr = $(`
+                <tr data-dealer="${group.dealer}">
+                    <td class="toggle-cell" style="cursor:pointer;text-align:center;">
+                        <i class="fa fa-chevron-right"></i>
+                    </td>
+					 <td style="text-align:center;">
+        				<input type="checkbox" class="dealer-tick-all-ok" />
+    				</td>
+                    <td>${
+						group.items[0].dealer_name
+							? group.items[0].dealer_name + " - " + group.dealer
+							: group.dealer
+					}</td>
+                    <td>${Array.from(group.purities).join(", ")}</td>
+                    <td>${group.total_weight.toFixed(2)}</td>
+                </tr>
+            `).appendTo($tbody);
+
+			$tr.find(".toggle-cell").on("click", async () => {
+				this.current_dealer = group.dealer;
+				await this.show_detail(group.items, $tr);
+			});
+
+			// Parent table tick-all for a dealer
+			$tr.find(".dealer-tick-all-ok").on("change", async (e) => {
+				const checked = e.target.checked;
+
+				// Track for all items in that dealer
+				group.items.forEach((item) => {
+					this.track_change(item.name, { tick_all_ok: checked ? 1 : 0 });
 				});
-				this.render_final_table(res.created_items || [], remainingTransfers);
+
+				const $detailRow = $tr.next(".detail-row");
+				const $container = $detailRow.find(".transactions-container");
+
+				if (checked) {
+					// If detail row not loaded/expanded, load transactions quietly
+					if ($container.length && !$container.data("loaded")) {
+						try {
+							await this.render_transactions($container, group.items);
+							$container.data("loaded", true);
+						} catch (err) {
+							console.warn(
+								`Failed to load transactions for dealer ${group.dealer}`,
+								err
+							);
+						}
+					}
+
+					// Select all inner transactions
+					if ($container.length && $container.data("loaded")) {
+						$container.find(".tick-all-ok").each(function () {
+							$(this).prop("checked", true).trigger("change");
+						});
+					}
+				} else {
+					// Uncheck all inner transactions if loaded
+					if ($container.length && $container.data("loaded")) {
+						$container.find(".tick-all-ok").each(function () {
+							$(this).prop("checked", false).trigger("change");
+						});
+					}
+				}
+
+				// If detail row is already expanded, also update visible checkboxes
+				if ($detailRow.length && $detailRow.is(":visible")) {
+					$detailRow.find(".tick-all-ok").prop("checked", checked);
+				}
+			});
+		});
+	}
+
+	async show_detail(items, $row) {
+		if ($row.next().hasClass("detail-row")) {
+			$row.next().toggle();
+			const icon = $row.find(".toggle-cell i");
+			icon.toggleClass("fa-chevron-right fa-chevron-down");
+			return;
+		}
+
+		const $detailRow = $(`
+            <tr class="detail-row">
+                <td colspan="5">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                               <th style="width:90px;">Date</th>
+                                <th>Purity</th>
+                                <th>Total Weight (g)</th>
+                                 <th>Discrepancy (MYR)</th>
+								 <th>Discrepancy Note</th>
+                                <th>Amount</th>
+                                <th style="text-align:center;">Tick if ok</th>
+                                <th style="width:180px;">Any discrepancies?</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </td>
+            </tr>
+        `).insertAfter($row);
+
+		const $tbody = $detailRow.find("tbody");
+
+		items.forEach((i) => {
+			const dstr = i.date ? this.formatCustomDate(i.date) : "";
+			const checked = i.tick_all_ok ? "checked" : "";
+			const discrepancyOptions = `
+                <option value="">Select</option>
+                <option value="Refund Request (ie. Credit Note)" ${
+					i.discrepancy_action === "Refund Request (ie. Credit Note)" ? "selected" : ""
+				}>
+                    Refund Request (ie. Credit Note)
+                </option>
+            `;
+			const $tr = $(`
+<tr data-name="${i.name}">
+    <td>${dstr}</td> 
+    <td>${i.purity}</td> 
+    <td>${(i.total_weight || 0).toFixed(2)}</td> 
+    <td>${frappe.format(i.discrepancy_amount || 0, { fieldtype: "Currency" })}</td> 
+    <td>${i.discrepancy_note || ""}</td> 
+    <td>${frappe.format(i.amount || 0, { fieldtype: "Currency" })}</td> 
+    <td style="text-align:center;">
+        <input type="checkbox" class="tick-all-ok" ${i.tick_all_ok ? "checked" : ""} />
+    </td> 
+   <td style="text-align:center;">
+    <button class="btn btn-sm btn-info refund-request-btn" 
+            style="padding:2px 6px; font-size:0.75rem;">
+        Refund Request
+    </button>
+</td>
+
+</tr>
+`).appendTo($tbody);
+
+			$tr.find(".tick-all-ok").on("change", (e) => {
+				this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
+			});
+
+			$tr.find(".refund-request-btn").on("click", async () => {
+				await frappe.prompt(
+					[
+						{
+							fieldname: "discrepancy_amount",
+							label: "Discrepancy Amount (MYR)",
+							fieldtype: "Float",
+							reqd: 1,
+						},
+						{
+							fieldname: "discrepancy_note",
+							label: "Discrepancy Note",
+							fieldtype: "Data",
+							reqd: 0,
+						},
+					],
+					(values) => {
+						// Track changes in JS
+						this.track_change(i.name, {
+							discrepancy_action: "Refund Request (ie. Credit Note)",
+							discrepancy_amount: values.discrepancy_amount,
+							discrepancy_note: values.discrepancy_note,
+						});
+
+						// Update table cells immediately
+						$tr.find("td").eq(3).text(values.discrepancy_amount.toFixed(2)); // Discrepancy Amount
+						$tr.find("td")
+							.eq(4)
+							.text(values.discrepancy_note || ""); // Discrepancy Note
+					},
+					__("Enter Discrepancy Details"),
+					__("OK")
+				);
+			});
+		});
+
+		$row.find(".toggle-cell i").removeClass("fa-chevron-right").addClass("fa-chevron-down");
+	}
+
+	track_change(name, update) {
+		if (!this.changes[name]) {
+			this.changes[name] = { name };
+		}
+		Object.assign(this.changes[name], update);
+		this.page.set_indicator(__("Not Saved"), "orange");
+	}
+
+	async save_changes() {
+		const updates = Object.values(this.changes);
+		if (!updates.length) {
+			frappe.show_alert({ message: __("No changes to save"), indicator: "blue" });
+			return;
+		}
+
+		try {
+			const result = await frappe.xcall("gold_app.api.page_api.manager_bulk_update_pickup", {
+				doc_updates: updates,
+			});
+
+			// Show success
+			frappe.show_alert({
+				message: __(`${result.updated} records updated`),
+				indicator: "green",
+			});
+			this.page.clear_indicator();
+
+			const selected_pickups = Object.keys(this.changes)
+				.filter((name) => this.changes[name].tick_all_ok)
+				.map((name) => name);
+
+			if (selected_pickups.length) {
+				let res = await frappe.xcall("gold_app.api.page_api.create_manager_pool", {
+					pickup_names: selected_pickups,
+					pool_type: "Dealer",
+					notes: "Auto-created from Manager Pickup Page",
+				});
 
 				frappe.msgprint({
-					title: "Success",
-					message: `Stock Entry <a href="/app/stock-entry/${res.name}">${res.name}</a> created.`,
+					title: __("Pool Created"),
+					message: `New Pool <a href="/app/gold-pool/${res.pool_name}" target="_blank">${
+						res.pool_name
+					}</a> created.<br>
+                          <b>Total Weight:</b> ${res.total_weight.toFixed(2)} g`,
 					indicator: "green",
 				});
-
-				await this.fetch_and_render_pool_data(this.pool_name);
-			} catch (err) {
-				console.error(err);
-				frappe.msgprint("Failed to create Stock Entry.");
 			}
-		});
-	}
 
-	update_remaining_weights() {
-		let remainingByPurity = {};
-		this.last_data.forEach((row) => {
-			remainingByPurity[row["Purity"]] = parseFloat(row["Total Weight (g)"]) || 0;
-		});
-
-		$(".entry-table tbody tr").each(function () {
-			let purity = $(this).find("select[name='purity']").val();
-			let qty = parseFloat($(this).find("input[name='qty']").val() || 0);
-			if (purity && remainingByPurity[purity] !== undefined)
-				remainingByPurity[purity] -= qty;
-		});
-
-		this.table_container.find(".remaining-weight").each(function () {
-			let purity = $(this).data("purity");
-			let remaining = remainingByPurity[purity] || 0;
-			$(this).text(remaining >= 0 ? remaining.toFixed(3) : "0.000");
-		});
-	}
-
-	// render_final_table(created_items = [], remainingTransfers = []) {
-	// 	this.final_table_container.empty();
-	// 	if (!created_items.length) {
-	// 		this.final_table_container.html("<p>No Stock Entry data to display.</p>");
-	// 		return;
-	// 	}
-
-	// 	let table = $("<table class='table table-bordered'></table>");
-	// 	let thead = $(`
-	//     <thead>
-	//         <tr>
-	//             <th>Purity</th>
-	//             <th>Item Code</th>
-	//             <th>Retail Weight (g)</th>
-	//             <th>Retail Warehouse</th>
-	//             <th>Wholesale Warehouse</th>
-	//         </tr>
-	//     </thead>
-	// `);
-	// 	table.append(thead);
-
-	// 	let tbody = $("<tbody></tbody>");
-	// 	let remainingMap = {};
-	// 	if (remainingTransfers && remainingTransfers.length) {
-	// 		remainingTransfers.forEach((rt) => {
-	// 			remainingMap[rt.purity] = rt.target_warehouse || "Bag 1 - Wholesale - AGSB";
-	// 		});
-	// 	}
-
-	// 	created_items.forEach((row) => {
-	// 		tbody.append(`
-	//         <tr>
-	//             <td>${row.purity || ""}</td>
-	//             <td>${row.item_code || "-"}</td>
-	//             <td>${row.qty || 0}</td>
-	//             <td>${row.target_warehouse || ""}</td>
-	//             <td>${remainingMap[row.purity] || ""}</td>
-	//         </tr>
-	//     `);
-	// 	});
-
-	// 	table.append(tbody);
-	// 	this.final_table_container.append("<h4>Final Stock Summary</h4>");
-	// 	this.final_table_container.append(table);
-	// }
-
-	render_final_table(created_items = [], remainingTransfers = []) {
-		this.final_table_container.empty();
-
-		if (!created_items.length && !remainingTransfers.length) {
-			this.final_table_container.html("<p>No Stock Entry data to display.</p>");
-			return;
+			this.changes = {};
+			await this.show_summary();
+		} catch (err) {
+			console.error(err);
+			frappe.msgprint("Failed to save changes");
 		}
-
-		let table = $("<table class='table table-bordered'></table>");
-		let thead = $(`
-        <thead>
-            <tr>
-                <th>Purity</th>
-                <th>Item Code</th>
-                <th>Weight (g)</th>
-                <th>Retail Warehouse</th>
-                <th>Wholesale Warehouse</th>
-                <th>Entry Type</th>
-            </tr>
-        </thead>
-    `);
-		table.append(thead);
-
-		let tbody = $("<tbody></tbody>");
-
-		// Map remaining transfers by purity for convenience
-		let remainingMap = {};
-		remainingTransfers.forEach((rt) => {
-			remainingMap[rt.purity] = rt.target_warehouse || "Bag 1 - Wholesale - AGSB";
-		});
-
-		// Render created retail items
-		created_items.forEach((row) => {
-			tbody.append(`
-            <tr>
-                <td>${row.purity || ""}</td>
-                <td>${row.item_code || "-"}</td>
-                <td>${row.qty || 0}</td>
-                <td>${row.target_warehouse || ""}</td>
-                <td>${remainingMap[row.purity] || ""}</td>
-                <td>Retail</td>
-            </tr>
-        `);
-		});
-
-		// Render remaining wholesale entries that weren't included in retail
-		remainingTransfers.forEach((rt) => {
-			// Skip if already shown in created_items
-			if (
-				!created_items.some(
-					(ci) => ci.purity === rt.purity && ci.target_warehouse === rt.target_warehouse
-				)
-			) {
-				tbody.append(`
-                <tr>
-                    <td>${rt.purity || ""}</td>
-                    <td>${rt.source_item || "-"}</td>
-                    <td>${rt.qty || 0}</td>
-                    <td></td>
-                    <td>${rt.target_warehouse || "Bag 1 - Wholesale - AGSB"}</td>
-                    <td>Wholesale</td>
-                </tr>
-            `);
-			}
-		});
-
-		table.append(tbody);
-		this.final_table_container.append("<h4>Final Stock Summary</h4>");
-		this.final_table_container.append(table);
 	}
 }

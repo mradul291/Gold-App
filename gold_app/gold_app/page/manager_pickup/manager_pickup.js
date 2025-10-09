@@ -87,10 +87,12 @@ class ManagerPickupPage {
                         Expand All
                     </span>
                 </th>
+				 <th style="width:36px; text-align:center;">
+            <input type="checkbox" id="select-all-dealers" title="Tick if all ok" />
+        </th>
                         <th>Customer Name</th>
                         <th>Purities</th>
                         <th>Total Weight (g)</th>
-                        <th>Tick if all ok</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -99,6 +101,23 @@ class ManagerPickupPage {
 
 		const $tbody = $tbl.find("tbody");
 		const $toggleAll = $tbl.find(".toggle-all");
+
+		// --- Master "Select All Dealers" ---
+		$("#select-all-dealers").on("change", (e) => {
+			const allChecked = $(e.currentTarget).is(":checked");
+			const $rows = $tbody.find("tr[data-dealer]");
+
+			$rows.each((_, row) => {
+				const $tr = $(row);
+				// Trigger parent dealer checkbox; updates all inner items via this.changes
+				$tr.find(".dealer-tick-all-ok").prop("checked", allChecked).trigger("change");
+			});
+
+			frappe.show_alert({
+				message: allChecked ? "All dealers ticked" : "All dealers unticked",
+				indicator: allChecked ? "green" : "orange",
+			});
+		});
 
 		$toggleAll.on("click", async () => {
 			const isExpand = $toggleAll.text() === "Expand All";
@@ -133,6 +152,9 @@ class ManagerPickupPage {
                     <td class="toggle-cell" style="cursor:pointer;text-align:center;">
                         <i class="fa fa-chevron-right"></i>
                     </td>
+					 <td style="text-align:center;">
+        				<input type="checkbox" class="dealer-tick-all-ok" />
+    				</td>
                     <td>${
 						group.items[0].dealer_name
 							? group.items[0].dealer_name + " - " + group.dealer
@@ -140,9 +162,6 @@ class ManagerPickupPage {
 					}</td>
                     <td>${Array.from(group.purities).join(", ")}</td>
                     <td>${group.total_weight.toFixed(2)}</td>
-                    <td style="text-align:center;">
-                        <input type="checkbox" class="dealer-tick-all-ok" />
-                    </td>
                 </tr>
             `).appendTo($tbody);
 
@@ -151,14 +170,21 @@ class ManagerPickupPage {
 				await this.show_detail(group.items, $tr);
 			});
 
+			// Parent table tick-all for a dealer
 			$tr.find(".dealer-tick-all-ok").on("change", (e) => {
 				const checked = e.target.checked;
+
+				// 1️⃣ Track all items in JS changes (even if detail not loaded)
 				group.items.forEach((item) => {
 					this.track_change(item.name, { tick_all_ok: checked ? 1 : 0 });
 				});
 
-				if ($tr.next().hasClass("detail-row")) {
-					$tr.next().find(".tick-all-ok").prop("checked", checked);
+				// 2️⃣ Tick inner checkboxes only if detail row is already rendered
+				const $detailRow = $tr.next(".detail-row");
+				if ($detailRow.length) {
+					$detailRow.find(".tick-all-ok").each(function () {
+						$(this).prop("checked", checked).trigger("change");
+					});
 				}
 			});
 		});
@@ -179,14 +205,13 @@ class ManagerPickupPage {
                         <thead>
                             <tr>
                                <th style="width:90px;">Date</th>
-								<th style="width:220px;">Customer Name</th>
                                 <th>Purity</th>
                                 <th>Total Weight (g)</th>
                                  <th>Discrepancy (MYR)</th>
 								 <th>Discrepancy Note</th>
                                 <th>Amount</th>
                                 <th style="text-align:center;">Tick if ok</th>
-                                <th style="width:200px;">Any discrepancies?</th>
+                                <th style="width:180px;">Any discrepancies?</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -199,7 +224,7 @@ class ManagerPickupPage {
 
 		items.forEach((i) => {
 			const dstr = i.date ? this.formatCustomDate(i.date) : "";
-			const checked = i.tick_all_ok ? "checked" : "";
+			const isChecked = this.changes[i.name]?.tick_all_ok ? "checked" : "";
 			const discrepancyOptions = `
                 <option value="">Select</option>
                 <option value="Refund Request (ie. Credit Note)" ${
@@ -211,78 +236,61 @@ class ManagerPickupPage {
 			const $tr = $(`
 <tr data-name="${i.name}">
     <td>${dstr}</td> 
-    <td>${i.dealer_name ? i.dealer_name + " - " + i.dealer : i.dealer}</td> 
     <td>${i.purity}</td> 
     <td>${(i.total_weight || 0).toFixed(2)}</td> 
     <td>${frappe.format(i.discrepancy_amount || 0, { fieldtype: "Currency" })}</td> 
     <td>${i.discrepancy_note || ""}</td> 
     <td>${frappe.format(i.amount || 0, { fieldtype: "Currency" })}</td> 
     <td style="text-align:center;">
-        <input type="checkbox" class="tick-all-ok" ${i.tick_all_ok ? "checked" : ""} />
+       <input type="checkbox" class="tick-all-ok" ${isChecked} />
     </td> 
-    <td>
-        <select class="discrepancy-action form-control form-control-sm">
-            <option value="">Select</option>
-            <option value="Refund Request (ie. Credit Note)" ${i.discrepancy_action === "Refund Request (ie. Credit Note)" ? "selected" : ""}>
-                Refund Request (ie. Credit Note)
-            </option>
-        </select>
-    </td> 
+   <td style="text-align:center;">
+    <button class="btn btn-sm btn-info refund-request-btn" 
+            style="padding:2px 6px; font-size:0.75rem;">
+        Refund Request
+    </button>
+</td>
+
 </tr>
 `).appendTo($tbody);
-
 
 			$tr.find(".tick-all-ok").on("change", (e) => {
 				this.track_change(i.name, { tick_all_ok: e.target.checked ? 1 : 0 });
 			});
 
-			// New functionality: prompt for discrepancy_amount
-			$tr.find(".discrepancy-action").on("change", async (e) => {
-				const val = e.target.value;
-				if (val === "Refund Request (ie. Credit Note)") {
-					await frappe.prompt(
-						[
-							{
-								fieldname: "discrepancy_amount",
-								label: "Discrepancy Amount (MYR)",
-								fieldtype: "Float",
-								reqd: 1,
-							},
-							{
-								fieldname: "discrepancy_note",
-								label: "Discrepancy Note",
-								fieldtype: "Data",
-								reqd: 0,
-							},
-						],
-						(values) => {
-							// Track changes
-							this.track_change(i.name, {
-								discrepancy_action: val,
-								discrepancy_amount: values.discrepancy_amount,
-								discrepancy_note: values.discrepancy_note,
-							});
-
-							// Update the table cells immediately
-							$tr.find("td").eq(4).text(values.discrepancy_amount.toFixed(2)); // Discrepancy amount
-							$tr.find("td")
-								.eq(5)
-								.text(values.discrepancy_note || ""); // Discrepancy note
+			$tr.find(".refund-request-btn").on("click", async () => {
+				await frappe.prompt(
+					[
+						{
+							fieldname: "discrepancy_amount",
+							label: "Discrepancy Amount (MYR)",
+							fieldtype: "Float",
+							reqd: 1,
 						},
-						__("Enter Discrepancy Details"),
-						__("OK")
-					);
-				} else {
-					this.track_change(i.name, {
-						discrepancy_action: val,
-						discrepancy_amount: null,
-						discrepancy_note: null,
-					});
+						{
+							fieldname: "discrepancy_note",
+							label: "Discrepancy Note",
+							fieldtype: "Data",
+							reqd: 0,
+						},
+					],
+					(values) => {
+						// Track changes in JS
+						this.track_change(i.name, {
+							discrepancy_action: "Refund Request (ie. Credit Note)",
+							discrepancy_amount: values.discrepancy_amount,
+							discrepancy_note: values.discrepancy_note,
+						});
 
-					// Clear the table cells immediately
-					$tr.find("td").eq(4).text("0"); // Discrepancy amount
-					$tr.find("td").eq(5).text(""); // Discrepancy note
-				}
+						// Update table cells immediately
+						$tr.find("td").eq(3).text(values.discrepancy_amount.toFixed(2)); // Discrepancy Amount
+						$tr.find("td")
+							.eq(4)
+							.text(values.discrepancy_note || ""); // Discrepancy Note
+					},
+					__("Enter Discrepancy Details"),
+					__("OK")
+				);
 			});
 		});
 

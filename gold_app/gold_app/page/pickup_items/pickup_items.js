@@ -219,11 +219,13 @@ class PickupItemsPage {
         <table class="table table-sm dealer-summary-table">
           <thead>
             <tr>
-              <th style="width:36px"></th>
-			  <th style="width:110px; text-align:center;">
+			  <th style="width:100px; text-align:center;">
   				<span id="expand-all-dealers" style="cursor:pointer; color:#007bff; text-decoration:underline;">
     				Expand All
   				</span>
+			  </th>
+			  <th style="width:36px">
+    			<input type="checkbox" id="select-all-dealers" title="Select All Dealers" />
 			  </th>
               <th>Date Range</th>
               <th>Customer Name</th>
@@ -352,34 +354,101 @@ class PickupItemsPage {
 			});
 
 			$tr.find(".select-dealer").on("change", async (e) => {
-				const dealerName = $(e.target).data("dealer");
-				const $dealerRow = $tbl.find(`.dealer-row[data-dealer='${dealerName}']`);
-				const $transactionsRow = $tbl.find(
-					`.dealer-transactions[data-dealer='${dealerName}']`
-				);
-				// const $toggle = $dealerRow.find(".toggle-transactions"); // No longer needed
+    const dealerName = $(e.target).data("dealer");
+    const $transactionsRow = $tbl.find(`.dealer-transactions[data-dealer='${dealerName}']`);
+    const $container = $transactionsRow.find(".transactions-container");
 
-				if (e.target.checked) {
-					// Add dealer to selected_dealers
+    if (e.target.checked) {
+        // Add dealer to selected_dealers
+        this.selected_dealers.add(dealerName);
+
+        // Ensure transactions exist (fetch if not already loaded)
+        if (!$container.data("loaded")) {
+            try {
+                await this.render_transactions($container, dealerName);
+                $container.data("loaded", true);
+            } catch (err) {
+                console.warn(`Failed to load transactions for dealer ${dealerName}`, err);
+            }
+        }
+
+        // Select all transactions
+        $container.find(".select-transaction").each(function () {
+            $(this).prop("checked", true).trigger("change");
+        });
+
+    } else {
+        // Remove dealer from selected_dealers
+        this.selected_dealers.delete(dealerName);
+
+        // Uncheck all transactions
+        if ($container.data("loaded")) {
+            $container.find(".select-transaction").each(function () {
+                $(this).prop("checked", false).trigger("change");
+            });
+        }
+    }
+
+    // Update selected dealer overview table
+    await this.render_selected_overview(Array.from(this.selected_dealers));
+});
+
+		});
+
+		// ---- Select / Deselect All Dealers functionality ----
+		$("#select-all-dealers").on("change", async (e) => {
+			const allChecked = $(e.currentTarget).is(":checked");
+
+			// Reflect checked state on all dealer checkboxes
+			$(".select-dealer").prop("checked", allChecked);
+
+			if (allChecked) {
+				this.selected_dealers.clear();
+
+				for (const row of $(".dealer-row")) {
+					const dealerName = $(row).data("dealer");
 					this.selected_dealers.add(dealerName);
 
-					// Select all transactions WITHOUT expanding the row
-					$transactionsRow.find(".select-transaction").each(function () {
-						$(this).prop("checked", true).trigger("change");
-					});
-				} else {
-					// Remove dealer from selected_dealers
-					this.selected_dealers.delete(dealerName);
+					// --- Ensure transactions exist (fetch if not already loaded) ---
+					const $transactionsRow = $(
+						`.dealer-transactions[data-dealer='${dealerName}']`
+					);
+					const $container = $transactionsRow.find(".transactions-container");
 
-					// Uncheck all transactions
-					$transactionsRow.find(".select-transaction").each(function () {
-						$(this).prop("checked", false).trigger("change");
+					if (!$container.data("loaded")) {
+						// Load transactions quietly in background (without expanding)
+						try {
+							await this.render_transactions($container, dealerName);
+							$container.data("loaded", true);
+						} catch (err) {
+							console.warn(
+								`Failed to load transactions for dealer ${dealerName}`,
+								err
+							);
+						}
+					}
+
+					// --- Now select all transactions ---
+					$container.find(".select-transaction").each(function () {
+						$(this).prop("checked", true).trigger("change");
 					});
 				}
 
-				// Update selected dealer overview table
-				await this.render_selected_overview(Array.from(this.selected_dealers));
-			});
+				frappe.show_alert({ message: "All dealers selected", indicator: "green" });
+			} else {
+				// ---- Deselect all dealers and their transactions ----
+				this.selected_dealers.clear();
+				$(".select-dealer").prop("checked", false);
+
+				$(".dealer-transactions .select-transaction").each(function () {
+					$(this).prop("checked", false).trigger("change");
+				});
+
+				frappe.show_alert({ message: "All dealers deselected", indicator: "orange" });
+			}
+
+			// Update overview after all selection/deselection done
+			await this.render_selected_overview(Array.from(this.selected_dealers));
 		});
 
 		// ---- Expand/Collapse All Dealers + Purities + Items functionality ----

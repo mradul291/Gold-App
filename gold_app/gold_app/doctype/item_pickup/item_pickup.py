@@ -85,7 +85,7 @@ def on_update(doc, method):
         credit_note.discrepancy_action = doc.discrepancy_action
         credit_note.discrepancy_amount = doc.discrepancy_amount
         credit_note.status = "Draft"
-        credit_note.remarks = f"Auto-created from Item Pickup {doc.name}"
+        credit_note.remarks = doc.discrepancy_note
         
         credit_note.insert(ignore_permissions=True)
 

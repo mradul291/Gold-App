@@ -98,13 +98,16 @@ class StaffPickupItemsPage {
             <table class="table table-sm table-bordered">
                 <thead>
                     <tr>
-                        <th style="width:36px"></th>
-						<th style="width:110px; text-align:center;">
+                        
+						<th style="width:90px; text-align:center;">
    							<span class="toggle-all" style="cursor:pointer; color:#007bff; text-decoration:underline; user-select:none; text-transform:none;">
 	Expand All
 </span>
 
 						</th>
+<th style="width:36px; text-align:center;">
+	<input type="checkbox" id="select-all-dealers" title="Select All Dealers" />
+</th>
                         <th>Customer Name</th>
                         <th>Purities</th>
                         <th>Total Weight (g)</th>
@@ -182,6 +185,96 @@ class StaffPickupItemsPage {
 				}
 			});
 		});
+
+		// ---- Select / Deselect All Dealers functionality ----
+		$("#select-all-dealers").on("change", async (e) => {
+			const allChecked = $(e.currentTarget).is(":checked");
+
+			// Reflect checked state on all dealer checkboxes
+			$(".dealer-select").prop("checked", allChecked);
+
+			if (allChecked) {
+				this.selected.clear();
+
+				for (const row of $(".dealer-row, tr[data-dealer]")) {
+					const $row = $(row);
+					const dealerName = $row.data("dealer");
+
+					// Fetch dealer items (without expanding)
+					let items = [];
+					try {
+						items = await frappe.xcall(
+							"gold_app.api.page_api.get_staff_pickup_items",
+							{ dealer: dealerName }
+						);
+					} catch (err) {
+						console.warn(`Failed to load items for dealer ${dealerName}`, err);
+						continue;
+					}
+
+					// Ensure there's a detail row (hidden) to hold checkboxes
+					let $detailRow = $row.next(".detail-row");
+					if (!$detailRow.length) {
+						$detailRow = $(`
+					<tr class="detail-row" style="display:none">
+						<td colspan="5">
+							<table class="table table-sm table-bordered">
+								<thead>
+									<tr>
+										<th style="width:36px"><input type="checkbox" class="select-all" checked/></th>
+										<th>Date</th>
+										<th>Purity</th>
+										<th>Total Weight (g)</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</td>
+					</tr>
+				`).insertAfter($row);
+					}
+
+					const $detailTbody = $detailRow.find("tbody");
+					$detailTbody.empty();
+
+					// Render all fetched items as selected
+					items.forEach((i) => {
+						const dstr = i.date
+							? new Date(i.date).toLocaleDateString("en-GB", {
+									day: "numeric",
+									month: "short",
+									year: "numeric",
+							  })
+							: "";
+						$detailTbody.append(`
+					<tr>
+						<td><input type="checkbox" class="item-select" data-name="${i.name}" checked/></td>
+						<td>${dstr}</td>
+						<td>${i.purity}</td>
+						<td>${(i.total_weight || 0).toFixed(2)}</td>
+					</tr>
+				`);
+						this.selected.add(i.name);
+					});
+
+					// Keep all detail rows hidden (no expand)
+					$detailRow.hide();
+				}
+
+				frappe.show_alert({
+					message: "All dealers and items selected",
+					indicator: "green",
+				});
+			} else {
+				// Deselect all
+				this.selected.clear();
+				$(".dealer-select, .item-select, .select-all").prop("checked", false);
+				frappe.show_alert({
+					message: "All dealers and items deselected",
+					indicator: "orange",
+				});
+			}
+		});
 	}
 
 	async show_detail(dealer, $row) {
@@ -207,7 +300,6 @@ class StaffPickupItemsPage {
                             <tr>
                                 <th style="width:36px"><input type="checkbox" class="select-all"/></th>
                                 <th>Date</th>
-                                <th>Customer Name</th>
                                 <th>Purity</th>
                                 <th>Total Weight (g)</th>
                             </tr>
@@ -226,7 +318,6 @@ class StaffPickupItemsPage {
                 <tr>
                     <td><input type="checkbox" class="item-select" data-name="${i.name}"/></td>
                     <td>${dstr}</td>
-                    <td>${i.dealer_name ? i.dealer_name + " - " + i.dealer : i.dealer}</td>
                     <td>${i.purity}</td>
                     <td>${(i.total_weight || 0).toFixed(2)}</td>
                 </tr>
