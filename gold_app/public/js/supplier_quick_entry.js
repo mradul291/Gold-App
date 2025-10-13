@@ -1,4 +1,6 @@
-frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends frappe.ui.form.ContactAddressQuickEntryForm {
+frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends (
+	frappe.ui.form.ContactAddressQuickEntryForm
+) {
 	constructor(doctype, after_insert, init_callback, doc, force) {
 		super(doctype, after_insert, init_callback, doc, force);
 		this.skip_redirect_on_error = true;
@@ -7,7 +9,7 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 	render_dialog() {
 		super.render_dialog();
 		const dialog = this.dialog;
-		dialog.set_title(__('New Customer'));
+		dialog.set_title(__("New Customer"));
 
 		// --- Nationality toggle ---
 		const toggle_nationality = () => {
@@ -55,20 +57,61 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 					frappe.msgprint(__("Malaysian ID must be exactly 12 digits"));
 					return;
 				}
-				dialog.set_value("malaysian_id", `${digits.slice(0,6)}-${digits.slice(6,8)}-${digits.slice(8)}`);
+				dialog.set_value(
+					"malaysian_id",
+					`${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+				);
+			});
+		}
+
+		// --- Mobile Number validation ---
+		const mobile_field = dialog.get_field("mobile_number");
+		if (mobile_field && mobile_field.$input) {
+			mobile_field.$input.on("blur", () => {
+				let val = mobile_field.$input.val() || "";
+				if (!val) return;
+
+				// Remove all non-digit characters
+				let digits = val.replace(/\D/g, "");
+
+				// Validate length
+				if (digits.length !== 10 && digits.length !== 11) {
+					frappe.msgprint(__("Mobile number must be 10 or 11 digits"));
+					return;
+				}
+
+				// Format number dynamically
+				let formatted;
+				if (digits.length === 10) {
+					formatted = `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6)}`;
+				} else {
+					formatted = `${digits.slice(0, 3)}-${digits.slice(3, 7)} ${digits.slice(7)}`;
+				}
+
+				dialog.set_value("mobile_number", formatted);
 			});
 		}
 
 		dialog.set_primary_action(__("Save"), async () => {
 			const nationality = dialog.get_value("customer_nationality");
 			const mid_val = dialog.get_value("malaysian_id");
+			const mobile_val = dialog.get_value("mobile_number") || "";
+			const mobile_digits = mobile_val.replace(/\D/g, "");
 
 			if (nationality === "Malaysian") {
-				const digits = (mid_val || "").replace(/\D/g, "");
-				if (!digits || digits.length !== 12) {
-					frappe.msgprint(__("Please enter a valid 12-digit Malaysian ID before saving."));
+				if (!mid_val || mid_val.replace(/\D/g, "").length !== 12) {
+					frappe.msgprint(
+						__("Please enter a valid 12-digit Malaysian ID before saving.")
+					);
 					return;
 				}
+			}
+
+			if (!mobile_val || (mobile_digits.length !== 10 && mobile_digits.length !== 11)) {
+				frappe.msgprint(
+					__("Please enter a valid 10 or 11-digit mobile number before saving.")
+				);
+				return;
 			}
 
 			await this.insert();
@@ -81,10 +124,13 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends fra
 				label: __("Mobile Number"),
 				fieldname: "mobile_number",
 				fieldtype: "Data",
+				reqd: 1,
 			},
 		];
 		return fields;
 	}
 };
 
-//
+
+
+

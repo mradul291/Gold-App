@@ -69,6 +69,13 @@ class PoolPage {
 		});
 	}
 
+	formatCurrency(value) {
+		return parseFloat(value || 0).toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		});
+	}
+
 	async update_pool_status(pool_name) {
 		try {
 			let pool_doc = await frappe.db.get_doc("Gold Pool", pool_name);
@@ -121,7 +128,7 @@ class PoolPage {
                     ${row["Total Weight (g)"]}
                 </td>
                 <td>${row["AVCO (RM/g)"]}</td>
-                <td>${row["Total Cost (MYR)"]}</td>
+                <td>${this.formatCurrency(row["Total Cost (MYR)"])}</td>
             </tr>`);
 		});
 		table.append(tbody);
@@ -221,12 +228,12 @@ class PoolPage {
 
 				tbody.append(`
             <tr>
-                <td>${purity}</td>
+                <td>${purity}</td>	
                 <td>${sourceItem}</td>
                 <td>${remainingQty.toFixed(3)}</td>
                 <td>${targetWarehouseSelect}</td>
 				 <td><input type="number" class="form-control avco-rate" value="${avco}" readonly></td>
-    			<td><input type="number" class="form-control total-cost" value="${totalCost}" readonly></td>
+    			<td><input type="text" class="form-control total-cost" value="${this.formatCurrency(totalCost)}" readonly></td>
             </tr>
         `);
 			});
@@ -296,7 +303,7 @@ class PoolPage {
 				// Recalculate total cost if qty is present
 				let qty = parseFloat(row.find("input[name='qty']").val()) || 0;
 				let totalCost = qty * avco;
-				row.find("input[name='total_cost']").val(totalCost.toFixed(2));
+				row.find("input[name='total_cost']").val(this.formatCurrency(totalCost));
 
 				renderRemainingTransferTable();
 			});
@@ -337,7 +344,7 @@ class PoolPage {
 				rows.push({
 					purity: r.find("select[name='purity']").val(),
 					qty: r.find("input[name='qty']").val(),
-					valuation_rate: r.find("input[name='valuation_rate']").val(),
+					valuation_rate: parseFloat(r.find("input[name='avco_rate']").val() || 0),
 					target_warehouse: r.find("select[name='target_warehouse']").val(),
 					item_group: r.find("select[name='item_group']").val(),
 					item_length: r.find("input[name='item_length']").val() || null,
@@ -409,52 +416,6 @@ class PoolPage {
 			$(this).text(remaining >= 0 ? remaining.toFixed(3) : "0.000");
 		});
 	}
-
-	// render_final_table(created_items = [], remainingTransfers = []) {
-	// 	this.final_table_container.empty();
-	// 	if (!created_items.length) {
-	// 		this.final_table_container.html("<p>No Stock Entry data to display.</p>");
-	// 		return;
-	// 	}
-
-	// 	let table = $("<table class='table table-bordered'></table>");
-	// 	let thead = $(`
-	//     <thead>
-	//         <tr>
-	//             <th>Purity</th>
-	//             <th>Item Code</th>
-	//             <th>Retail Weight (g)</th>
-	//             <th>Retail Warehouse</th>
-	//             <th>Wholesale Warehouse</th>
-	//         </tr>
-	//     </thead>
-	// `);
-	// 	table.append(thead);
-
-	// 	let tbody = $("<tbody></tbody>");
-	// 	let remainingMap = {};
-	// 	if (remainingTransfers && remainingTransfers.length) {
-	// 		remainingTransfers.forEach((rt) => {
-	// 			remainingMap[rt.purity] = rt.target_warehouse || "Bag 1 - Wholesale - AGSB";
-	// 		});
-	// 	}
-
-	// 	created_items.forEach((row) => {
-	// 		tbody.append(`
-	//         <tr>
-	//             <td>${row.purity || ""}</td>
-	//             <td>${row.item_code || "-"}</td>
-	//             <td>${row.qty || 0}</td>
-	//             <td>${row.target_warehouse || ""}</td>
-	//             <td>${remainingMap[row.purity] || ""}</td>
-	//         </tr>
-	//     `);
-	// 	});
-
-	// 	table.append(tbody);
-	// 	this.final_table_container.append("<h4>Final Stock Summary</h4>");
-	// 	this.final_table_container.append(table);
-	// }
 
 	render_final_table(created_items = [], remainingTransfers = []) {
 		this.final_table_container.empty();

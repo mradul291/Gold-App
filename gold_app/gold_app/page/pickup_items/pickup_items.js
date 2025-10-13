@@ -312,24 +312,10 @@ class PickupItemsPage {
 				if (showing) {
 					$details.addClass("d-none");
 					icon.removeClass("fa-chevron-down").addClass("fa-chevron-right");
-					this.selected_dealers.delete(d.dealer); // remove dealer when collapsed
-					if (!this.isExpandingAll) {
-						await this.render_selected_overview(Array.from(this.selected_dealers));
-					}
 				} else {
 					icon.removeClass("fa-chevron-right").addClass("fa-chevron-down");
 
 					const dealerName = d.dealer;
-					if (this.selected_dealers.has(dealerName)) {
-						this.selected_dealers.delete(dealerName); // Deselect dealer
-					} else {
-						this.selected_dealers.add(dealerName); // Select dealer
-					}
-
-					if (!this.isExpandingAll) {
-						await this.render_selected_overview(Array.from(this.selected_dealers));
-					}
-
 					const $container = $details.find(".purity-container");
 					if (!$container.data("loaded")) {
 						$container.html('<div class="text-muted">Loading purities...</div>');
@@ -354,45 +340,48 @@ class PickupItemsPage {
 			});
 
 			$tr.find(".select-dealer").on("change", async (e) => {
-    const dealerName = $(e.target).data("dealer");
-    const $transactionsRow = $tbl.find(`.dealer-transactions[data-dealer='${dealerName}']`);
-    const $container = $transactionsRow.find(".transactions-container");
+				const dealerName = $(e.target).data("dealer");
+				const $transactionsRow = $tbl.find(
+					`.dealer-transactions[data-dealer='${dealerName}']`
+				);
+				const $container = $transactionsRow.find(".transactions-container");
 
-    if (e.target.checked) {
-        // Add dealer to selected_dealers
-        this.selected_dealers.add(dealerName);
+				if (e.target.checked) {
+					// Add dealer to selected_dealers
+					this.selected_dealers.add(dealerName);
 
-        // Ensure transactions exist (fetch if not already loaded)
-        if (!$container.data("loaded")) {
-            try {
-                await this.render_transactions($container, dealerName);
-                $container.data("loaded", true);
-            } catch (err) {
-                console.warn(`Failed to load transactions for dealer ${dealerName}`, err);
-            }
-        }
+					// Ensure transactions exist (fetch if not already loaded)
+					if (!$container.data("loaded")) {
+						try {
+							await this.render_transactions($container, dealerName);
+							$container.data("loaded", true);
+						} catch (err) {
+							console.warn(
+								`Failed to load transactions for dealer ${dealerName}`,
+								err
+							);
+						}
+					}
 
-        // Select all transactions
-        $container.find(".select-transaction").each(function () {
-            $(this).prop("checked", true).trigger("change");
-        });
+					// Select all transactions
+					$container.find(".select-transaction").each(function () {
+						$(this).prop("checked", true).trigger("change");
+					});
+				} else {
+					// Remove dealer from selected_dealers
+					this.selected_dealers.delete(dealerName);
 
-    } else {
-        // Remove dealer from selected_dealers
-        this.selected_dealers.delete(dealerName);
+					// Uncheck all transactions
+					if ($container.data("loaded")) {
+						$container.find(".select-transaction").each(function () {
+							$(this).prop("checked", false).trigger("change");
+						});
+					}
+				}
 
-        // Uncheck all transactions
-        if ($container.data("loaded")) {
-            $container.find(".select-transaction").each(function () {
-                $(this).prop("checked", false).trigger("change");
-            });
-        }
-    }
-
-    // Update selected dealer overview table
-    await this.render_selected_overview(Array.from(this.selected_dealers));
-});
-
+				// Update selected dealer overview table
+				await this.render_selected_overview(Array.from(this.selected_dealers));
+			});
 		});
 
 		// ---- Select / Deselect All Dealers functionality ----
@@ -462,11 +451,11 @@ class PickupItemsPage {
 				this.isExpandingAll = true;
 
 				const $loader = $(`
-    <div class="loading-overlay text-center p-4">
-        <div class="spinner-border text-primary" role="status"></div>
-        <div class="mt-2 text-muted">Loading all customers...</div>
-    </div>
-`).appendTo(this.overview_container);
+    			<div class="loading-overlay text-center p-4">
+        			<div class="spinner-border text-primary" role="status"></div>
+        			<div class="mt-2 text-muted">Loading all customers...</div>
+    			</div>
+			`).appendTo(this.overview_container);
 
 				// Hide existing tables while loading
 				this.overview_container.children().not($loader).css("opacity", "0.3");
@@ -518,8 +507,6 @@ class PickupItemsPage {
 
 					this.selected_dealers.add(dealerName);
 				}
-
-				await this.render_selected_overview(Array.from(this.selected_dealers));
 				$loader.remove();
 				this.overview_container.children().css("opacity", "1");
 
@@ -562,9 +549,6 @@ class PickupItemsPage {
 				allExpanded = false;
 				$("#expand-all-dealers").text("Expand All");
 
-				// Clear selected dealers before updating overview
-				this.selected_dealers.clear();
-				await this.render_selected_overview([]); // correctly show "No dealers selected"
 				this.isExpandingAll = false; // re-enable per-dealer updates
 			}
 		});
