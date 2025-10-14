@@ -23,20 +23,13 @@ class StaffPickupItemsPage {
 	}
 
 	make_toolbar() {
-		// Remove default action button
 		this.page.set_primary_action(__("Refresh"), () => location.reload());
 		this.page.clear_menu();
 
-		// Add Mark Pickup button in the toolbar
 		this.page.add_action_item("Mark Pickup", async () => {
-			if (!this.current_dealer) {
-				frappe.msgprint("Please expand a dealer and select items first");
-				return;
-			}
+			// Collect all selected items (visible or hidden)
+			const $selectedCheckboxes = this.container.find(".item-select:checked");
 
-			const $selectedCheckboxes = this.container.find(
-				".detail-row:visible tbody .item-select:checked"
-			);
 			if (!$selectedCheckboxes.length) {
 				frappe.msgprint("No items selected");
 				return;
@@ -243,91 +236,80 @@ class StaffPickupItemsPage {
 		// ---- Select / Deselect All Dealers functionality ----
 		$("#select-all-dealers").on("change", async (e) => {
 			const allChecked = $(e.currentTarget).is(":checked");
+			this.selected.clear();
 
-			// Reflect checked state on all dealer checkboxes
-			$(".dealer-select").prop("checked", allChecked);
+			for (const row of $("tr[data-dealer]")) {
+				const $row = $(row);
+				const dealerName = $row.data("dealer");
 
-			if (allChecked) {
-				this.selected.clear();
+				$row.find(".dealer-select").prop("checked", allChecked);
 
-				for (const row of $(".dealer-row, tr[data-dealer]")) {
-					const $row = $(row);
-					const dealerName = $row.data("dealer");
-
-					// Fetch dealer items (without expanding)
-					let items = [];
-					try {
-						items = await frappe.xcall(
-							"gold_app.api.page_api.get_staff_pickup_items",
-							{ dealer: dealerName }
-						);
-					} catch (err) {
-						console.warn(`Failed to load items for dealer ${dealerName}`, err);
-						continue;
-					}
-
-					// Ensure there's a detail row (hidden) to hold checkboxes
-					let $detailRow = $row.next(".detail-row");
-					if (!$detailRow.length) {
-						$detailRow = $(`
-					<tr class="detail-row" style="display:none">
-						<td colspan="5">
-							<table class="table table-sm table-bordered">
-								<thead>
-									<tr>
-										<th style="width:36px"><input type="checkbox" class="select-all" checked/></th>
-										<th>Date</th>
-										<th>Purity</th>
-										<th>Total Weight (g)</th>
-									</tr>
-								</thead>
-								<tbody></tbody>
-							</table>
-						</td>
-					</tr>
-				`).insertAfter($row);
-					}
-
-					const $detailTbody = $detailRow.find("tbody");
-					$detailTbody.empty();
-
-					// Render all fetched items as selected
-					items.forEach((i) => {
-						const dstr = i.date
-							? new Date(i.date).toLocaleDateString("en-GB", {
-									day: "numeric",
-									month: "short",
-									year: "numeric",
-							  })
-							: "";
-						$detailTbody.append(`
-					<tr>
-						<td><input type="checkbox" class="item-select" data-name="${i.name}" checked/></td>
-						<td>${dstr}</td>
-						<td>${i.purity}</td>
-						<td>${(i.total_weight || 0).toFixed(2)}</td>
-					</tr>
-				`);
-						this.selected.add(i.name);
+				// Fetch items for each dealer
+				let items = [];
+				try {
+					items = await frappe.xcall("gold_app.api.page_api.get_staff_pickup_items", {
+						dealer: dealerName,
 					});
-
-					// Keep all detail rows hidden (no expand)
-					$detailRow.hide();
+				} catch (err) {
+					console.warn(`Failed to load items for dealer ${dealerName}`, err);
+					continue;
 				}
 
-				frappe.show_alert({
-					message: "All dealers and items selected",
-					indicator: "green",
-				});
-			} else {
-				// Deselect all
-				this.selected.clear();
-				$(".dealer-select, .item-select, .select-all").prop("checked", false);
-				frappe.show_alert({
-					message: "All dealers and items deselected",
-					indicator: "orange",
+				// Ensure there’s a detail row for checkboxes
+				let $detailRow = $row.next(".detail-row");
+				if (!$detailRow.length) {
+					$detailRow = $(`
+				<tr class="detail-row" style="display:none">
+					<td colspan="5">
+						<table class="table table-sm table-bordered">
+							<thead>
+								<tr>
+									<th style="width:36px"><input type="checkbox" class="select-all" ${
+										allChecked ? "checked" : ""
+									}/></th>
+									<th>Date</th>
+									<th>Purity</th>
+									<th>Total Weight (g)</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</td>
+				</tr>
+			`).insertAfter($row);
+				}
+
+				const $detailTbody = $detailRow.find("tbody");
+				$detailTbody.empty();
+
+				items.forEach((i) => {
+					const dstr = i.date
+						? new Date(i.date).toLocaleDateString("en-GB", {
+								day: "numeric",
+								month: "short",
+								year: "numeric",
+						  })
+						: "";
+					$detailTbody.append(`
+				<tr>
+					<td><input type="checkbox" class="item-select" data-name="${i.name}" ${
+						allChecked ? "checked" : ""
+					}/></td>
+					<td>${dstr}</td>
+					<td>${i.purity}</td>
+					<td>${(i.total_weight || 0).toFixed(2)}</td>
+				</tr>
+			`);
+					if (allChecked) this.selected.add(i.name);
 				});
 			}
+
+			frappe.show_alert({
+				message: allChecked
+					? "All dealers and items selected"
+					: "All dealers and items deselected",
+				indicator: allChecked ? "green" : "orange",
+			});
 		});
 	}
 

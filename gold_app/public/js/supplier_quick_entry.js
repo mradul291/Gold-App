@@ -132,5 +132,3 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends (
 };
 
 
-
-
