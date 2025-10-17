@@ -1,0 +1,44 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"O7p3idsLCs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Wholesale Sales Management</span>\",\"col\":12}},{\"id\":\"XPmuLBgRxZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Create New Sale\",\"col\":3}}]",
+ "creation": "2025-10-14 18:18:34.341343",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "chart",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Wholesale Sales",
+ "links": [],
+ "modified": "2025-10-14 18:35:33.126402",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Wholesale Sales",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Manager"
+  }
+ ],
+ "sequence_id": 7.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Create New Sale",
+   "link_to": "wholesale-sale",
+   "type": "Page"
+  }
+ ],
+ "title": "Wholesale Sales"
+}

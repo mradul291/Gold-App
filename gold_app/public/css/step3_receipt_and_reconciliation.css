@@ -1,0 +1,243 @@
+.receipt-recon-container {
+    padding: 16px 28px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    font-family: "Inter", sans-serif;
+}
+.tab-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e6e8ec;
+    margin-bottom: 16px;
+    padding-bottom: 0;
+    gap: 4px;
+}
+.tab {
+    font-size: 15px;
+    padding: 8px 24px;
+    border-radius: 6px 6px 0 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #506690;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+}
+.tab-active {
+    background: #e6f0ff;
+    color: #2563eb;
+    border-bottom: 2px solid #2563eb;
+    font-weight: 600;
+}
+.tab-content {
+    margin-top: 8px;
+}
+.section-title {
+    margin: 8px 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #222;
+}
+.input-caption {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+.summary-section {
+    margin-bottom: 28px;
+}
+.summary-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 12px;
+}
+.summary-block {
+    flex: 1;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 20px 18px;
+    min-width: 210px;
+    box-sizing: border-box;
+}
+.summary-block-highlight {
+    background: #eff6ff;
+    border: 1px solid #bdd8ff;
+}
+.summary-label {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+.summary-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #222;
+}
+.summary-value-highlight {
+    color: #2563eb;
+    font-size: 17px;
+    font-weight: 700;
+}
+.bag-content-section {
+    margin-top: 18px;
+}
+
+.receipt-table, .recon-table, .adjust-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    background: white;
+}
+.receipt-table th, .recon-table th, .adjust-table th {
+    background: #f0f6fa;
+    padding: 10px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 1px solid #e2e8f0;
+    color: #444;
+    font-size: 14px;
+}
+.receipt-table td, .recon-table td, .adjust-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f2f2f2;
+    color: #23272e;
+    font-size: 14px;
+}
+.receipt-table input[type="text"], .receipt-table input[type="number"] {
+    width: 88px;
+    padding: 4px 6px;
+    font-size: 14px;
+    border: 1px solid #cdd5df;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+.receipt-table .delete-row-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #e04a4a;
+    font-size: 17px;
+}
+.recon-table .status-icon {
+    font-size: 17px;
+    color: #ca8a04;
+    padding: 2px 7px;
+}
+.neg-profit {
+    color: #e04a4a;
+}
+.receipt-table .footer-total {
+    font-weight: 600;
+    background: #f4f8fd;
+    color: #2563eb;
+}
+.summary-total-row td, .recon-table .summary-total-row td {
+    background: #f4f8fd;
+    font-weight: 700;
+    color: #2563eb;
+}
+.adjust-table {
+    margin-top: 10px;
+}
+.btn-receipt, .btn-adjustment, .btn-upload-receipt {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(36,155,255,0.06);
+    transition: background 0.2s;
+    margin-right: 6px;
+    margin-top: 12px;
+}
+.btn-receipt:hover, .btn-adjustment:hover, .btn-upload-receipt:hover {
+    background: #144bb0;
+}
+.btn-save-green {
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 11px 22px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    margin-left: 8px;
+    margin-top: 10px;
+}
+.btn-save-green:hover {
+    background: #169c41;
+}
+.btn-back {
+    background: #fff;
+    color: #222;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 11px 22px;
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+    margin-right: 12px;
+    margin-top: 10px;
+}
+.btn-back:hover {
+    background: #f8fafc;
+}
+.recon-action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 22px;
+}
+.action-row {
+    margin-top: 15px;
+    display: flex;
+    justify-content: flex-end; /* pushes button to right */
+}
+
+.caption-small {
+    color: #767e8c;
+    font-size: 12px;
+}
+.move-arrows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+}
+.up-arrow, .down-arrow {
+    cursor: pointer;
+    font-size: 12px;
+    color: #2563eb;
+}
+.del-icon {
+    font-size: 15px;
+    color: #e04a4a;
+}
+.section1-buyer-receipt,
+.section2-recon-summary,
+.section3-adjustments {
+    margin-bottom: 24px;
+}
+
+.recon-row-green td {
+  color: #009900 !important;
+  font-weight: 600;
+}
+
+.recon-row-green .status-icon.success {
+  color: #009900 !important;
+}
+
+.receipt-table th:last-child,
+.receipt-table td:last-child {
+  width: 60px;   /* or any smaller width you want */
+  white-space: nowrap; /* prevent wrapping if needed */
+  text-align: center;  /* optional - center align content */
+  padding: 4px 8px;    /* optional - adjust padding */
+}

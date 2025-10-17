@@ -1,0 +1,119 @@
+.buyer-details-container {
+	padding: 24px 40px;
+	background: #fff;
+	border-radius: 12px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+	font-family: "Inter", sans-serif;
+}
+
+.bag-summary-block {
+	background: #fafafa;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+	padding: 16px;
+	margin-bottom: 24px;
+}
+
+.bag-title-row {
+	font-size: 16px;
+	font-weight: 500;
+	margin-bottom: 10px;
+	color: #444;
+}
+
+.summary-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 8px;
+}
+
+.summary-table th {
+	background: #f2f2f2;
+	padding: 8px;
+	text-align: left;
+	font-weight: 600;
+	border-bottom: 1px solid #ddd;
+}
+
+.summary-table td {
+	padding: 8px;
+	border-bottom: 1px solid #eee;
+	color: #333;
+}
+
+.summary-total-row td {
+	background: #f9f9f9;
+	font-weight: 600;
+}
+
+.buyer-form-block {
+	margin-bottom: 20px;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 14px;
+}
+
+.form-group label {
+	font-size: 14px;
+	font-weight: 500;
+	color: #333;
+	margin-bottom: 6px;
+}
+
+.input-select,
+.input-date {
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	padding: 8px 10px;
+	font-size: 14px;
+	width: 100%;
+	outline: none;
+	transition: border-color 0.2s ease;
+}
+
+.input-select:focus,
+.input-date:focus {
+	border-color: #007bff;
+}
+
+.req {
+	color: #e63946;
+}
+
+.button-row {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 24px;
+}
+
+.btn-secondary,
+.btn-primary {
+	padding: 10px 18px;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.btn-secondary {
+	background: #f0f0f0;
+	color: #333;
+	border: 1px solid #ccc;
+}
+
+.btn-primary {
+	background: #007bff;
+	color: #fff;
+	border: none;
+}
+
+.btn-primary:hover {
+	background: #0056b3;
+}
+
+.btn-secondary:hover {
+	background: #e6e6e6;
+}

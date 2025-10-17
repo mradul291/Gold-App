@@ -21,8 +21,18 @@ doctype_js = {
     "Supplier": "public/js/supplier.js",
 }
 
+app_include_css = [
+    "/assets/gold_app/css/step1_select_bag.css",
+    "/assets/gold_app/css/step2_buyer_details.css",
+    "/assets/gold_app/css/step3_receipt_and_reconciliation.css"
+]
+
 app_include_js = [
     "assets/gold_app/js/supplier_quick_entry.js",
+    "/assets/gold_app/js/step1_select_bag.js",
+    "/assets/gold_app/js/step2_buyer_details.js",
+    "/assets/gold_app/js/step3_receipt_and_reconciliation.js",
+    "/assets/gold_app/js/wholesale_sale.js"
 ]
 
 doc_events = {
