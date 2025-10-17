@@ -42,7 +42,7 @@ class GoldSortingPage {
                         <table class="table table-sm table-bordered">
                             <thead>
                                 <tr>
-                                <th style="width:90px; text-align:center;">
+                                <th style="width:60px; text-align:center;">
                                     <span class="toggle-all"
                                         style="cursor:pointer; color:#007bff; text-decoration:underline; user-select:none; text-transform:none;">
                                             Expand All
@@ -60,14 +60,17 @@ class GoldSortingPage {
                                 </tr>
                             </thead>
                             <tbody></tbody>
-                            <tfoot>
-                                <tr class="summary-row">
-                                    <td colspan="5" class="text-end fw-bold">TOTAL</td>
-                                    <td class="text-end total-weight">0.00</td>
-                                    <td class="text-end total-amount">0.00</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
+                          <tfoot>
+  <tr>
+    <td style="width: 90px;"></td> <!-- Expand -->
+    <td></td> <!-- Move -->
+    <td colspan="3" class="text-end fw-bold">TOTAL</td>
+    <td class="text-end total-weight">0.00</td>
+    <td class="text-end total-amount">0.00</td>
+    <td></td> <!-- Action -->
+  </tr>
+</tfoot>
+
                         </table>
                     </div>
                 </div>
@@ -175,7 +178,11 @@ class GoldSortingPage {
         <input type="checkbox" class="pr-select" />
     </td>
     <td>${first_date ? this.formatCustomDate(first_date) : ""}</td>
-    <td>${group.items[0].dealer_name ? group.items[0].dealer_name + " - " + first_dealer : first_dealer}</td>
+    <td>${
+		group.items[0].dealer_name
+			? group.items[0].dealer_name + " - " + first_dealer
+			: first_dealer
+	}</td>
     <td>${Array.from(group.purities).join(", ")}</td>
     <td class="text-end">${group.total_weight.toFixed(2)}</td>
     <td class="text-end">${group.total_amount.toFixed(2)}</td>
