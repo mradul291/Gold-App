@@ -365,6 +365,7 @@ class Step3ReceiptAndReconciliation {
 			"Purity Change",
 			"Weight Loss - Torching/Cleaning",
 			"Weight Adjustment - Stones",
+			"Weight Loss - Other",
 			"Purity Blend (Melting)",
 			"Item Return",
 		];
