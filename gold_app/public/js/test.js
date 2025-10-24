@@ -86,7 +86,6 @@ class Step3ReceiptAndReconciliation {
 		// Receipt & Reconciliation buttons
 		if (this.activeTab === "Receipt & Reconciliation") {
 			this.bindReceiptEvents();
-			this.bindAdjustmentEvents();
 			this.container.find(".back-to-sale-btn").on("click", () => {
 				this.activeTab = "Sale Details";
 				this.render();
@@ -314,6 +313,7 @@ class Step3ReceiptAndReconciliation {
 					}
 				});
 			};
+			setTimeout(() => this.renderAdjustmentsSection(), 100);
 
 			document
 				.querySelectorAll(".input-weight, .input-rate, .input-amount")
@@ -344,20 +344,95 @@ class Step3ReceiptAndReconciliation {
         </div>
         <hr>
         <div class="section3-adjustments">
-            <h4 class="section-title">Section 3: Adjustments</h4>
-            <p class="input-caption">Add adjustment rows until Claimed = Actual</p>
-            <table class="adjust-table">
-                <thead><tr><th>#</th><th>Adjustment Type</th><th>From Purity</th><th>To Purity</th><th>Weight (g)</th><th>Notes / Remarks</th><th>Profit Impact</th></tr></thead>
-                <tbody>${adjustmentRows}</tbody>
-            </table>
-            <button class="add-adjustment-btn btn-adjustment">+ Add Adjustment</button>
-            <button class="save-adjustments-btn btn-save-green">Save All Adjustments</button>
-        </div>
+    <h4 class="section-title">Section 3: Adjustments</h4>
+    <p class="input-caption">Add adjustment rows until Claimed = Actual</p>
+    <table class="adjust-table">
+        <thead><tr><th>#</th><th>Adjustment Type</th><th>From Purity</th><th>To Purity</th><th>Weight (g)</th><th>Notes / Remarks</th><th>Profit Impact</th><th>Delete</th></tr></thead>
+        <tbody>${adjustmentRows}</tbody>
+    </table>
+    <button class="add-adjustment-btn btn-adjustment">+ Add Adjustment</button>
+    <button class="save-adjustments-btn btn-save-green">Save All Adjustments</button>
+</div>
         <hr>
         <div class="recon-action-buttons">
             <button class="back-to-sale-btn btn-back">← Back to Sale Details</button>
             <button class="save-continue-btn btn-save-green">Save & Continue to Payments →</button>
         </div>`;
+	}
+
+	renderAdjustmentsSection() {
+		const adjustmentOptions = [
+			"Purity Change",
+			"Weight Loss - Torching/Cleaning",
+			"Weight Adjustment - Stones",
+			"Weight Loss - Other",
+			"Purity Blend (Melting)",
+			"Item Return",
+		];
+
+		// Target only the adjustment section body (already rendered)
+		const section = this.container.find(".section3-adjustments");
+		const tbody = section.find("tbody");
+
+		// Clear any previous rows
+		tbody.empty();
+
+		const addRow = () => {
+			const idx = tbody.children().length + 1;
+			const optionHTML = adjustmentOptions
+				.map((o) => `<option value="${o}">${o}</option>`)
+				.join("");
+			const row = $(`
+			<tr data-idx="${idx}">
+				<td>${idx}</td>
+				<td><select class="adjust-type">${optionHTML}</select></td>
+				<td><input type="number" class="from-purity" placeholder="From" /></td>
+				<td><input type="number" class="to-purity" placeholder="To" /></td>
+				<td><input type="number" class="weight" placeholder="0" /></td>
+				<td><input type="text" class="notes" placeholder="Enter notes or remarks..." /></td>
+				<td class="profit-impact text-success">+RM 0.00</td>
+				<td><button class="btn-delete-row" title="Remove">🗑️</button></td>
+			</tr>
+		`);
+			tbody.append(row);
+		};
+
+		// Event bindings
+		section.find(".add-adjustment-btn").off("click").on("click", addRow);
+
+		tbody.off("click", ".btn-delete-row").on("click", ".btn-delete-row", function () {
+			$(this).closest("tr").remove();
+			tbody.find("tr").each((i, tr) =>
+				$(tr)
+					.find("td:first")
+					.text(i + 1)
+			);
+		});
+
+		section
+			.find(".save-adjustments-btn")
+			.off("click")
+			.on("click", () => {
+				const adjustments = [];
+				tbody.find("tr").each(function () {
+					adjustments.push({
+						type: $(this).find(".adjust-type").val(),
+						from_purity: $(this).find(".from-purity").val(),
+						to_purity: $(this).find(".to-purity").val(),
+						weight: $(this).find(".weight").val(),
+						notes: $(this).find(".notes").val(),
+						impact: $(this).find(".profit-impact").text(),
+					});
+				});
+				console.log("Saved adjustments:", adjustments);
+				frappe.show_alert({
+					message: "Adjustments saved successfully",
+					indicator: "green",
+				});
+			});
+
+		// Initialize with one default row
+		addRow();
 	}
 
 	// Payment Entry tab
@@ -461,30 +536,6 @@ class Step3ReceiptAndReconciliation {
 			container
 				.find(".receipt-table tbody tr:last td:nth-child(5)")
 				.text(`RM ${totalAmount.toFixed(2)}`);
-		});
-	}
-
-	// Bind adjustment table events
-	bindAdjustmentEvents() {
-		const container = this.container;
-
-		// Add new adjustment row
-		container.find(".add-adjustment-btn").on("click", () => {
-			const newAdj = {
-				type: "",
-				from_purity: "",
-				to_purity: "",
-				weight: 0,
-				notes: "",
-				impact: 0,
-			};
-			this.adjustments.push(newAdj);
-			this.render();
-		});
-
-		// Save adjustments (currently front-end only)
-		container.find(".save-adjustments-btn").on("click", () => {
-			alert("Adjustments saved (front-end only)");
 		});
 	}
 

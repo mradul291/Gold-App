@@ -94,8 +94,11 @@ class Step2BuyerDetails {
 			fields: ["name", "customer_name"],
 		});
 		let buyerSelect = container.find("#buyer-select");
+
+		let buyerMap = {};
 		buyers.forEach((b) => {
 			buyerSelect.append(`<option value="${b.name}">${b.customer_name}</option>`);
+			buyerMap[b.name] = b.customer_name;
 		});
 
 		// -----------------------------
@@ -105,6 +108,7 @@ class Step2BuyerDetails {
 
 		container.find(".continue-btn").on("click", () => {
 			let buyer = container.find("#buyer-select").val();
+			let buyer_name = buyerMap[buyer];
 			if (!buyer || buyer === "-- Select Buyer --") {
 				frappe.msgprint("Please select a buyer.");
 				return;
@@ -126,6 +130,7 @@ class Step2BuyerDetails {
 			this.nextStepCallback({
 				selected_bag: this.selected_bag_data.warehouse_name, // Step 3 expects this
 				buyer: buyer,
+				buyer_name: buyer_name,
 				sale_date: sale_date,
 				bagSummary: normalizedBagSummary,
 				totalAmount: totalCost,

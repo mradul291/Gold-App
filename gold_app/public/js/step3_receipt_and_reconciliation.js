@@ -86,6 +86,7 @@ class Step3ReceiptAndReconciliation {
 		// Receipt & Reconciliation buttons
 		if (this.activeTab === "Receipt & Reconciliation") {
 			this.bindReceiptEvents();
+			this.bindUploadReceipt();
 			this.container.find(".back-to-sale-btn").on("click", () => {
 				this.activeTab = "Sale Details";
 				this.render();
@@ -109,7 +110,7 @@ class Step3ReceiptAndReconciliation {
 				</div>
 				<div class="summary-block">
 					<div class="summary-label">Buyer</div>
-					<div class="summary-value">${this.buyer}</div>
+					<div class="summary-value">${this.buyer_name || this.buyer}</div>
 				</div>
 			</div>
 			<div class="summary-row">
@@ -173,7 +174,7 @@ class Step3ReceiptAndReconciliation {
 				(r, idx) => `
         <tr data-idx="${idx}">
             <td><span class="move-arrows"><span class="up-arrow">&#9650;</span><span class="down-arrow">&#9660;</span></span></td>
-            <td><input type="text" class="input-purity" value="${r.purity}" readonly></td>
+            <td><input type="text" class="input-purity" value="${r.purity}"></td>
             <td><input type="number" class="input-weight" value="0.00" data-purity="${r.purity}"></td>
             <td><input type="number" class="input-rate" value="0.00" data-purity="${r.purity}"></td>
             <td><input type="number" class="input-amount" value="0.00" data-purity="${r.purity}"></td>
@@ -327,7 +328,13 @@ class Step3ReceiptAndReconciliation {
             <table class="receipt-table">
                 <thead><tr><th>Move</th><th>Purity</th><th>Weight (g) *</th><th>Rate (RM/g)</th><th>Amount (RM)</th><th>Action</th></tr></thead>
                 <tbody>${receiptLines}
-                    <tr><td colspan="2" class="footer-total">TOTAL</td><td>0.00 g</td><td>-</td><td>RM 0.00</td><td></td></tr>
+                    <tr class="footer-total">
+  						<td colspan="2">TOTAL</td>
+ 					    <td class="total-weight">0.00 g</td>
+  						<td>-</td>
+  						<td class="total-amount">RM 0.00</td>
+  						<td></td> 
+					</tr>
                 </tbody>
             </table>
             <button class="add-receipt-line-btn btn-receipt">+ Add Receipt Line</button>
@@ -365,6 +372,7 @@ class Step3ReceiptAndReconciliation {
 			"Purity Change",
 			"Weight Loss - Torching/Cleaning",
 			"Weight Adjustment - Stones",
+			"Weight Loss - Other",
 			"Purity Blend (Melting)",
 			"Item Return",
 		];
@@ -530,12 +538,104 @@ class Step3ReceiptAndReconciliation {
 			});
 
 			container
-				.find(".receipt-table tbody tr:last td:nth-child(3)")
+				.find(".receipt-table .footer-total .total-weight")
 				.text(`${totalWeight.toFixed(2)} g`);
 			container
-				.find(".receipt-table tbody tr:last td:nth-child(5)")
+				.find(".receipt-table .footer-total .total-amount")
 				.text(`RM ${totalAmount.toFixed(2)}`);
 		});
+
+		// Update totals based on the current table inputs
+		container.on("input", ".input-weight, .input-amount", () => {
+			let totalWeight = 0,
+				totalAmount = 0;
+
+			container.find(".receipt-table tbody tr").each(function () {
+				const weight = parseFloat($(this).find(".input-weight").val()) || 0;
+				const amount = parseFloat($(this).find(".input-amount").val()) || 0;
+
+				totalWeight += weight;
+				totalAmount += amount;
+			});
+
+			container
+				.find(".receipt-table .footer-total .total-weight")
+				.text(`${totalWeight.toFixed(2)} g`);
+			container
+				.find(".receipt-table .footer-total .total-amount")
+				.text(`RM ${totalAmount.toFixed(2)}`);
+		});
+
+		// Move arrows: increase or decrease purity
+		container
+			.find(".up-arrow, .down-arrow")
+			.off("click")
+			.on("click", (e) => {
+				const isUp = $(e.currentTarget).hasClass("up-arrow");
+				const row = $(e.currentTarget).closest("tr");
+				const idx = row.index();
+
+				// Read current purity
+				let purityVal = parseFloat(row.find(".input-purity").val()) || 0;
+
+				// Increase or decrease by 1 (you can change this step size if needed)
+				if (isUp) purityVal += 1;
+				else purityVal -= 1;
+
+				// Limit range (optional)
+				if (purityVal < 0) purityVal = 0;
+
+				// Update input field
+				row.find(".input-purity").val(purityVal.toFixed(2));
+
+				// Update in bagSummary for persistence
+				if (this.bagSummary[idx]) {
+					this.bagSummary[idx].purity = purityVal;
+				}
+			});
+	}
+
+	bindUploadReceipt() {
+		const container = this.container;
+
+		// Ensure the hidden file input exists
+		if (container.find("#hidden-upload-input").length === 0) {
+			const fileInput = $(
+				'<input type="file" id="hidden-upload-input" style="display:none" />'
+			);
+			container.append(fileInput);
+
+			// Handle file selection
+			fileInput.on("change", (e) => {
+				const file = e.target.files[0];
+				if (!file) return;
+
+				console.log("Selected file:", file);
+
+				// Example: read file as text (adjust if PDF, image, etc.)
+				const reader = new FileReader();
+				reader.onload = (ev) => {
+					const content = ev.target.result;
+					console.log("File content:", content);
+
+					// You can now process the receipt file here
+					// For example, send to backend, parse CSV, etc.
+					frappe.show_alert({
+						message: `Receipt "${file.name}" selected`,
+						indicator: "green",
+					});
+				};
+				reader.readAsText(file);
+			});
+		}
+
+		// Bind click on the upload button
+		container
+			.find(".btn-upload-receipt")
+			.off("click")
+			.on("click", () => {
+				container.find("#hidden-upload-input").click();
+			});
 	}
 
 	// Update reconSummary based on bagSummary / inputs
