@@ -31,6 +31,9 @@ app_include_js = [
     "assets/gold_app/js/supplier_quick_entry.js",
     "/assets/gold_app/js/step1_select_bag.js",
     "/assets/gold_app/js/step2_buyer_details.js",
+    "/assets/gold_app/js/step3_tab_sale_details.js",
+    "/assets/gold_app/js/step3_tab_receipt_reconciliation.js",
+    "/assets/gold_app/js/step3_tab_payment_entry.js",
     "/assets/gold_app/js/step3_receipt_and_reconciliation.js",
     "/assets/gold_app/js/wholesale_sale.js"
 ]

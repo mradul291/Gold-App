@@ -405,6 +405,20 @@ class Step3TabReceiptReconciliation {
 
 	updateReconciliationSummary() {
 		const container = this.container;
+
+		// Precompute total Item Return weights per purity from adjustments
+		const itemReturnMap = {};
+		this.adjustments.forEach((adj) => {
+			if (adj.type === "Item Return") {
+				const purity = adj.from_purity;
+				const weight = parseFloat(adj.weight) || 0;
+				if (!itemReturnMap[purity]) {
+					itemReturnMap[purity] = 0;
+				}
+				itemReturnMap[purity] += weight;
+			}
+		});
+
 		const rows = container.find(".receipt-table tbody tr[data-idx]");
 
 		rows.each((_, rowElem) => {
@@ -419,7 +433,6 @@ class Step3TabReceiptReconciliation {
 			const reconRow = container.find(`.recon-table tr[data-purity="${purity}"]`);
 			if (!reconRow.length) return;
 
-			// Base reference values from reconRow
 			const baseClaimed = parseFloat(reconRow.find(".claimed-cell").text()) || 0;
 			const baseCostBasis =
 				parseFloat(
@@ -429,17 +442,23 @@ class Step3TabReceiptReconciliation {
 						.replace(/[^\d.-]/g, "")
 				) || 0;
 
+			// Apply Item Return adjustment weights to claimed weight
+			const itemReturnWeight = itemReturnMap[purity] || 0;
+
+			// New actual after adjustment:
+			// Assuming 'actual' is what physically remains (claimed - item return)
+			const actual = weight + itemReturnWeight;
+
 			const claimed = baseClaimed;
-			const actual = weight;
 			const delta = (actual - claimed).toFixed(2);
 
+			// Update profit, margin calculations as before
 			let revenue = 0,
 				profit = 0,
 				profitG = 0,
 				margin = 0;
 			let statusHTML = "";
 
-			// Conditions for reconciliation status
 			if (Math.abs(actual - claimed) < 0.001 && Math.abs(amount - baseCostBasis) < 0.001) {
 				statusHTML = '<span class="status-icon success">&#10004;</span>';
 				reconRow.addClass("recon-row-green");
@@ -543,6 +562,27 @@ class Step3TabReceiptReconciliation {
 
 		addRow();
 
+		// After "addRow();" and after setting up existing handlers:
+
+		// Handler for ANY adjustment value changes (type, from_purity, weight)
+		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
+			// Sync adjustments array with current UI state
+			this.adjustments = [];
+			tbody.find("tr").each((_, tr) => {
+				const row = $(tr);
+				this.adjustments.push({
+					type: row.find(".adjust-type").val(),
+					from_purity: row.find(".from-purity").val(),
+					to_purity: row.find(".to-purity").val(),
+					weight: row.find(".weight").val(),
+					notes: row.find(".notes").val(),
+					impact: row.find(".profit-impact").text(),
+				});
+			});
+			// Refresh the reconciliation summary to immediately apply changes
+			this.updateReconciliationSummary();
+		});
+
 		// Function to toggle visibility of 'To Purity' field in a given row based on selected adjustment type
 		const toggleToPurityField = (row) => {
 			const adjustmentType = row.find(".adjust-type").val();
@@ -561,9 +601,23 @@ class Step3TabReceiptReconciliation {
 		});
 
 		// Event handler for change on adjustment type select dropdown
-		tbody.off("change", ".adjust-type").on("change", ".adjust-type", function () {
-			const row = $(this).closest("tr");
+		tbody.off("change", ".adjust-type").on("change", ".adjust-type", (e) => {
+			const row = $(e.currentTarget).closest("tr");
 			toggleToPurityField(row);
+			// Same as above: refresh adjustments and update recon
+			this.adjustments = [];
+			tbody.find("tr").each((_, tr) => {
+				const row = $(tr);
+				this.adjustments.push({
+					type: row.find(".adjust-type").val(),
+					from_purity: row.find(".from-purity").val(),
+					to_purity: row.find(".to-purity").val(),
+					weight: row.find(".weight").val(),
+					notes: row.find(".notes").val(),
+					impact: row.find(".profit-impact").text(),
+				});
+			});
+			this.updateReconciliationSummary();
 		});
 	}
 
@@ -585,19 +639,47 @@ class Step3TabReceiptReconciliation {
 			amount: line.amount,
 		}));
 
-		// Reconciliation lines from reconSummary
-		transactionDoc.reconciliation_lines = this.reconSummary.map((line) => ({
-			purity: line.purity,
-			actual: line.actual,
-			claimed: line.claimed,
-			delta: line.actual - line.claimed,
-			status: line.status || "", // add status if available
-			cost_basis: line.cost_basis,
-			revenue: line.revenue,
-			profit: line.profit,
-			profit_g: line.profit_g,
-			margin_percent: line.margin_percent,
-		}));
+		// Read reconciliation table directly for most up-to-date data
+		transactionDoc.reconciliation_lines = [];
+		this.container.find(".recon-table tbody tr").each((_, tr) => {
+			const $tr = $(tr);
+			transactionDoc.reconciliation_lines.push({
+				purity: $tr.find("td:eq(0)").text().trim(),
+				actual: parseFloat($tr.find(".actual-cell").text()) || 0,
+				claimed: parseFloat($tr.find(".claimed-cell").text()) || 0,
+				delta: parseFloat($tr.find(".delta-cell").text()) || 0,
+				status: $tr.find(".status-cell").text().trim() || "",
+				cost_basis:
+					parseFloat(
+						$tr
+							.find(".cost-basis")
+							.text()
+							.replace(/[^\d\.-]/g, "")
+					) || 0,
+				revenue:
+					parseFloat(
+						$tr
+							.find(".revenue-cell")
+							.text()
+							.replace(/[^\d\.-]/g, "")
+					) || 0,
+				profit:
+					parseFloat(
+						$tr
+							.find(".profit-cell")
+							.text()
+							.replace(/[^\d\.-]/g, "")
+					) || 0,
+				profit_g:
+					parseFloat(
+						$tr
+							.find(".profit-g-cell")
+							.text()
+							.replace(/[^\d\.-]/g, "")
+					) || 0,
+				margin_percent: parseFloat($tr.find(".margin-cell").text()) || 0,
+			});
+		});
 
 		// Adjustments from adjustments
 		transactionDoc.adjustments = this.adjustments.map((adj) => ({

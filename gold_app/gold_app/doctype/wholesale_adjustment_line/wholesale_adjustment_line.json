@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-27 20:46:42.326113",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "adjustment_type",
+  "from_purity",
+  "to_purity",
+  "weight",
+  "notes",
+  "profit_impact"
+ ],
+ "fields": [
+  {
+   "fieldname": "adjustment_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Adjustment Type"
+  },
+  {
+   "fieldname": "from_purity",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "From Purity"
+  },
+  {
+   "fieldname": "to_purity",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "To Purity"
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Notes"
+  },
+  {
+   "fieldname": "profit_impact",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Profit Impact"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-27 20:51:05.749971",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Wholesale Adjustment Line",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,111 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "WT-.#####",
+ "creation": "2025-10-27 20:37:42.386548",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "wholesale_bag",
+  "buyer",
+  "buyer_name",
+  "column_break_vsgz",
+  "sale_date",
+  "total_cost_basis",
+  "section_break_qayb",
+  "receipt_lines",
+  "reconciliation_lines",
+  "adjustments"
+ ],
+ "fields": [
+  {
+   "fieldname": "wholesale_bag",
+   "fieldtype": "Data",
+   "label": "Wholesale Bag\t",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Link",
+   "label": "Buyer\t",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "buyer.customer_name",
+   "fieldname": "buyer_name",
+   "fieldtype": "Data",
+   "label": "Buyer Name\t",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vsgz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sale_date",
+   "fieldtype": "Date",
+   "label": "Sale Date\t",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_cost_basis",
+   "fieldtype": "Currency",
+   "label": "Total Cost Basis\t",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_qayb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "receipt_lines",
+   "fieldtype": "Table",
+   "label": "Receipt",
+   "options": "Wholesale Receipt Line",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reconciliation_lines",
+   "fieldtype": "Table",
+   "label": "Reconciliation",
+   "options": "Wholesale Reconciliation Line",
+   "read_only": 1
+  },
+  {
+   "fieldname": "adjustments",
+   "fieldtype": "Table",
+   "label": "Adjustments",
+   "options": "Wholesale Adjustment Line",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-27 21:33:07.705293",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Wholesale Transaction",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

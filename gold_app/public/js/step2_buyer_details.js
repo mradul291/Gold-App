@@ -11,19 +11,20 @@ class Step2BuyerDetails {
 		let container = $(`
 			<div class="buyer-details-container">
 				<div class="bag-details-summary"></div>
-				<div class="buyer-form-block">
-					<div class="form-group">
-						<label for="buyer-select">Select Buyer <span class="req">*</span></label>
-						<select id="buyer-select" class="input-select">
-							<option>-- Select Buyer --</option>
-						</select>
-					</div>
-					<div class="form-group mt-2">
-						<label for="sale-date">Sale Date</label>
-						<input type="date" class="input-date" id="sale-date"
-							value="${frappe.datetime.nowdate()}"/>
-					</div>
-				</div>
+				<div class="buyer-form-block flex-row">
+    <div class="form-group" style="flex: 1; min-width: 200px;">
+        <label for="buyer-select">Select Buyer <span class="req">*</span></label>
+        <select id="buyer-select" class="input-select">
+            <option>-- Select Buyer --</option>
+        </select>
+    </div>
+    <div class="form-group" style="flex: 1; min-width: 200px; margin-left: 16px;">
+        <label for="sale-date">Sale Date</label>
+        <input type="date" class="input-date" id="sale-date"
+            value="${frappe.datetime.nowdate()}"/>
+    </div>
+</div>
+
 				<div class="button-row">
 					<button class="btn-secondary back-btn">&lt; Back</button>
 					<button class="btn-primary continue-btn">Continue &rarr;</button>
