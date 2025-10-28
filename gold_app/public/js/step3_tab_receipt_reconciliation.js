@@ -353,17 +353,24 @@ class Step3TabReceiptReconciliation {
 		container
 			.find(".save-continue-btn")
 			.off("click")
-			.on("click", async (e) => {
-				console.log("Save & Continue button clicked"); // <-- debug log
+			.on("click", async () => {
+				if (!this.isFullyReconciled()) {
+					frappe.msgprint({
+						title: "Reconciliation Incomplete",
+						message:
+							"Please complete reconciliation (Δ = 0) for all purities before continuing to payments.",
+						indicator: "orange",
+					});
+					return;
+				}
 				try {
 					await this.callCreateSalesAndDeliveryAPI();
 					frappe.show_alert({
-						message: "Sales created successfully",
+						message: "Sales and Delivery created successfully",
 						indicator: "green",
 					});
 					if (this.continueCallback) this.continueCallback();
 				} catch (error) {
-					console.error("API error:", error);
 					frappe.msgprint({
 						title: "Error",
 						message: `Failed to create sales and delivery: ${error.message}`,
@@ -419,6 +426,19 @@ class Step3TabReceiptReconciliation {
 			}
 		});
 
+		// Precompute total Weight Loss - Torching/Cleaning weights per purity from adjustments
+		const weightLossMap = {};
+		this.adjustments.forEach((adj) => {
+			if (adj.type === "Weight Loss - Torching/Cleaning") {
+				const purity = adj.from_purity;
+				const weight = parseFloat(adj.weight) || 0;
+				if (!weightLossMap[purity]) {
+					weightLossMap[purity] = 0;
+				}
+				weightLossMap[purity] += weight;
+			}
+		});
+
 		const rows = container.find(".receipt-table tbody tr[data-idx]");
 
 		rows.each((_, rowElem) => {
@@ -433,7 +453,20 @@ class Step3TabReceiptReconciliation {
 			const reconRow = container.find(`.recon-table tr[data-purity="${purity}"]`);
 			if (!reconRow.length) return;
 
-			const baseClaimed = parseFloat(reconRow.find(".claimed-cell").text()) || 0;
+			let baseClaimed = parseFloat(reconRow.find(".claimed-cell").text()) || 0;
+			let itemReturnWeight = itemReturnMap[purity] || 0;
+			let weightLoss = weightLossMap[purity] || 0;
+			let totalAdjustment = itemReturnWeight + weightLoss;
+			let claimed = baseClaimed - totalAdjustment;
+
+			if (totalAdjustment > 0) {
+				reconRow
+					.find(".claimed-cell")
+					.html(`<s>${baseClaimed.toFixed(2)}</s> ${claimed.toFixed(2)}`);
+			} else {
+				reconRow.find(".claimed-cell").text(baseClaimed.toFixed(2));
+			}
+
 			const baseCostBasis =
 				parseFloat(
 					reconRow
@@ -443,13 +476,11 @@ class Step3TabReceiptReconciliation {
 				) || 0;
 
 			// Apply Item Return adjustment weights to claimed weight
-			const itemReturnWeight = itemReturnMap[purity] || 0;
 
 			// New actual after adjustment:
 			// Assuming 'actual' is what physically remains (claimed - item return)
-			const actual = weight + itemReturnWeight;
+			const actual = weight;
 
-			const claimed = baseClaimed;
 			const delta = (actual - claimed).toFixed(2);
 
 			// Update profit, margin calculations as before
@@ -492,6 +523,20 @@ class Step3TabReceiptReconciliation {
 			reconRow.find(".margin-cell").text(`${margin.toFixed(1)}%`);
 			reconRow.find(".status-cell").html(statusHTML);
 		});
+	}
+
+	// Add this method inside your class, e.g. just before updateReconciliationSummary()
+	isFullyReconciled() {
+		let reconciled = true;
+		this.container.find(".recon-table tbody tr").each((_, tr) => {
+			const delta = parseFloat($(tr).find(".delta-cell").text());
+			const isGreen = $(tr).hasClass("recon-row-green");
+			if (Math.abs(delta) > 0.001 || !isGreen) {
+				reconciled = false;
+				return false; // exit loop early if any row fails
+			}
+		});
+		return reconciled;
 	}
 
 	renderAdjustmentsSection() {
@@ -541,6 +586,15 @@ class Step3TabReceiptReconciliation {
 			.find(".save-adjustments-btn")
 			.off("click")
 			.on("click", () => {
+				if (!this.isFullyReconciled()) {
+					frappe.msgprint({
+						title: "Reconciliation Incomplete",
+						message:
+							"Please complete reconciliation (Δ = 0) for all purities before saving.",
+						indicator: "orange",
+					});
+					return;
+				}
 				// Update adjustments from UI inputs
 				const adjustments = [];
 				tbody.find("tr").each((_, tr) => {
@@ -555,8 +609,6 @@ class Step3TabReceiptReconciliation {
 					});
 				});
 				this.adjustments = adjustments;
-
-				// Now save entire transaction with updated adjustments
 				this.onClickSaveAdjustments();
 			});
 
@@ -587,11 +639,14 @@ class Step3TabReceiptReconciliation {
 		const toggleToPurityField = (row) => {
 			const adjustmentType = row.find(".adjust-type").val();
 			const toPurityInput = row.find(".to-purity");
-
+			const fromPurityInput = row.find(".from-purity");
 			if (adjustmentType === "Item Return") {
-				toPurityInput.hide();
+				toPurityInput.val("").hide().prop("readonly", false);
+			} else if (adjustmentType === "Weight Loss - Torching/Cleaning") {
+				toPurityInput.show().prop("readonly", true);
+				toPurityInput.val(fromPurityInput.val());
 			} else {
-				toPurityInput.show();
+				toPurityInput.show().prop("readonly", false);
 			}
 		};
 
@@ -619,93 +674,141 @@ class Step3TabReceiptReconciliation {
 			});
 			this.updateReconciliationSummary();
 		});
+
+		// Real-time sync from_purity to to_purity for weight loss rows
+		tbody.on("input", ".from-purity", function () {
+			const row = $(this).closest("tr");
+			if (row.find(".adjust-type").val() === "Weight Loss - Torching/Cleaning") {
+				row.find(".to-purity").val($(this).val());
+			}
+		});
 	}
 
 	onClickSaveAdjustments() {
-		const transactionDoc = frappe.model.get_new_doc("Wholesale Transaction");
-
-		// Header info from existing props
-		transactionDoc.wholesale_bag = this.props.selected_bag;
-		transactionDoc.buyer = this.props.customer; // ensure customer is passed in props
-		transactionDoc.buyer_name = this.props.buyer_name || "";
-		transactionDoc.sale_date = this.props.sale_date;
-		transactionDoc.total_cost_basis = this.props.totalAmount;
-
-		// Receipt lines from bagSummary
-		transactionDoc.receipt_lines = this.bagSummary.map((line) => ({
-			purity: line.purity,
-			weight: line.weight,
-			rate: line.rate,
-			amount: line.amount,
-		}));
-
-		// Read reconciliation table directly for most up-to-date data
-		transactionDoc.reconciliation_lines = [];
-		this.container.find(".recon-table tbody tr").each((_, tr) => {
-			const $tr = $(tr);
-			transactionDoc.reconciliation_lines.push({
-				purity: $tr.find("td:eq(0)").text().trim(),
-				actual: parseFloat($tr.find(".actual-cell").text()) || 0,
-				claimed: parseFloat($tr.find(".claimed-cell").text()) || 0,
-				delta: parseFloat($tr.find(".delta-cell").text()) || 0,
-				status: $tr.find(".status-cell").text().trim() || "",
-				cost_basis:
-					parseFloat(
-						$tr
-							.find(".cost-basis")
-							.text()
-							.replace(/[^\d\.-]/g, "")
-					) || 0,
-				revenue:
-					parseFloat(
-						$tr
-							.find(".revenue-cell")
-							.text()
-							.replace(/[^\d\.-]/g, "")
-					) || 0,
-				profit:
-					parseFloat(
-						$tr
-							.find(".profit-cell")
-							.text()
-							.replace(/[^\d\.-]/g, "")
-					) || 0,
-				profit_g:
-					parseFloat(
-						$tr
-							.find(".profit-g-cell")
-							.text()
-							.replace(/[^\d\.-]/g, "")
-					) || 0,
-				margin_percent: parseFloat($tr.find(".margin-cell").text()) || 0,
-			});
-		});
-
-		// Adjustments from adjustments
-		transactionDoc.adjustments = this.adjustments.map((adj) => ({
-			adjustment_type: adj.type,
-			from_purity: adj.from_purity,
-			to_purity: adj.to_purity,
-			weight: adj.weight,
-			notes: adj.notes,
-			profit_impact: adj.impact,
-		}));
-
-		// Save document
 		frappe.call({
-			method: "frappe.client.insert",
+			method: "frappe.client.get_list",
 			args: {
-				doc: transactionDoc,
+				doctype: "Wholesale Transaction",
+				filters: { wholesale_bag: this.props.selected_bag },
+				fields: ["name"],
 			},
-			callback: (r) => {
-				frappe.show_alert({
-					message: "Transaction saved successfully.",
-					indicator: "green",
+			callback: (res) => {
+				let transactionDoc = {
+					doctype: "Wholesale Transaction", // always include doctype
+					wholesale_bag: this.props.selected_bag,
+					buyer: this.props.customer,
+					buyer_name: this.props.buyer_name || "",
+					sale_date: this.props.sale_date,
+					total_cost_basis: this.props.totalAmount,
+					receipt_lines: this.bagSummary.map((line) => ({
+						purity: line.purity,
+						weight: line.weight,
+						rate: line.rate,
+						amount: line.amount,
+					})),
+					reconciliation_lines: [],
+					adjustments: this.adjustments.map((adj) => ({
+						adjustment_type: adj.type,
+						from_purity: adj.from_purity,
+						to_purity: adj.to_purity,
+						weight: adj.weight,
+						notes: adj.notes,
+						profit_impact: adj.impact,
+					})),
+				};
+
+				// Fill reconciliation lines live from DOM
+				this.container.find(".recon-table tbody tr").each((_, tr) => {
+					const $tr = $(tr);
+					transactionDoc.reconciliation_lines.push({
+						purity: $tr.find("td:eq(0)").text().trim(),
+						actual: parseFloat($tr.find(".actual-cell").text()) || 0,
+						claimed: parseFloat($tr.find(".claimed-cell").text()) || 0,
+						delta: parseFloat($tr.find(".delta-cell").text()) || 0,
+						status: $tr.find(".status-cell").text().trim() || "",
+						cost_basis:
+							parseFloat(
+								$tr
+									.find(".cost-basis")
+									.text()
+									.replace(/[^\d\.-]/g, "")
+							) || 0,
+						revenue:
+							parseFloat(
+								$tr
+									.find(".revenue-cell")
+									.text()
+									.replace(/[^\d\.-]/g, "")
+							) || 0,
+						profit:
+							parseFloat(
+								$tr
+									.find(".profit-cell")
+									.text()
+									.replace(/[^\d\.-]/g, "")
+							) || 0,
+						profit_g:
+							parseFloat(
+								$tr
+									.find(".profit-g-cell")
+									.text()
+									.replace(/[^\d\.-]/g, "")
+							) || 0,
+						margin_percent: parseFloat($tr.find(".margin-cell").text()) || 0,
+					});
 				});
-				// Any follow-up code here
+
+				if (res.message && res.message.length > 0) {
+					// Existing record found: fetch the full latest document first
+					const docname = res.message[0].name;
+
+					frappe.call({
+						method: "frappe.client.get",
+						args: { doctype: "Wholesale Transaction", name: docname },
+						callback: (r) => {
+							if (r.message) {
+								// Merge your updated fields into the fresh document object
+								Object.assign(r.message, transactionDoc);
+
+								// Save merged document properly
+								frappe.call({
+									method: "frappe.client.save",
+									args: { doc: r.message },
+									callback: () => {
+										frappe.show_alert({
+											message: "Transaction updated successfully.",
+											indicator: "green",
+										});
+									},
+									error: (e) => {
+										frappe.msgprint("Update failed: " + (e.message || e));
+									},
+								});
+							}
+						},
+						error: (e) => {
+							frappe.msgprint("Failed to fetch latest doc: " + (e.message || e));
+						},
+					});
+				} else {
+					// No existing record, just insert new
+					frappe.call({
+						method: "frappe.client.insert",
+						args: { doc: transactionDoc },
+						callback: () => {
+							frappe.show_alert({
+								message: "Transaction saved successfully.",
+								indicator: "green",
+							});
+						},
+						error: (e) => {
+							frappe.msgprint("Save failed: " + (e.message || e));
+						},
+					});
+				}
 			},
 			error: (e) => {
-				frappe.msgprint("Save failed: " + (e.message || e));
+				frappe.msgprint("Error searching for transaction: " + (e.message || e));
 			},
 		});
 	}
