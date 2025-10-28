@@ -353,17 +353,24 @@ class Step3TabReceiptReconciliation {
 		container
 			.find(".save-continue-btn")
 			.off("click")
-			.on("click", async (e) => {
-				console.log("Save & Continue button clicked"); // <-- debug log
+			.on("click", async () => {
+				if (!this.isFullyReconciled()) {
+					frappe.msgprint({
+						title: "Reconciliation Incomplete",
+						message:
+							"Please complete reconciliation (Δ = 0) for all purities before continuing to payments.",
+						indicator: "orange",
+					});
+					return;
+				}
 				try {
 					await this.callCreateSalesAndDeliveryAPI();
 					frappe.show_alert({
-						message: "Sales created successfully",
+						message: "Sales and Delivery created successfully",
 						indicator: "green",
 					});
 					if (this.continueCallback) this.continueCallback();
 				} catch (error) {
-					console.error("API error:", error);
 					frappe.msgprint({
 						title: "Error",
 						message: `Failed to create sales and delivery: ${error.message}`,
@@ -518,6 +525,20 @@ class Step3TabReceiptReconciliation {
 		});
 	}
 
+	// Add this method inside your class, e.g. just before updateReconciliationSummary()
+	isFullyReconciled() {
+		let reconciled = true;
+		this.container.find(".recon-table tbody tr").each((_, tr) => {
+			const delta = parseFloat($(tr).find(".delta-cell").text());
+			const isGreen = $(tr).hasClass("recon-row-green");
+			if (Math.abs(delta) > 0.001 || !isGreen) {
+				reconciled = false;
+				return false; // exit loop early if any row fails
+			}
+		});
+		return reconciled;
+	}
+
 	renderAdjustmentsSection() {
 		const adjustmentOptions = [
 			"Purity Change",
@@ -565,6 +586,15 @@ class Step3TabReceiptReconciliation {
 			.find(".save-adjustments-btn")
 			.off("click")
 			.on("click", () => {
+				if (!this.isFullyReconciled()) {
+					frappe.msgprint({
+						title: "Reconciliation Incomplete",
+						message:
+							"Please complete reconciliation (Δ = 0) for all purities before saving.",
+						indicator: "orange",
+					});
+					return;
+				}
 				// Update adjustments from UI inputs
 				const adjustments = [];
 				tbody.find("tr").each((_, tr) => {
@@ -579,8 +609,6 @@ class Step3TabReceiptReconciliation {
 					});
 				});
 				this.adjustments = adjustments;
-
-				// Now save entire transaction with updated adjustments
 				this.onClickSaveAdjustments();
 			});
 
