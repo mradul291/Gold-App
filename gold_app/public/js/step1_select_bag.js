@@ -7,36 +7,46 @@ class Step1SelectBag {
 
 	async render() {
 		const html = `
-			<div class="wholesale-container">
-				<div class="warehouse-list flex flex-wrap gap-6"></div>
+		<div class="wholesale-container">
+			<div class="loader-overlay">
+				<div class="loader"></div>
+				<p>Loading bags, please wait...</p>
 			</div>
-		`;
+			<div class="warehouse-list flex flex-wrap gap-6" style="display:none;"></div>
+		</div>
+	`;
 		this.container.append(html);
 
 		const warehouseList = this.container.find(".warehouse-list");
+		const loader = this.container.find(".loader-overlay");
 
-		// Fetch all warehouses that start with "Bag"
-		let warehouses = await frappe.db.get_list("Warehouse", {
-			filters: [
-				["warehouse_name", "like", "Bag%"],
-				["parent_warehouse", "=", "Wholesale - AGSB"],
-			],
-			fields: ["name", "warehouse_name", "parent_warehouse"],
-		});
-
-		if (!warehouses.length) {
-			warehouseList.append(`<p>No warehouse found.</p>`);
-			return;
-		}
-
-		for (let wh of warehouses) {
-			const res = await frappe.call({
-				method: "gold_app.api.sales.wholesale_warehouse.get_warehouse_stock",
-				args: { warehouse_name: wh.name },
+		try {
+			let warehouses = await frappe.db.get_list("Warehouse", {
+				filters: [
+					["warehouse_name", "like", "Bag%"],
+					["parent_warehouse", "=", "Wholesale - AGSB"],
+				],
+				fields: ["name", "warehouse_name", "parent_warehouse"],
 			});
 
-			const stockData = res && res.message ? res.message : [];
-			this.renderWarehouseCard(warehouseList, wh, stockData);
+			if (!warehouses.length) {
+				warehouseList.append(`<p>No warehouse found.</p>`);
+				return;
+			}
+
+			for (let wh of warehouses) {
+				const res = await frappe.call({
+					method: "gold_app.api.sales.wholesale_warehouse.get_warehouse_stock",
+					args: { warehouse_name: wh.name },
+				});
+				const stockData = res && res.message ? res.message : [];
+				this.renderWarehouseCard(warehouseList, wh, stockData);
+			}
+		} finally {
+			// Hide loader and show results
+			loader.fadeOut(200, () => {
+				warehouseList.fadeIn(200);
+			});
 		}
 	}
 

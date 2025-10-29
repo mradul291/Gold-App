@@ -439,13 +439,29 @@ class Step3TabReceiptReconciliation {
 		// Precompute total Weight Loss - Torching/Cleaning weights per purity from adjustments
 		const weightLossMap = {};
 		this.adjustments.forEach((adj) => {
-			if (adj.type === "Weight Loss - Torching/Cleaning") {
+			if (
+				adj.type === "Weight Loss - Torching/Cleaning" ||
+				adj.type === "Weight Loss - Other"
+			) {
 				const purity = adj.from_purity;
 				const weight = parseFloat(adj.weight) || 0;
 				if (!weightLossMap[purity]) {
 					weightLossMap[purity] = 0;
 				}
 				weightLossMap[purity] += weight;
+			}
+		});
+
+		// New weight adjustment (addition) map
+		const weightAdjustStonesMap = {};
+		this.adjustments.forEach((adj) => {
+			if (adj.type === "Weight Adjustment - Stones") {
+				const purity = adj.from_purity;
+				const weight = parseFloat(adj.weight) || 0;
+				if (!weightAdjustStonesMap[purity]) {
+					weightAdjustStonesMap[purity] = 0;
+				}
+				weightAdjustStonesMap[purity] += weight;
 			}
 		});
 
@@ -466,13 +482,14 @@ class Step3TabReceiptReconciliation {
 			let baseClaimed = parseFloat(reconRow.find(".claimed-cell").text()) || 0;
 			let itemReturnWeight = itemReturnMap[purity] || 0;
 			let weightLoss = weightLossMap[purity] || 0;
+			let weightAdjustStones = weightAdjustStonesMap[purity] || 0;
 			let totalAdjustment = itemReturnWeight + weightLoss;
-			let claimed = baseClaimed - totalAdjustment;
+			let claimed = baseClaimed - itemReturnWeight - weightLoss + weightAdjustStones;
 
-			if (totalAdjustment > 0) {
+			if (Math.abs(claimed - baseClaimed) > 0.001) {
 				reconRow
 					.find(".claimed-cell")
-					.html(`<s>${baseClaimed.toFixed(2)}</s> ${claimed.toFixed(2)}`);
+					.html(`<s>${baseClaimed.toFixed(2)}</s> &rarr; ${claimed.toFixed(2)}`);
 			} else {
 				reconRow.find(".claimed-cell").text(baseClaimed.toFixed(2));
 			}
@@ -652,7 +669,11 @@ class Step3TabReceiptReconciliation {
 			const fromPurityInput = row.find(".from-purity");
 			if (adjustmentType === "Item Return") {
 				toPurityInput.val("").hide().prop("readonly", false);
-			} else if (adjustmentType === "Weight Loss - Torching/Cleaning") {
+			} else if (
+				adjustmentType === "Weight Loss - Torching/Cleaning" ||
+				adjustmentType === "Weight Loss - Other" ||
+				adjustmentType === "Weight Adjustment - Stones"
+			) {
 				toPurityInput.show().prop("readonly", true);
 				toPurityInput.val(fromPurityInput.val());
 			} else {
@@ -688,7 +709,12 @@ class Step3TabReceiptReconciliation {
 		// Real-time sync from_purity to to_purity for weight loss rows
 		tbody.on("input", ".from-purity", function () {
 			const row = $(this).closest("tr");
-			if (row.find(".adjust-type").val() === "Weight Loss - Torching/Cleaning") {
+			const adjustmentType = row.find(".adjust-type").val();
+			if (
+				adjustmentType === "Weight Loss - Torching/Cleaning" ||
+				adjustmentType === "Weight Loss - Other" ||
+				adjustmentType === "Weight Adjustment - Stones"
+			) {
 				row.find(".to-purity").val($(this).val());
 			}
 		});

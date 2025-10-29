@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import flt
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_delivery_note
@@ -95,7 +96,7 @@ def get_warehouse_stock(warehouse_name=None):
 #         frappe.throw(f"Error while creating Sales Flow: {str(e)}")
 
 
-# 
+# Create Sales Invoice for Stock Reduction
 @frappe.whitelist()
 def create_sales_invoice(customer, items, company=None):
     if not company:
@@ -131,3 +132,26 @@ def create_sales_invoice(customer, items, company=None):
         "status": "success",
         "sales_invoice": si.name,
     }
+
+
+@frappe.whitelist()
+def get_wholesale_transaction_by_bag(wholesale_bag):
+ 
+    if not wholesale_bag:
+        frappe.throw(_("Parameter 'wholesale_bag' is required"))
+
+    # Fetch list of docnames matching bag
+    docs = frappe.get_all('Wholesale Transaction', filters={'wholesale_bag': wholesale_bag}, fields=['name'])
+
+    if not docs:
+        return {'status': 'error', 'message': f'No Wholesale Transaction found for bag: {wholesale_bag}'}
+
+    docname = docs[0].name
+
+    # Fetch full document including child tables
+    doc = frappe.get_doc('Wholesale Transaction', docname)
+    
+    # Convert to dict/json to return
+    doc_dict = doc.as_dict()
+
+    return {'status': 'success', 'data': doc_dict}

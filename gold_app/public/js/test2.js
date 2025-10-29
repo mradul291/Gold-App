@@ -241,7 +241,7 @@ class Step3TabReceiptReconciliation {
 			this.bagSummary[idx].purity = $(e.currentTarget).val();
 		});
 
-		container.find(".input-weight, .input-rate, .input-amount").on("input", (e) => {
+		container.find(".input-weight, .input-rate, .input-amount").on("blur", (e) => {
 			const row = $(e.currentTarget).closest("tr");
 			const idx = row.index();
 
@@ -279,9 +279,19 @@ class Step3TabReceiptReconciliation {
 				}
 			}
 
-			row.find(".input-weight").val(weight.toFixed(2));
-			row.find(".input-rate").val(rate.toFixed(2));
-			row.find(".input-amount").val(amount.toFixed(2));
+			// Format on blur: always to 2 decimals
+			row.find(".input-weight").val(function (_, v) {
+				v = parseFloat(v) || 0;
+				return v.toFixed(2);
+			});
+			row.find(".input-rate").val(function (_, v) {
+				v = parseFloat(v) || 0;
+				return v.toFixed(2);
+			});
+			row.find(".input-amount").val(function (_, v) {
+				v = parseFloat(v) || 0;
+				return v.toFixed(2);
+			});
 
 			if (this.bagSummary[idx]) {
 				this.bagSummary[idx].weight = weight;
