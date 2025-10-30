@@ -112,6 +112,14 @@
     border-radius: 6px;
     background: #f8fafc;
 }
+.receipt-table select.input-purity {
+    width: 88px;
+    padding: 4px 6px;
+    font-size: 14px;
+    border: 1px solid #cdd5df;
+    border-radius: 6px;
+    background: #f8fafc;
+}
 .receipt-table .delete-row-btn {
     background: none;
     border: none;
