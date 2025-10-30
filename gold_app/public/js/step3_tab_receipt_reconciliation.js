@@ -10,6 +10,8 @@ class Step3TabReceiptReconciliation {
 			: this.initializeReconSummary();
 		this.adjustments = props.adjustments;
 		this.bagSummary = [];
+		this.uploadedReceiptUrl = "";
+
 		this.render();
 		this.bindReceiptEvents();
 		this.bindUploadReceipt();
@@ -40,83 +42,13 @@ class Step3TabReceiptReconciliation {
 	}
 
 	render() {
-		// Prepare summary rows for receipt table etc.
-		const receiptLines = this.bagSummary
-			.map(
-				(r, idx) => `
-        <tr data-idx="${idx}">
-            <td><span class="move-arrows"><span class="up-arrow">&#9650;</span><span class="down-arrow">&#9660;</span></span></td>
-            <td><input type="text" class="input-purity" value="${r.purity}"></td>
-            <td><input type="number" class="input-weight" value="${
-				r.weight ? r.weight.toFixed(2) : "0.00"
-			}" data-purity="${r.purity}"></td>
-            <td><input type="number" class="input-rate" value="${
-				r.rate ? r.rate.toFixed(2) : "0.00"
-			}" data-purity="${r.purity}"></td>
-            <td><input type="number" class="input-amount" value="${
-				r.amount ? r.amount.toFixed(2) : "0.00"
-			}" data-purity="${r.purity}"></td>
-            <td><button class="delete-row-btn" data-idx="${idx}">&#128465;</button></td>
-        </tr>`
-			)
-			.join("");
-
-		const reconRows = this.reconSummary
-			.map(
-				(r, idx) => `
-        <tr data-idx="${idx}" data-purity="${r.purity}">
-            <td>${r.purity}</td>
-            <td class="actual-cell">${r.actual.toFixed(2)}</td>
-            <td class="claimed-cell">${(r.claimed || 0).toFixed(2)}</td>
-            <td class="delta-cell">${(r.actual - r.claimed).toFixed(2)}</td>
-            <td class="status-cell"><span class="status-icon info">&#9432;</span></td>
-            <td class="cost-basis">RM ${(r.cost_basis || 0).toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-			})}</td>
-            <td class="revenue-cell">RM ${(r.revenue || 0).toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-			})}</td>
-            <td class="profit-cell">RM ${r.profit.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-			})}</td>
-            <td class="profit-g-cell">RM ${(r.profit_g || 0).toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-			})}</td>
-            <td class="margin-cell">${(r.margin_percent || 0).toFixed(1)}%</td>
-        </tr>`
-			)
-			.join("");
-
-		const adjustmentRows = this.adjustments
-			.map(
-				(r, idx) => `
-        <tr data-idx="${idx}">
-            <td>${idx + 1}</td>
-            <td>${r.type}</td>
-            <td>${r.from_purity}</td>
-            <td>${r.to_purity}</td>
-            <td>${r.weight}</td>
-            <td>${r.notes}</td>
-            <td>${r.impact}</td>
-        </tr>`
-			)
-			.join("");
-
 		this.container.html(`
         <div class="section1-buyer-receipt">
             <h4 class="section-title">Section 1: Buyer's Official Receipt</h4>
             <p class="input-caption">Enter what the buyer actually paid for</p>
             <table class="receipt-table">
-                <thead><tr><th>Move</th><th>Purity</th><th>Weight (g) *</th><th>Rate (RM/g)</th><th>Amount (RM)</th><th>Action</th></thead>
-                <tbody>${receiptLines}
-                    <tr class="footer-total">
-                        <td colspan="2">TOTAL</td>
-                        <td class="total-weight">0.00 g</td>
-                        <td>-</td>
-                        <td class="total-amount">RM 0.00</td>
-                        <td></td>
-                    </tr>
-                </tbody>
+                <thead><tr><th>Move</th><th>Purity</th><th>Weight (g) *</th><th>Rate (RM/g)</th><th>Amount (RM)</th><th>Action</th></tr></thead>
+                <tbody></tbody>
             </table>
             <button class="add-receipt-line-btn btn-receipt">+ Add Receipt Line</button>
             <button class="btn-upload-receipt">Upload Receipt</button>
@@ -127,7 +59,7 @@ class Step3TabReceiptReconciliation {
             <p class="input-caption">Live updates as adjustments are added</p>
             <table class="recon-table">
                 <thead><tr><th>Purity</th><th>Actual (g)</th><th>Claimed (g)</th><th>Δ (g)</th><th>Status</th><th>Cost Basis</th><th>Revenue</th><th>Profit</th><th>Profit/g</th><th>Margin %</th></tr></thead>
-                <tbody>${reconRows}</tbody>
+                <tbody></tbody>
             </table>
         </div>
         <hr>
@@ -136,7 +68,7 @@ class Step3TabReceiptReconciliation {
             <p class="input-caption">Add adjustment rows until Claimed = Actual</p>
             <table class="adjust-table">
                 <thead><tr><th>#</th><th>Adjustment Type</th><th>From Purity</th><th>To Purity</th><th>Weight (g)</th><th>Notes / Remarks</th><th>Profit Impact</th><th>Delete</th></tr></thead>
-                <tbody>${adjustmentRows}</tbody>
+                <tbody></tbody>
             </table>
             <button class="add-adjustment-btn btn-adjustment">+ Add Adjustment</button>
             <button class="save-adjustments-btn btn-save-green">Save All Adjustments</button>
@@ -145,7 +77,291 @@ class Step3TabReceiptReconciliation {
         <div class="recon-action-buttons">
             <button class="back-to-sale-btn btn-back">← Back to Sale Details</button>
             <button class="save-continue-btn btn-save-green">Save & Continue to Payments →</button>
-        </div>`);
+        </div>
+    `);
+
+		// Call three section renders to fill tbody's
+		this.renderReceiptSection();
+		this.renderReconciliationSection();
+		this.renderAdjustmentsSection();
+	}
+
+	renderReceiptSection() {
+		const purities = this.getPuritiesFromReconciliation();
+		// Helper to build options html
+		const purityOptions = (selected) => {
+			const blankOption = `<option value="" ${
+				selected === "" ? "selected" : ""
+			} disabled>Select</option>`;
+			const otherOptions = purities
+				.map(
+					(p) => `<option value="${p}" ${p === selected ? "selected" : ""}>${p}</option>`
+				)
+				.join("");
+			return blankOption + otherOptions;
+		};
+
+		const receiptLines = this.bagSummary
+			.map(
+				(r, idx) => `
+            <tr data-idx="${idx}">
+                <td><span class="move-arrows"><span class="up-arrow">&#9650;</span><span class="down-arrow">&#9660;</span></span></td>
+               <td>
+                    <select class="input-purity">${purityOptions(r.purity)}</select>
+                </td>
+                <td><input type="number" class="input-weight" value="${
+					r.weight ? r.weight.toFixed(2) : "0.00"
+				}" data-purity="${r.purity}"></td>
+                <td><input type="number" class="input-rate" value="${
+					r.rate ? r.rate.toFixed(2) : "0.00"
+				}" data-purity="${r.purity}"></td>
+                <td><input type="number" class="input-amount" value="${
+					r.amount ? r.amount.toFixed(2) : "0.00"
+				}" data-purity="${r.purity}"></td>
+                <td><button class="delete-row-btn" data-idx="${idx}">&#128465;</button></td>
+            </tr>
+        `
+			)
+			.join("");
+
+		const receiptTable = this.container.find(
+			".section1-buyer-receipt table.receipt-table tbody"
+		);
+		if (receiptTable.length) {
+			receiptTable.html(`${receiptLines}
+            <tr class="footer-total">
+                <td colspan="2">TOTAL</td>
+                <td class="total-weight">0.00 g</td>
+                <td>-</td>
+                <td class="total-amount">RM 0.00</td>
+                <td></td>
+            </tr>`);
+		} else {
+			// Initial render case - call full render to set HTML first
+			this.render();
+		}
+	}
+
+	renderReconciliationSection() {
+		const reconRows = this.reconSummary
+			.map(
+				(r) => `
+            <tr data-idx="${r.purity}" data-purity="${r.purity}">
+                <td>${r.purity}</td>
+                <td class="actual-cell">${r.actual.toFixed(2)}</td>
+                <td class="claimed-cell">${(r.claimed || 0).toFixed(2)}</td>
+                <td class="delta-cell">${(r.actual - r.claimed).toFixed(2)}</td>
+                <td class="status-cell"><span class="status-icon info">&#9432;</span></td>
+                <td class="cost-basis">RM ${(r.cost_basis || 0).toLocaleString("en-MY", {
+					minimumFractionDigits: 2,
+				})}</td>
+                <td class="revenue-cell">RM ${(r.revenue || 0).toLocaleString("en-MY", {
+					minimumFractionDigits: 2,
+				})}</td>
+                <td class="profit-cell">RM ${r.profit.toLocaleString("en-MY", {
+					minimumFractionDigits: 2,
+				})}</td>
+                <td class="profit-g-cell">RM ${(r.profit_g || 0).toLocaleString("en-MY", {
+					minimumFractionDigits: 2,
+				})}</td>
+                <td class="margin-cell">${(r.margin_percent || 0).toFixed(1)}%</td>
+            </tr>
+        `
+			)
+			.join("");
+
+		this.container.find(".section2-recon-summary table.recon-table tbody").html(reconRows);
+	}
+
+	renderAdjustmentsSection() {
+		const adjustmentOptions = [
+			"Purity Change",
+			"Weight Loss - Torching/Cleaning",
+			"Weight Adjustment - Stones",
+			"Weight Loss - Other",
+			"Purity Blend (Melting)",
+			"Item Return",
+		];
+		const section = this.container.find(".section3-adjustments");
+		const tbody = section.find("tbody");
+		tbody.empty();
+		const purities = this.getPuritiesFromReconciliation(); // get fresh purity list
+		const purityOptions = [
+			`<option value="" disabled selected>Select</option>`, // Blank first option
+			...purities.map((p) => `<option value="${p}">${p}</option>`), // rest
+		].join("");
+
+		const addRow = () => {
+			const idx = tbody.children().length + 1;
+			const optionHTML = adjustmentOptions
+				.map((o) => `<option value="${o}">${o}</option>`)
+				.join("");
+
+			const row = $(`
+                <tr data-idx="${idx}">
+                    <td>${idx}</td>
+                    <td><select class="adjust-type">${optionHTML}</select></td>
+                    <td><select class="from-purity">${purityOptions}</select></td>
+            		<td><select class="to-purity">${purityOptions}</select></td>
+                    <td><input type="number" class="weight" placeholder="0" /></td>
+                    <td><input type="text" class="notes" placeholder="Enter notes or remarks..." /></td>
+                    <td class="profit-impact text-success">+RM 0.00</td>
+                    <td><button class="btn-delete-row" title="Remove">🗑️</button></td>
+                </tr>
+            `);
+			tbody.append(row);
+		};
+
+		section
+			.find(".add-adjustment-btn")
+			.off("click")
+			.on("click", () => {
+				const tbody = section.find("tbody");
+				const idx = tbody.children().length + 1;
+				const optionHTML = adjustmentOptions
+					.map((o) => `<option value="${o}">${o}</option>`)
+					.join("");
+				const purities = this.getPuritiesFromReconciliation();
+				const purityOptions = [
+					`<option value="" disabled selected>Select</option>`, // Blank first option
+					...purities.map((p) => `<option value="${p}">${p}</option>`), // rest
+				].join("");
+
+				const row = $(`
+        <tr data-idx="${idx}">
+            <td>${idx}</td>
+            <td><select class="adjust-type">${optionHTML}</select></td>
+            <td><select class="from-purity">${purityOptions}</select></td>
+            <td><select class="to-purity">${purityOptions}</select></td>
+            <td><input type="number" class="weight" placeholder="0" /></td>
+            <td><input type="text" class="notes" placeholder="Enter notes or remarks..." /></td>
+            <td class="profit-impact text-success">+RM 0.00</td>
+            <td><button class="btn-delete-row" title="Remove">🗑️</button></td>
+        </tr>
+    `);
+				tbody.append(row);
+				this.bindAdjustmentEvents();
+				this.updateReconciliationSummary();
+			});
+
+		tbody.off("click", ".btn-delete-row").on("click", ".btn-delete-row", function () {
+			$(this).closest("tr").remove();
+			tbody.find("tr").each((i, tr) =>
+				$(tr)
+					.find("td:first")
+					.text(i + 1)
+			);
+		});
+
+		section
+			.find(".save-adjustments-btn")
+			.off("click")
+			.on("click", () => {
+				if (!this.isFullyReconciled()) {
+					frappe.msgprint({
+						title: "Reconciliation Incomplete",
+						message:
+							"Please complete reconciliation (Δ = 0) for all purities before saving.",
+						indicator: "orange",
+					});
+					return;
+				}
+				// Update adjustments from UI inputs
+				const adjustments = [];
+				tbody.find("tr").each((_, tr) => {
+					const row = $(tr);
+					adjustments.push({
+						type: row.find(".adjust-type").val(),
+						from_purity: row.find(".from-purity").val(),
+						to_purity: row.find(".to-purity").val(),
+						weight: row.find(".weight").val(),
+						notes: row.find(".notes").val(),
+						impact: row.find(".profit-impact").text(),
+					});
+				});
+				this.adjustments = adjustments;
+				this.onClickSaveAdjustments();
+			});
+
+		addRow();
+
+		// After "addRow();" and after setting up existing handlers:
+
+		// Handler for ANY adjustment value changes (type, from_purity, weight)
+		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
+			// Sync adjustments array with current UI state
+			this.adjustments = [];
+			tbody.find("tr").each((_, tr) => {
+				const row = $(tr);
+				this.adjustments.push({
+					type: row.find(".adjust-type").val(),
+					from_purity: row.find(".from-purity").val(),
+					to_purity: row.find(".to-purity").val(),
+					weight: row.find(".weight").val(),
+					notes: row.find(".notes").val(),
+					impact: row.find(".profit-impact").text(),
+				});
+			});
+			// Refresh the reconciliation summary to immediately apply changes
+			this.updateReconciliationSummary();
+		});
+
+		// Function to toggle visibility of 'To Purity' field in a given row based on selected adjustment type
+		const toggleToPurityField = (row) => {
+			const adjustmentType = row.find(".adjust-type").val();
+			const toPurityInput = row.find(".to-purity");
+			const fromPurityInput = row.find(".from-purity");
+			if (adjustmentType === "Item Return") {
+				toPurityInput.val("").hide().prop("readonly", false);
+			} else if (
+				adjustmentType === "Weight Loss - Torching/Cleaning" ||
+				adjustmentType === "Weight Loss - Other" ||
+				adjustmentType === "Weight Adjustment - Stones"
+			) {
+				toPurityInput.show().prop("readonly", true);
+				toPurityInput.val(fromPurityInput.val());
+			} else {
+				toPurityInput.show().prop("readonly", false);
+			}
+		};
+
+		// Initial toggle on all existing rows
+		tbody.find("tr").each((_, tr) => {
+			toggleToPurityField($(tr));
+		});
+
+		// Event handler for change on adjustment type select dropdown
+		tbody.off("change", ".adjust-type").on("change", ".adjust-type", (e) => {
+			const row = $(e.currentTarget).closest("tr");
+			toggleToPurityField(row);
+			// Same as above: refresh adjustments and update recon
+			this.adjustments = [];
+			tbody.find("tr").each((_, tr) => {
+				const row = $(tr);
+				this.adjustments.push({
+					type: row.find(".adjust-type").val(),
+					from_purity: row.find(".from-purity").val(),
+					to_purity: row.find(".to-purity").val(),
+					weight: row.find(".weight").val(),
+					notes: row.find(".notes").val(),
+					impact: row.find(".profit-impact").text(),
+				});
+			});
+			this.updateReconciliationSummary();
+		});
+
+		// Real-time sync from_purity to to_purity for weight loss rows
+		tbody.on("input", ".from-purity", function () {
+			const row = $(this).closest("tr");
+			const adjustmentType = row.find(".adjust-type").val();
+			if (
+				adjustmentType === "Weight Loss - Torching/Cleaning" ||
+				adjustmentType === "Weight Loss - Other" ||
+				adjustmentType === "Weight Adjustment - Stones"
+			) {
+				row.find(".to-purity").val($(this).val());
+			}
+		});
 	}
 
 	attachNavHandlers() {
@@ -171,62 +387,24 @@ class Step3TabReceiptReconciliation {
 			});
 	}
 
-	async callCreateSalesAndDeliveryAPI() {
-		if (!this.props.customer) {
-			throw new Error("Customer info missing.");
-		}
-
-		const warehouse = this.props.selected_bag + " - AGSB";
-		const items = this.bagSummary.map((line) => {
-			const purityStr = line.purity || "";
-			return {
-				item_code: `Unsorted-${purityStr}`,
-				purity: purityStr,
-				weight: parseFloat(line.weight) || 0,
-				rate: parseFloat(line.rate) || 0,
-				warehouse: warehouse,
-			};
-		});
-
-		const payload = {
-			customer: this.props.customer,
-			items: JSON.stringify(items),
-			company: this.props.company || null,
-		};
-
-		await new Promise((resolve, reject) => {
-			frappe.call({
-				method: "gold_app.api.sales.wholesale_warehouse.create_sales_invoice",
-				args: payload,
-				callback: (r) => {
-					console.log("API response:", r);
-					if (r.message && r.message.status === "success") {
-						resolve(r.message);
-					} else {
-						reject(new Error("API returned failure"));
-					}
-				},
-				errorHandler: (err) => {
-					console.error("API call error:", err);
-					reject(err);
-				},
-			});
-		});
-	}
-
 	bindReceiptEvents() {
 		const container = this.container;
 
-		container.find(".add-receipt-line-btn").on("click", () => {
-			const newRow = {
-				purity: "",
-				weight: 0,
-				rate: 0,
-				amount: 0,
-			};
-			this.bagSummary.push(newRow);
-			this.renderAndBindAll();
-		});
+		container
+			.find(".add-receipt-line-btn")
+			.off("click")
+			.on("click", () => {
+				const newRow = {
+					purity: "",
+					weight: 0,
+					rate: 0,
+					amount: 0,
+				};
+				this.bagSummary.push(newRow);
+				this.renderReceiptSection();
+				this.bindReceiptEvents(); // Re-bind receipt events
+				this.updateReconciliationSummary();
+			});
 
 		container.on("click", ".delete-row-btn", (e) => {
 			const idx = $(e.currentTarget).data("idx");
@@ -390,36 +568,6 @@ class Step3TabReceiptReconciliation {
 			});
 	}
 
-	bindUploadReceipt() {
-		const container = this.container;
-		if (container.find("#hidden-upload-input").length === 0) {
-			const fileInput = $(
-				'<input type="file" id="hidden-upload-input" style="display:none" />'
-			);
-			container.append(fileInput);
-			fileInput.on("change", (e) => {
-				const file = e.target.files[0];
-				if (!file) return;
-
-				const reader = new FileReader();
-				reader.onload = (ev) => {
-					const content = ev.target.result;
-					frappe.show_alert({
-						message: `Receipt "${file.name}" selected`,
-						indicator: "green",
-					});
-				};
-				reader.readAsText(file);
-			});
-		}
-		container
-			.find(".btn-upload-receipt")
-			.off("click")
-			.on("click", () => {
-				container.find("#hidden-upload-input").click();
-			});
-	}
-
 	updateReconciliationSummary() {
 		const container = this.container;
 
@@ -526,7 +674,9 @@ class Step3TabReceiptReconciliation {
 				profitG = actual ? profit / actual : 0;
 				margin = revenue ? (profit / revenue) * 100 : 0;
 
-				if (profit > 0) {
+				const totalWeightAdjustments = itemReturnWeight + weightLoss + weightAdjustStones;
+
+				if (profit > 0 && totalWeightAdjustments > 0) {
 					statusHTML = '<span class="status-icon success">&#10004;</span>';
 					reconRow.addClass("recon-row-green");
 				} else {
@@ -552,7 +702,56 @@ class Step3TabReceiptReconciliation {
 		});
 	}
 
-	// Add this method inside your class, e.g. just before updateReconciliationSummary()
+	bindAdjustmentEvents() {
+		const tbody = this.container.find(".section3-adjustments tbody");
+
+		tbody.off("click", ".btn-delete-row").on("click", ".btn-delete-row", (e) => {
+			$(e.currentTarget).closest("tr").remove();
+			tbody.find("tr").each((i, tr) => {
+				$(tr)
+					.find("td:first")
+					.text(i + 1);
+			});
+			this.updateReconciliationSummary();
+		});
+
+		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
+			this.adjustments = [];
+			tbody.find("tr").each((_, tr) => {
+				const row = $(tr);
+				this.adjustments.push({
+					type: row.find(".adjust-type").val(),
+					from_purity: row.find(".from-purity").val(),
+					to_purity: row.find(".to-purity").val(),
+					weight: row.find(".weight").val(),
+					notes: row.find(".notes").val(),
+					impact: row.find(".profit-impact").text(),
+				});
+			});
+			this.updateReconciliationSummary();
+		});
+
+		tbody.off("change", ".adjust-type").on("change", ".adjust-type", (e) => {
+			const row = $(e.currentTarget).closest("tr");
+			this.toggleToPurityField(row);
+			this.updateReconciliationSummary();
+		});
+
+		tbody.off("input", ".from-purity").on("input", ".from-purity", function () {
+			const row = $(this).closest("tr");
+			const adjustmentType = row.find(".adjust-type").val();
+			if (
+				[
+					"Weight Loss - Torching/Cleaning",
+					"Weight Loss - Other",
+					"Weight Adjustment - Stones",
+				].includes(adjustmentType)
+			) {
+				row.find(".to-purity").val($(this).val());
+			}
+		});
+	}
+
 	isFullyReconciled() {
 		let reconciled = true;
 		this.container.find(".recon-table tbody tr").each((_, tr) => {
@@ -566,158 +765,122 @@ class Step3TabReceiptReconciliation {
 		return reconciled;
 	}
 
-	renderAdjustmentsSection() {
-		const adjustmentOptions = [
-			"Purity Change",
-			"Weight Loss - Torching/Cleaning",
-			"Weight Adjustment - Stones",
-			"Weight Loss - Other",
-			"Purity Blend (Melting)",
-			"Item Return",
-		];
-		const section = this.container.find(".section3-adjustments");
-		const tbody = section.find("tbody");
-		tbody.empty();
-		const addRow = () => {
-			const idx = tbody.children().length + 1;
-			const optionHTML = adjustmentOptions
-				.map((o) => `<option value="${o}">${o}</option>`)
-				.join("");
-			const row = $(`
-                <tr data-idx="${idx}">
-                    <td>${idx}</td>
-                    <td><select class="adjust-type">${optionHTML}</select></td>
-                    <td><input type="number" class="from-purity" placeholder="From" /></td>
-                    <td><input type="number" class="to-purity" placeholder="To" /></td>
-                    <td><input type="number" class="weight" placeholder="0" /></td>
-                    <td><input type="text" class="notes" placeholder="Enter notes or remarks..." /></td>
-                    <td class="profit-impact text-success">+RM 0.00</td>
-                    <td><button class="btn-delete-row" title="Remove">🗑️</button></td>
-                </tr>
-            `);
-			tbody.append(row);
-		};
+	getPuritiesFromReconciliation() {
+		const purities = [];
+		this.container.find(".section2-recon-summary table.recon-table tbody tr").each((_, tr) => {
+			const purity = $(tr).find("td:first").text().trim();
+			if (purity && !purities.includes(purity)) {
+				purities.push(purity);
+			}
+		});
+		return purities;
+	}
 
-		section.find(".add-adjustment-btn").off("click").on("click", addRow);
+	async callCreateSalesAndDeliveryAPI() {
+		if (!this.props.customer) {
+			throw new Error("Customer info missing.");
+		}
 
-		tbody.off("click", ".btn-delete-row").on("click", ".btn-delete-row", function () {
-			$(this).closest("tr").remove();
-			tbody.find("tr").each((i, tr) =>
-				$(tr)
-					.find("td:first")
-					.text(i + 1)
-			);
+		const warehouse = this.props.selected_bag + " - AGSB";
+		const items = this.bagSummary.map((line) => {
+			const purityStr = line.purity || "";
+			return {
+				item_code: `Unsorted-${purityStr}`,
+				purity: purityStr,
+				weight: parseFloat(line.weight) || 0,
+				rate: parseFloat(line.rate) || 0,
+				warehouse: warehouse,
+			};
 		});
 
-		section
-			.find(".save-adjustments-btn")
+		const payload = {
+			customer: this.props.customer,
+			items: JSON.stringify(items),
+			company: this.props.company || null,
+		};
+
+		await new Promise((resolve, reject) => {
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_warehouse.create_sales_invoice",
+				args: payload,
+				callback: (r) => {
+					console.log("API response:", r);
+					if (r.message && r.message.status === "success") {
+						resolve(r.message);
+					} else {
+						reject(new Error("API returned failure"));
+					}
+				},
+				errorHandler: (err) => {
+					console.error("API call error:", err);
+					reject(err);
+				},
+			});
+		});
+	}
+
+	bindUploadReceipt() {
+		const container = this.container;
+		if (container.find("#hidden-upload-input").length === 0) {
+			const fileInput = $(
+				'<input type="file" id="hidden-upload-input" style="display:none" />'
+			);
+			container.append(fileInput);
+			fileInput.on("change", (e) => {
+				const file = e.target.files[0];
+				if (!file) return;
+				this.pendingReceiptFile = file; // Save the file object for later
+				frappe.show_alert({
+					message: `Receipt "${file.name}" selected, will be uploaded on Save.`,
+					indicator: "green",
+				});
+			});
+		}
+		container
+			.find(".btn-upload-receipt")
 			.off("click")
 			.on("click", () => {
-				if (!this.isFullyReconciled()) {
-					frappe.msgprint({
-						title: "Reconciliation Incomplete",
-						message:
-							"Please complete reconciliation (Δ = 0) for all purities before saving.",
-						indicator: "orange",
-					});
-					return;
-				}
-				// Update adjustments from UI inputs
-				const adjustments = [];
-				tbody.find("tr").each((_, tr) => {
-					const row = $(tr);
-					adjustments.push({
-						type: row.find(".adjust-type").val(),
-						from_purity: row.find(".from-purity").val(),
-						to_purity: row.find(".to-purity").val(),
-						weight: row.find(".weight").val(),
-						notes: row.find(".notes").val(),
-						impact: row.find(".profit-impact").text(),
-					});
-				});
-				this.adjustments = adjustments;
-				this.onClickSaveAdjustments();
+				container.find("#hidden-upload-input").click();
 			});
+	}
 
-		addRow();
-
-		// After "addRow();" and after setting up existing handlers:
-
-		// Handler for ANY adjustment value changes (type, from_purity, weight)
-		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
-			// Sync adjustments array with current UI state
-			this.adjustments = [];
-			tbody.find("tr").each((_, tr) => {
-				const row = $(tr);
-				this.adjustments.push({
-					type: row.find(".adjust-type").val(),
-					from_purity: row.find(".from-purity").val(),
-					to_purity: row.find(".to-purity").val(),
-					weight: row.find(".weight").val(),
-					notes: row.find(".notes").val(),
-					impact: row.find(".profit-impact").text(),
-				});
+	uploadReceiptFile(transactionName) {
+		if (!this.pendingReceiptFile) return;
+		const file = this.pendingReceiptFile;
+		const reader = new FileReader();
+		reader.onload = (ev) => {
+			frappe.call({
+				method: "frappe.client.attach_file",
+				args: {
+					doctype: "Wholesale Transaction",
+					docname: transactionName, // now the valid docname!
+					filedata: ev.target.result.split(",")[1],
+					filename: file.name,
+					is_private: 1,
+				},
+				callback: (r) => {
+					if (r.message && r.message.file_url) {
+						// Update the transaction's upload_receipt field after attaching
+						frappe.call({
+							method: "frappe.client.set_value",
+							args: {
+								doctype: "Wholesale Transaction",
+								name: transactionName,
+								fieldname: "upload_receipt",
+								value: r.message.file_url,
+							},
+							callback: () => {
+								frappe.show_alert({
+									message: "Receipt file linked successfully!",
+									indicator: "green",
+								});
+							},
+						});
+					}
+				},
 			});
-			// Refresh the reconciliation summary to immediately apply changes
-			this.updateReconciliationSummary();
-		});
-
-		// Function to toggle visibility of 'To Purity' field in a given row based on selected adjustment type
-		const toggleToPurityField = (row) => {
-			const adjustmentType = row.find(".adjust-type").val();
-			const toPurityInput = row.find(".to-purity");
-			const fromPurityInput = row.find(".from-purity");
-			if (adjustmentType === "Item Return") {
-				toPurityInput.val("").hide().prop("readonly", false);
-			} else if (
-				adjustmentType === "Weight Loss - Torching/Cleaning" ||
-				adjustmentType === "Weight Loss - Other" ||
-				adjustmentType === "Weight Adjustment - Stones"
-			) {
-				toPurityInput.show().prop("readonly", true);
-				toPurityInput.val(fromPurityInput.val());
-			} else {
-				toPurityInput.show().prop("readonly", false);
-			}
 		};
-
-		// Initial toggle on all existing rows
-		tbody.find("tr").each((_, tr) => {
-			toggleToPurityField($(tr));
-		});
-
-		// Event handler for change on adjustment type select dropdown
-		tbody.off("change", ".adjust-type").on("change", ".adjust-type", (e) => {
-			const row = $(e.currentTarget).closest("tr");
-			toggleToPurityField(row);
-			// Same as above: refresh adjustments and update recon
-			this.adjustments = [];
-			tbody.find("tr").each((_, tr) => {
-				const row = $(tr);
-				this.adjustments.push({
-					type: row.find(".adjust-type").val(),
-					from_purity: row.find(".from-purity").val(),
-					to_purity: row.find(".to-purity").val(),
-					weight: row.find(".weight").val(),
-					notes: row.find(".notes").val(),
-					impact: row.find(".profit-impact").text(),
-				});
-			});
-			this.updateReconciliationSummary();
-		});
-
-		// Real-time sync from_purity to to_purity for weight loss rows
-		tbody.on("input", ".from-purity", function () {
-			const row = $(this).closest("tr");
-			const adjustmentType = row.find(".adjust-type").val();
-			if (
-				adjustmentType === "Weight Loss - Torching/Cleaning" ||
-				adjustmentType === "Weight Loss - Other" ||
-				adjustmentType === "Weight Adjustment - Stones"
-			) {
-				row.find(".to-purity").val($(this).val());
-			}
-		});
+		reader.readAsDataURL(file);
 	}
 
 	onClickSaveAdjustments() {
@@ -730,7 +893,7 @@ class Step3TabReceiptReconciliation {
 			},
 			callback: (res) => {
 				let transactionDoc = {
-					doctype: "Wholesale Transaction", // always include doctype
+					doctype: "Wholesale Transaction",
 					wholesale_bag: this.props.selected_bag,
 					buyer: this.props.customer,
 					buyer_name: this.props.buyer_name || "",
@@ -753,7 +916,6 @@ class Step3TabReceiptReconciliation {
 					})),
 				};
 
-				// Fill reconciliation lines live from DOM
 				this.container.find(".recon-table tbody tr").each((_, tr) => {
 					const $tr = $(tr);
 					transactionDoc.reconciliation_lines.push({
@@ -794,8 +956,8 @@ class Step3TabReceiptReconciliation {
 					});
 				});
 
+				// 1. Transaction exists: update, then upload
 				if (res.message && res.message.length > 0) {
-					// Existing record found: fetch the full latest document first
 					const docname = res.message[0].name;
 
 					frappe.call({
@@ -803,18 +965,16 @@ class Step3TabReceiptReconciliation {
 						args: { doctype: "Wholesale Transaction", name: docname },
 						callback: (r) => {
 							if (r.message) {
-								// Merge your updated fields into the fresh document object
 								Object.assign(r.message, transactionDoc);
-
-								// Save merged document properly
 								frappe.call({
 									method: "frappe.client.save",
 									args: { doc: r.message },
-									callback: () => {
+									callback: (saveRes) => {
 										frappe.show_alert({
 											message: "Transaction updated successfully.",
 											indicator: "green",
 										});
+										this.uploadReceiptFile(docname); // <- Always use docname!
 									},
 									error: (e) => {
 										frappe.msgprint("Update failed: " + (e.message || e));
@@ -827,15 +987,18 @@ class Step3TabReceiptReconciliation {
 						},
 					});
 				} else {
-					// No existing record, just insert new
+					// 2. New transaction: insert, then upload receipt
 					frappe.call({
 						method: "frappe.client.insert",
 						args: { doc: transactionDoc },
-						callback: () => {
+						callback: (insertRes) => {
 							frappe.show_alert({
 								message: "Transaction saved successfully.",
 								indicator: "green",
 							});
+							if (insertRes.message && insertRes.message.name) {
+								this.uploadReceiptFile(insertRes.message.name); // <- Use the REAL docname!
+							}
 						},
 						error: (e) => {
 							frappe.msgprint("Save failed: " + (e.message || e));

@@ -10,8 +10,13 @@ class Step2BuyerDetails {
 	async render() {
 		let container = $(`
 			<div class="buyer-details-container">
+			 <div class="loader-overlay">
+            <div class="loader"></div>
+            <p>Loading buyer details, please wait...</p>
+        </div>
+		<div class="buyer-content" style="display:none;">
 				<div class="bag-details-summary"></div>
-				<div class="buyer-form-block flex-row">
+				<div class="buyer-form-block flex-row">		
 <div class="form-group" style="flex: 1; min-width: 200px;">
     <label for="buyer-input">Select Buyer <span class="req">*</span></label>
     <input type="text" id="buyer-input" class="input-text" placeholder="Search Buyer...">
@@ -23,10 +28,11 @@ class Step2BuyerDetails {
         <input type="date" class="input-date" id="sale-date"
             value="${frappe.datetime.nowdate()}"/>
     </div>
+	</div>
 </div>
 
 				<div class="button-row">
-					<button class="btn-secondary back-btn">&lt; Back</button>
+					<button class="btn-secondary back-btn">&larr; Back</button>
 					<button class="btn-primary continue-btn">Continue &rarr;</button>
 				</div>
 			</div>
@@ -130,16 +136,22 @@ class Step2BuyerDetails {
 		buyerInput.on("input", function () {
 			let query = $(this).val().toLowerCase();
 			let filtered = buyers.filter((b) => b.customer_name.toLowerCase().includes(query));
-
-			// Auto-select if only one result matches
-			if (filtered.length === 1) {
-				let selected = filtered[0];
-				buyerInput.val(selected.customer_name).data("buyer-id", selected.name);
-				suggestionBox.empty();
-				return;
-			}
-
 			renderSuggestions(filtered);
+		});
+
+		// On enter select Buyer
+		buyerInput.on("keydown", function (e) {
+			if (e.key === "Enter") {
+				let query = $(this).val().toLowerCase();
+				let filtered = buyers.filter((b) => b.customer_name.toLowerCase().includes(query));
+				if (filtered.length === 1) {
+					// Select the only suggestion
+					let selected = filtered[0];
+					buyerInput.val(selected.customer_name).data("buyer-id", selected.name);
+					suggestionBox.empty();
+					e.preventDefault(); // Prevent form submission or blur
+				}
+			}
 		});
 
 		// Handle selection from dropdown
@@ -155,6 +167,14 @@ class Step2BuyerDetails {
 			if (!$(e.target).closest("#buyer-input, #buyer-suggestions").length) {
 				suggestionBox.empty();
 			}
+		});
+
+		const loader = container.find(".loader-overlay");
+		const content = container.find(".buyer-content");
+
+		// After all async loading and UI setup is done:
+		loader.fadeOut(200, () => {
+			content.fadeIn(200);
 		});
 
 		// -----------------------------

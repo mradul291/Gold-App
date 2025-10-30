@@ -69,6 +69,11 @@ class Step1SelectBag {
 			totalAmount += row.total_amount_rm;
 		});
 
+		// Skip this card if totalQty is 0 (no weight)
+		if (totalQty === 0) {
+			return; // Do not render this warehouse card
+		}
+
 		const formattedTotal = frappe.format(totalAmount, { fieldtype: "Currency" });
 
 		const card = $(`

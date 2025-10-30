@@ -12,6 +12,7 @@
   "column_break_vsgz",
   "sale_date",
   "total_cost_basis",
+  "upload_receipt",
   "section_break_qayb",
   "receipt_lines",
   "reconciliation_lines",
@@ -79,12 +80,17 @@
    "label": "Adjustments",
    "options": "Wholesale Adjustment Line",
    "read_only": 1
+  },
+  {
+   "fieldname": "upload_receipt",
+   "fieldtype": "Attach",
+   "label": "Upload Receipt"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-27 21:33:07.705293",
+ "modified": "2025-10-30 18:13:36.747498",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Transaction",

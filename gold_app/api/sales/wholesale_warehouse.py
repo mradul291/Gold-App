@@ -26,6 +26,8 @@ def get_warehouse_stock(warehouse_name=None):
             bin.warehouse = %s
         GROUP BY
             item.purity
+        HAVING
+            SUM(bin.actual_qty) > 0
         """,
         (warehouse_name,),
         as_dict=True
