@@ -408,8 +408,13 @@ class Step3TabReceiptReconciliation {
 
 		container.on("click", ".delete-row-btn", (e) => {
 			const idx = $(e.currentTarget).data("idx");
-			this.bagSummary.splice(idx, 1);
-			this.renderAndBindAll();
+			this.bagSummary.splice(idx, 1); // Remove from data array
+
+			$(e.currentTarget).closest("tr").remove();
+
+			this.renderReceiptSection();
+			this.bindReceiptEvents();
+			this.updateReconciliationSummary();
 		});
 
 		// Purity field event handler
@@ -491,6 +496,27 @@ class Step3TabReceiptReconciliation {
 				.find(".receipt-table .footer-total .total-amount")
 				.text(`RM ${totalAmount.toFixed(2)}`);
 			this.updateReconciliationSummary();
+		});
+
+		container.find(".input-weight, .input-amount").on("input", (e) => {
+			const row = $(e.currentTarget).closest("tr");
+			const idx = row.index();
+
+			let weight = parseFloat(row.find(".input-weight").val()) || 0;
+			let amount = parseFloat(row.find(".input-amount").val()) || 0;
+
+			if (weight > 0 && amount > 0) {
+				const rate = amount / weight;
+				row.find(".input-rate").val(rate.toFixed(2));
+				if (this.bagSummary[idx]) {
+					this.bagSummary[idx].rate = rate;
+				}
+			} else {
+				row.find(".input-rate").val("0.00");
+				if (this.bagSummary[idx]) {
+					this.bagSummary[idx].rate = 0;
+				}
+			}
 		});
 
 		container.on("input", ".input-weight, .input-amount", () => {
@@ -676,7 +702,11 @@ class Step3TabReceiptReconciliation {
 
 				const totalWeightAdjustments = itemReturnWeight + weightLoss + weightAdjustStones;
 
-				if (profit > 0 && totalWeightAdjustments > 0) {
+				if (
+					(profit > 0 && totalWeightAdjustments > 0) ||
+					profitG > 0 ||
+					revenue > baseCostBasis
+				) {
 					statusHTML = '<span class="status-icon success">&#10004;</span>';
 					reconRow.addClass("recon-row-green");
 				} else {
