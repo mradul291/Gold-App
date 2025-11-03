@@ -135,7 +135,6 @@ def create_sales_invoice(customer, items, company=None):
         "sales_invoice": si.name,
     }
 
-
 @frappe.whitelist()
 def get_wholesale_transaction_by_bag(wholesale_bag):
  

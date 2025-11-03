@@ -11,12 +11,16 @@ class Step3TabReceiptReconciliation {
 		this.adjustments = props.adjustments;
 		this.bagSummary = [];
 		this.uploadedReceiptUrl = "";
+		this.availablePurities = [];
 
-		this.render();
-		this.bindReceiptEvents();
-		this.bindUploadReceipt();
-		this.renderAdjustmentsSection();
-		this.attachNavHandlers();
+		this.fetchPuritiesFromDoctype().then((purities) => {
+			this.availablePurities = purities;
+			this.render();
+			this.bindReceiptEvents();
+			this.bindUploadReceipt();
+			this.renderAdjustmentsSection();
+			this.attachNavHandlers();
+		});
 	}
 
 	initializeReconSummary() {
@@ -39,6 +43,25 @@ class Step3TabReceiptReconciliation {
 		this.renderAdjustmentsSection();
 		this.attachNavHandlers();
 		this.updateReconciliationSummary();
+	}
+
+	async fetchPuritiesFromDoctype() {
+		try {
+			const response = await frappe.call({
+				method: "frappe.client.get_list",
+				args: {
+					doctype: "Purity",
+					fields: ["name"],
+					limit_page_length: 100,
+					order_by: "name asc",
+				},
+			});
+			// Extract purity names from result
+			return response.message.map((item) => item.name);
+		} catch (error) {
+			console.error("Error fetching purities:", error);
+			return [];
+		}
 	}
 
 	render() {
@@ -87,7 +110,8 @@ class Step3TabReceiptReconciliation {
 	}
 
 	renderReceiptSection() {
-		const purities = this.getPuritiesFromReconciliation();
+		const purities = this.availablePurities;
+
 		// Helper to build options html
 		const purityOptions = (selected) => {
 			const blankOption = `<option value="" ${
@@ -106,9 +130,13 @@ class Step3TabReceiptReconciliation {
 				(r, idx) => `
             <tr data-idx="${idx}">
                 <td><span class="move-arrows"><span class="up-arrow">&#9650;</span><span class="down-arrow">&#9660;</span></span></td>
-               <td>
-                    <select class="input-purity">${purityOptions(r.purity)}</select>
-                </td>
+             <td>
+  <input list="purity-list-${idx}" class="input-purity" value="${r.purity}">
+  <datalist id="purity-list-${idx}">
+    ${purities.map((p) => `<option value="${p}">`).join("")}
+  </datalist>
+</td>
+
                 <td><input type="number" class="input-weight" value="${
 					r.weight ? r.weight.toFixed(2) : "0.00"
 				}" data-purity="${r.purity}"></td>
@@ -185,12 +213,7 @@ class Step3TabReceiptReconciliation {
 		const section = this.container.find(".section3-adjustments");
 		const tbody = section.find("tbody");
 		tbody.empty();
-		const purities = this.getPuritiesFromReconciliation(); // get fresh purity list
-		const purityOptions = [
-			`<option value="" disabled selected>Select</option>`, // Blank first option
-			...purities.map((p) => `<option value="${p}">${p}</option>`), // rest
-		].join("");
-
+		const purities = this.availablePurities; // get fresh purity list
 		const addRow = () => {
 			const idx = tbody.children().length + 1;
 			const optionHTML = adjustmentOptions
@@ -201,8 +224,19 @@ class Step3TabReceiptReconciliation {
                 <tr data-idx="${idx}">
                     <td>${idx}</td>
                     <td><select class="adjust-type">${optionHTML}</select></td>
-                    <td><select class="from-purity">${purityOptions}</select></td>
-            		<td><select class="to-purity">${purityOptions}</select></td>
+                    <td>
+  <input list="from-purity-list-${idx}" class="from-purity" />
+  <datalist id="from-purity-list-${idx}">
+    ${purities.map((p) => `<option value="${p}">`).join("")}
+  </datalist>
+</td>
+<td>
+  <input list="to-purity-list-${idx}" class="to-purity" />
+  <datalist id="to-purity-list-${idx}">
+    ${purities.map((p) => `<option value="${p}">`).join("")}
+  </datalist>
+</td>
+
                     <td><input type="number" class="weight" placeholder="0" /></td>
                     <td><input type="text" class="notes" placeholder="Enter notes or remarks..." /></td>
                     <td class="profit-impact text-success">+RM 0.00</td>
@@ -210,6 +244,8 @@ class Step3TabReceiptReconciliation {
                 </tr>
             `);
 			tbody.append(row);
+			// update the impact display for this freshly-added row
+			this.computeProfitImpactForRow(tbody.find("tr").last());
 		};
 
 		section
@@ -221,18 +257,24 @@ class Step3TabReceiptReconciliation {
 				const optionHTML = adjustmentOptions
 					.map((o) => `<option value="${o}">${o}</option>`)
 					.join("");
-				const purities = this.getPuritiesFromReconciliation();
-				const purityOptions = [
-					`<option value="" disabled selected>Select</option>`, // Blank first option
-					...purities.map((p) => `<option value="${p}">${p}</option>`), // rest
-				].join("");
-
+				const purities = this.availablePurities;
 				const row = $(`
         <tr data-idx="${idx}">
             <td>${idx}</td>
             <td><select class="adjust-type">${optionHTML}</select></td>
-            <td><select class="from-purity">${purityOptions}</select></td>
-            <td><select class="to-purity">${purityOptions}</select></td>
+          <td>
+  <input list="from-purity-list-${idx}" class="from-purity" />
+  <datalist id="from-purity-list-${idx}">
+    ${purities.map((p) => `<option value="${p}">`).join("")}
+  </datalist>
+</td>
+<td>
+  <input list="to-purity-list-${idx}" class="to-purity" />
+  <datalist id="to-purity-list-${idx}">
+    ${purities.map((p) => `<option value="${p}">`).join("")}
+  </datalist>
+</td>
+
             <td><input type="number" class="weight" placeholder="0" /></td>
             <td><input type="text" class="notes" placeholder="Enter notes or remarks..." /></td>
             <td class="profit-impact text-success">+RM 0.00</td>
@@ -288,21 +330,25 @@ class Step3TabReceiptReconciliation {
 		// After "addRow();" and after setting up existing handlers:
 
 		// Handler for ANY adjustment value changes (type, from_purity, weight)
+		// canonical single handler for adjustment input changes
 		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
-			// Sync adjustments array with current UI state
+			// Recompute per-row profit impact and sync adjustments array
 			this.adjustments = [];
 			tbody.find("tr").each((_, tr) => {
-				const row = $(tr);
+				const $tr = $(tr);
+				// compute numeric impact and update cell
+				const numericImpact = this.computeProfitImpactForRow($tr);
+
 				this.adjustments.push({
-					type: row.find(".adjust-type").val(),
-					from_purity: row.find(".from-purity").val(),
-					to_purity: row.find(".to-purity").val(),
-					weight: row.find(".weight").val(),
-					notes: row.find(".notes").val(),
-					impact: row.find(".profit-impact").text(),
+					type: $tr.find(".adjust-type").val(),
+					from_purity: $tr.find(".from-purity").val(),
+					to_purity: $tr.find(".to-purity").val(),
+					weight: $tr.find(".weight").val(),
+					notes: $tr.find(".notes").val(),
+					impact: numericImpact, // store numeric impact for persistence
 				});
 			});
-			// Refresh the reconciliation summary to immediately apply changes
+			// Refresh reconciliation summary to apply aggregated impacts
 			this.updateReconciliationSummary();
 		});
 
@@ -639,11 +685,64 @@ class Step3TabReceiptReconciliation {
 			}
 		});
 
+		//Profit Impact
+
+		// --- New: aggregate adjustment impacts per purity ---
+		const adjustmentImpactMap = {}; // purity => numeric RM impact
+		(this.adjustments || []).forEach((adj) => {
+			const wt = parseFloat(adj.weight) || 0;
+			const type = adj.type;
+			const from = adj.from_purity || "";
+			const to = adj.to_purity || "";
+
+			// We want same logic as computeProfitImpactForRow but in aggregated form.
+			// Reuse computeUnitMaps to derive per-gram rates
+		});
+		const { unit_revenue: __ur, unit_cost: __uc } = this.computeUnitMaps();
+
+		// Now actually compute impacts and fill map (keeps rules consistent)
+		(this.adjustments || []).forEach((adj) => {
+			const wt = parseFloat(adj.weight) || 0;
+			const type = adj.type;
+			const from = adj.from_purity || "";
+			const to = adj.to_purity || "";
+
+			const urFrom = __ur[from] || 0;
+			const ucFrom = __uc[from] || 0;
+			const urTo = __ur[to] || 0;
+			const ucTo = __uc[to] || 0;
+
+			let impact = 0;
+			if (type === "Item Return") {
+				impact = -(urFrom - ucFrom) * wt;
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+			} else if (
+				type === "Weight Loss - Torching/Cleaning" ||
+				type === "Weight Loss - Other"
+			) {
+				impact = -urFrom * wt;
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+			} else if (type === "Weight Adjustment - Stones") {
+				impact = (urFrom - ucFrom) * wt;
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+			} else if (type === "Purity Change" || type === "Purity Blend (Melting)") {
+				const margin_to = urTo - ucTo;
+				const margin_from = urFrom - ucFrom;
+				impact = (margin_to - margin_from) * wt;
+				// For purity change, allocate negative on 'from' and positive on 'to' if you prefer;
+				// here we add full impact to 'from' key so it shows up when recon iterates that purity.
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+				// Also reflect impact on target purity (optional but recommended):
+				adjustmentImpactMap[to] = (adjustmentImpactMap[to] || 0) + 0; // (no-op if you don't want double counting)
+			}
+		});
+
 		const rows = container.find(".receipt-table tbody tr[data-idx]");
 
 		rows.each((_, rowElem) => {
 			const row = $(rowElem);
-			const purity = row.find(".input-purity").val().trim();
+			const purityVal = row.find(".input-purity").val();
+			const purity = purityVal ? purityVal.trim() : "";
 			const weight = parseFloat(row.find(".input-weight").val()) || 0;
 			const rate = parseFloat(row.find(".input-rate").val()) || 0;
 			const amountInput = parseFloat(row.find(".input-amount").val());
@@ -697,6 +796,10 @@ class Step3TabReceiptReconciliation {
 			} else {
 				revenue = amount;
 				profit = revenue - baseCostBasis;
+				// Apply aggregated adjustment impact for this purity (if any)
+				const adjImpactForPurity = adjustmentImpactMap[purity] || 0;
+				profit += adjImpactForPurity;
+
 				profitG = actual ? profit / actual : 0;
 				margin = revenue ? (profit / revenue) * 100 : 0;
 
@@ -793,17 +896,6 @@ class Step3TabReceiptReconciliation {
 			}
 		});
 		return reconciled;
-	}
-
-	getPuritiesFromReconciliation() {
-		const purities = [];
-		this.container.find(".section2-recon-summary table.recon-table tbody tr").each((_, tr) => {
-			const purity = $(tr).find("td:first").text().trim();
-			if (purity && !purities.includes(purity)) {
-				purities.push(purity);
-			}
-		});
-		return purities;
 	}
 
 	async callCreateSalesAndDeliveryAPI() {
@@ -1040,5 +1132,106 @@ class Step3TabReceiptReconciliation {
 				frappe.msgprint("Error searching for transaction: " + (e.message || e));
 			},
 		});
+	}
+
+	// Prfit Impact
+	// --- ADD THESE HELPERS INSIDE THE CLASS ---
+
+	/**
+	 * Build maps:
+	 *  - unit_revenue[purity] = average RM per g from receipt rows (amount/weight)
+	 *  - unit_cost[purity] = cost_basis per g from reconSummary (cost_basis / claimed)
+	 */
+	computeUnitMaps() {
+		const unit_revenue = {};
+		const unit_cost = {};
+
+		// Build unit_revenue from receipt-table rows
+		this.container.find(".receipt-table tbody tr[data-idx]").each((_, tr) => {
+			const $tr = $(tr);
+			const purity = ($tr.find(".input-purity").val() || "").trim();
+			const w = parseFloat($tr.find(".input-weight").val()) || 0;
+			const a = parseFloat($tr.find(".input-amount").val()) || 0;
+			if (purity && w > 0) {
+				// If multiple rows for same purity, last one will overwrite; acceptable for simplicity.
+				unit_revenue[purity] = a / w;
+			}
+		});
+
+		// Build unit_cost from reconSummary (use DOM cost-basis cell as source of truth)
+		this.container.find(".recon-table tbody tr[data-purity]").each((_, tr) => {
+			const $tr = $(tr);
+			const purity = $tr.data("purity");
+			const claimed =
+				parseFloat(
+					$tr
+						.find(".claimed-cell")
+						.text()
+						.replace(/[^\d.-]/g, "")
+				) || 0;
+			const costText = $tr
+				.find(".cost-basis")
+				.text()
+				.replace(/[^\d.-]/g, "");
+			const cost = parseFloat(costText) || 0;
+			if (purity && claimed > 0) {
+				unit_cost[purity] = cost / claimed;
+			} else {
+				unit_cost[purity] = 0;
+			}
+		});
+
+		return { unit_revenue, unit_cost };
+	}
+
+	/**
+	 * Compute profit impact for a single adjustment row (numeric RM),
+	 * update the row's `.profit-impact` cell text, and return numeric impact.
+	 */
+	computeProfitImpactForRow($row) {
+		const type = $row.find(".adjust-type").val();
+		const from = ($row.find(".from-purity").val() || "").trim();
+		const to = ($row.find(".to-purity").val() || "").trim();
+		const weight = parseFloat($row.find(".weight").val()) || 0;
+
+		const { unit_revenue, unit_cost } = this.computeUnitMaps();
+
+		const getUR = (p) => unit_revenue[p] || 0;
+		const getUC = (p) => unit_cost[p] || 0;
+
+		let impact = 0;
+
+		switch (type) {
+			case "Item Return":
+				// Profit lost = gross margin per g * weight
+				impact = -(getUR(from) - getUC(from)) * weight;
+				break;
+			case "Weight Loss - Torching/Cleaning":
+			case "Weight Loss - Other":
+				// Revenue lost (conservative)
+				impact = -getUR(from) * weight;
+				break;
+			case "Weight Adjustment - Stones":
+				// Stones removal increases saleable weight → gains margin
+				impact = (getUR(from) - getUC(from)) * weight;
+				break;
+			case "Purity Change":
+			case "Purity Blend (Melting)":
+				// Move from -> to: net change = (margin_to - margin_from) * weight
+				const margin_to = getUR(to) - getUC(to);
+				const margin_from = getUR(from) - getUC(from);
+				impact = (margin_to - margin_from) * weight;
+				break;
+			default:
+				impact = 0;
+		}
+
+		// Update UI cell text with sign and two decimals
+		const sign = impact >= 0 ? "+" : "-";
+		const absVal = Math.abs(impact).toFixed(2);
+		$row.find(".profit-impact").text(`${sign}RM ${absVal}`);
+
+		// return signed numeric value
+		return impact;
 	}
 }
