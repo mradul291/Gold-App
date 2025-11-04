@@ -299,16 +299,6 @@ class Step3TabReceiptReconciliation {
 			.find(".save-adjustments-btn")
 			.off("click")
 			.on("click", () => {
-				if (!this.isFullyReconciled()) {
-					frappe.msgprint({
-						title: "Reconciliation Incomplete",
-						message:
-							"Please complete reconciliation (Δ = 0) for all purities before saving.",
-						indicator: "orange",
-					});
-					return;
-				}
-				// Update adjustments from UI inputs
 				const adjustments = [];
 				tbody.find("tr").each((_, tr) => {
 					const row = $(tr);
@@ -321,8 +311,31 @@ class Step3TabReceiptReconciliation {
 						impact: row.find(".profit-impact").text(),
 					});
 				});
+
 				this.adjustments = adjustments;
+
+				const hasPurityBlend = adjustments.some(
+					(adj) => adj.type === "Purity Blend (Melting)"
+				);
+
+				if (!this.isFullyReconciled() && !hasPurityBlend) {
+					frappe.msgprint({
+						title: "Reconciliation Incomplete",
+						message:
+							"Please complete reconciliation (Δ = 0) for all purities before saving.",
+						indicator: "orange",
+					});
+					return;
+				}
+
 				this.onClickSaveAdjustments();
+
+				frappe.show_alert({
+					message: hasPurityBlend
+						? "Adjustments saved (Purity Blend entries will be handled separately)."
+						: "Adjustments saved successfully.",
+					indicator: "green",
+				});
 			});
 
 		addRow();
@@ -614,7 +627,13 @@ class Step3TabReceiptReconciliation {
 			.find(".save-continue-btn")
 			.off("click")
 			.on("click", async () => {
-				if (!this.isFullyReconciled()) {
+				const adjustments = this.adjustments || [];
+
+				const hasPurityBlend = adjustments.some(
+					(adj) => adj.type === "Purity Blend (Melting)"
+				);
+
+				if (!this.isFullyReconciled() && !hasPurityBlend) {
 					frappe.msgprint({
 						title: "Reconciliation Incomplete",
 						message:
@@ -623,17 +642,26 @@ class Step3TabReceiptReconciliation {
 					});
 					return;
 				}
+
 				try {
+					if (hasPurityBlend) {
+						await this.callCreateMaterialReceiptAPI();
+					}
+
 					await this.callCreateSalesAndDeliveryAPI();
+
 					frappe.show_alert({
-						message: "Sales and Delivery created successfully",
+						message: hasPurityBlend
+							? "Sales, Delivery, and Material Receipt created successfully."
+							: "Sales and Delivery created successfully.",
 						indicator: "green",
 					});
+
 					if (this.continueCallback) this.continueCallback();
 				} catch (error) {
 					frappe.msgprint({
 						title: "Error",
-						message: `Failed to create sales and delivery: ${error.message}`,
+						message: `Failed to complete Save & Continue: ${error.message}`,
 						indicator: "red",
 					});
 				}
@@ -643,123 +671,205 @@ class Step3TabReceiptReconciliation {
 	updateReconciliationSummary() {
 		const container = this.container;
 
-		// Precompute total Item Return weights per purity from adjustments
+		// Precompute adjustment weight maps by type (per purity)
 		const itemReturnMap = {};
-		this.adjustments.forEach((adj) => {
-			if (adj.type === "Item Return") {
-				const purity = adj.from_purity;
-				const weight = parseFloat(adj.weight) || 0;
-				if (!itemReturnMap[purity]) {
-					itemReturnMap[purity] = 0;
-				}
-				itemReturnMap[purity] += weight;
-			}
-		});
-
-		// Precompute total Weight Loss - Torching/Cleaning weights per purity from adjustments
 		const weightLossMap = {};
-		this.adjustments.forEach((adj) => {
-			if (
-				adj.type === "Weight Loss - Torching/Cleaning" ||
-				adj.type === "Weight Loss - Other"
-			) {
-				const purity = adj.from_purity;
-				const weight = parseFloat(adj.weight) || 0;
-				if (!weightLossMap[purity]) {
-					weightLossMap[purity] = 0;
-				}
-				weightLossMap[purity] += weight;
-			}
-		});
-
-		// New weight adjustment (addition) map
 		const weightAdjustStonesMap = {};
-		this.adjustments.forEach((adj) => {
-			if (adj.type === "Weight Adjustment - Stones") {
-				const purity = adj.from_purity;
-				const weight = parseFloat(adj.weight) || 0;
-				if (!weightAdjustStonesMap[purity]) {
-					weightAdjustStonesMap[purity] = 0;
-				}
-				weightAdjustStonesMap[purity] += weight;
-			}
-		});
+		const purityChangeOutMap = {}; // weights moved out from a purity
+		const purityChangeInMap = {}; // weights moved into a purity
 
-		//Profit Impact
-
-		// --- New: aggregate adjustment impacts per purity ---
-		const adjustmentImpactMap = {}; // purity => numeric RM impact
 		(this.adjustments || []).forEach((adj) => {
-			const wt = parseFloat(adj.weight) || 0;
 			const type = adj.type;
-			const from = adj.from_purity || "";
-			const to = adj.to_purity || "";
-
-			// We want same logic as computeProfitImpactForRow but in aggregated form.
-			// Reuse computeUnitMaps to derive per-gram rates
-		});
-		const { unit_revenue: __ur, unit_cost: __uc } = this.computeUnitMaps();
-
-		// Now actually compute impacts and fill map (keeps rules consistent)
-		(this.adjustments || []).forEach((adj) => {
+			const from = (adj.from_purity || "").trim();
+			const to = (adj.to_purity || "").trim();
 			const wt = parseFloat(adj.weight) || 0;
-			const type = adj.type;
-			const from = adj.from_purity || "";
-			const to = adj.to_purity || "";
 
-			const urFrom = __ur[from] || 0;
-			const ucFrom = __uc[from] || 0;
-			const urTo = __ur[to] || 0;
-			const ucTo = __uc[to] || 0;
+			if (!wt) return;
 
-			let impact = 0;
 			if (type === "Item Return") {
-				impact = -(urFrom - ucFrom) * wt;
-				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+				itemReturnMap[from] = (itemReturnMap[from] || 0) + wt;
 			} else if (
 				type === "Weight Loss - Torching/Cleaning" ||
 				type === "Weight Loss - Other"
 			) {
-				impact = -urFrom * wt;
-				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+				weightLossMap[from] = (weightLossMap[from] || 0) + wt;
 			} else if (type === "Weight Adjustment - Stones") {
-				impact = (urFrom - ucFrom) * wt;
-				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
+				weightAdjustStonesMap[from] = (weightAdjustStonesMap[from] || 0) + wt;
 			} else if (type === "Purity Change" || type === "Purity Blend (Melting)") {
-				const margin_to = urTo - ucTo;
-				const margin_from = urFrom - ucFrom;
-				impact = (margin_to - margin_from) * wt;
-				// For purity change, allocate negative on 'from' and positive on 'to' if you prefer;
-				// here we add full impact to 'from' key so it shows up when recon iterates that purity.
-				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impact;
-				// Also reflect impact on target purity (optional but recommended):
-				adjustmentImpactMap[to] = (adjustmentImpactMap[to] || 0) + 0; // (no-op if you don't want double counting)
+				// For purity change, treat as moving wt from 'from' to 'to'
+				purityChangeOutMap[from] = (purityChangeOutMap[from] || 0) + wt;
+				purityChangeInMap[to] = (purityChangeInMap[to] || 0) + wt;
 			}
 		});
 
+		// Build aggregated monetary impacts per purity (consistent with computeProfitImpactForRow)
+		const adjustmentImpactMap = {}; // numeric RM adjustments per purity
+		const { unit_revenue: __ur, unit_cost: __uc } = this.computeUnitMaps
+			? this.computeUnitMaps()
+			: { unit_revenue: {}, unit_cost: {} };
+
+		(this.adjustments || []).forEach((adj) => {
+			const type = adj.type;
+			const from = (adj.from_purity || "").trim();
+			const to = (adj.to_purity || "").trim();
+			const wt = parseFloat(adj.weight) || 0;
+			if (!wt) return;
+
+			const urFrom = (__ur && __ur[from]) || 0;
+			const ucFrom = (__uc && __uc[from]) || 0;
+			const urTo = (__ur && __ur[to]) || 0;
+			const ucTo = (__uc && __uc[to]) || 0;
+
+			let impactFrom = 0;
+			let impactTo = 0;
+
+			if (type === "Item Return") {
+				impactFrom = -(urFrom - ucFrom) * wt;
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impactFrom;
+			} else if (
+				type === "Weight Loss - Torching/Cleaning" ||
+				type === "Weight Loss - Other"
+			) {
+				impactFrom = -urFrom * wt;
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impactFrom;
+			} else if (type === "Weight Adjustment - Stones") {
+				impactFrom = (urFrom - ucFrom) * wt;
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impactFrom;
+			} else if (type === "Purity Change" || type === "Purity Blend (Melting)") {
+				// margin difference moved from => to
+				const margin_from = urFrom - ucFrom;
+				const margin_to = urTo - ucTo;
+				const net = (margin_to - margin_from) * wt;
+				// net is positive if moving increases overall margin, negative otherwise.
+				// Allocate negative impact on 'from' and positive on 'to'
+				impactFrom = -net; // remove margin from 'from' (show as negative)
+				impactTo = net; // add margin to 'to'
+				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impactFrom;
+				adjustmentImpactMap[to] = (adjustmentImpactMap[to] || 0) + impactTo;
+			}
+		});
+
+		// Iterate receipt rows and update reconciliation table rows
 		const rows = container.find(".receipt-table tbody tr[data-idx]");
 
+		// For faster lookup, load recon rows by purity key
+		const reconMap = {};
+		container.find(".recon-table tbody tr[data-purity]").each((_, r) => {
+			const $r = $(r);
+			const p = ($r.data("purity") || "").toString().trim();
+			if (p) reconMap[p] = $r;
+		});
+
+		// --- Ensure all 'to' purities from Purity Blend (Melting) exist in reconciliation table ---
+		(this.adjustments || []).forEach((adj) => {
+			const type = adj.type;
+			if (type === "Purity Blend (Melting)") {
+				const fromPurity = (adj.from_purity || "").trim();
+				const toPurity = (adj.to_purity || "").trim();
+				const addedWeight = parseFloat(adj.weight) || 0;
+
+				if (!toPurity || !addedWeight) return;
+
+				// If this purity doesn't exist yet, create a new row
+				if (!reconMap[toPurity]) {
+					const $tableBody = container.find(".recon-table tbody");
+					const newRow = $(`
+				<tr data-purity="${toPurity}">
+					<td class="purity-cell">${toPurity}</td>
+					<td class="actual-cell">0.00</td>
+					<td class="claimed-cell">0.00</td>
+					<td class="delta-cell">0.00</td>
+					<td class="status-cell"><span class="status-icon warning">&#9888;</span></td>
+					<td class="cost-basis">0.00</td>
+					<td class="revenue-cell">RM 0.00</td>
+					<td class="profit-cell">RM 0.00</td>
+					<td class="profit-g-cell">RM 0.00</td>
+					<td class="margin-cell">0.0%</td>
+				</tr>
+			`);
+					newRow.attr("data-blend-row", "1");
+					$tableBody.append(newRow);
+					reconMap[toPurity] = newRow;
+
+					// Copy cost basis and compute per-gram rate
+					if (fromPurity && reconMap[fromPurity]) {
+						const fromRow = reconMap[fromPurity];
+
+						const fromCostBasis =
+							parseFloat(
+								fromRow
+									.find(".cost-basis")
+									.text()
+									.replace(/[^\d.-]/g, "")
+							) || 0;
+
+						const fromClaimed =
+							parseFloat(
+								fromRow
+									.find(".claimed-cell")
+									.text()
+									.replace(/[^\d.-]/g, "")
+							) || 0;
+
+						if (fromCostBasis > 0 && fromClaimed > 0) {
+							const perGramRate = fromCostBasis / fromClaimed;
+							const totalCost = perGramRate * addedWeight;
+
+							newRow.find(".cost-basis").text(totalCost.toFixed(2));
+							newRow.data("per-gram-rate", perGramRate); // store per-gram rate for later use
+
+							console.log(
+								`Copied cost basis ${fromCostBasis} from purity ${fromPurity} → ${toPurity}, per-gram rate ${perGramRate.toFixed(
+									2
+								)}`
+							);
+						} else {
+							console.warn(
+								`Source purity ${fromPurity} has 0 cost basis or 0 claimed weight.`
+							);
+						}
+					} else {
+						console.warn(`No valid source row found for from_purity ${fromPurity}.`);
+					}
+				}
+			}
+		});
+
+		// We'll also update any recon rows that have no receipt row (e.g., a 'to' purity that only gets increased)
+		// But first update based on receipt rows to get actual weights.
 		rows.each((_, rowElem) => {
 			const row = $(rowElem);
-			const purityVal = row.find(".input-purity").val();
-			const purity = purityVal ? purityVal.trim() : "";
+			const purityVal = (row.find(".input-purity").val() || "").toString().trim();
+			const purity = purityVal || "";
 			const weight = parseFloat(row.find(".input-weight").val()) || 0;
 			const rate = parseFloat(row.find(".input-rate").val()) || 0;
 			const amountInput = parseFloat(row.find(".input-amount").val());
 			const amount = isNaN(amountInput) ? weight * rate : amountInput;
 
-			// Find matching row in reconciliation table via data-purity attribute
-			const reconRow = container.find(`.recon-table tr[data-purity="${purity}"]`);
-			if (!reconRow.length) return;
+			if (!purity || !reconMap[purity]) return;
 
+			const reconRow = reconMap[purity];
 			let baseClaimed = parseFloat(reconRow.find(".claimed-cell").text()) || 0;
-			let itemReturnWeight = itemReturnMap[purity] || 0;
-			let weightLoss = weightLossMap[purity] || 0;
-			let weightAdjustStones = weightAdjustStonesMap[purity] || 0;
-			let totalAdjustment = itemReturnWeight + weightLoss;
-			let claimed = baseClaimed - itemReturnWeight - weightLoss + weightAdjustStones;
 
-			if (Math.abs(claimed - baseClaimed) > 0.001) {
+			// Apply adjustments affecting this purity:
+			const itemReturnWeight = itemReturnMap[purity] || 0;
+			const weightLoss = weightLossMap[purity] || 0;
+			const weightAdjustStones = weightAdjustStonesMap[purity] || 0;
+			const purityOut = purityChangeOutMap[purity] || 0; // moved out
+			const purityIn = purityChangeInMap[purity] || 0; // moved in
+
+			// Effective claimed = baseClaimed - out (item return + purity out + weight loss) + in (purity in + stones adjust)
+			const claimed =
+				baseClaimed -
+				itemReturnWeight -
+				weightLoss -
+				purityOut +
+				purityIn +
+				weightAdjustStones;
+
+			// Show strikethrough -> new claimed when it changed
+			if (Math.abs(claimed - baseClaimed) > 0.0009) {
+				// If claimed decreased show original -> new, likewise for increase
 				reconRow
 					.find(".claimed-cell")
 					.html(`<s>${baseClaimed.toFixed(2)}</s> &rarr; ${claimed.toFixed(2)}`);
@@ -767,6 +877,11 @@ class Step3TabReceiptReconciliation {
 				reconRow.find(".claimed-cell").text(baseClaimed.toFixed(2));
 			}
 
+			// Actual is the physical weight in Section 1 for this row
+			const actual = weight;
+			const delta = (actual - claimed).toFixed(2);
+
+			// Cost basis read from UI (existing behavior)
 			const baseCostBasis =
 				parseFloat(
 					reconRow
@@ -775,27 +890,21 @@ class Step3TabReceiptReconciliation {
 						.replace(/[^\d.-]/g, "")
 				) || 0;
 
-			// Apply Item Return adjustment weights to claimed weight
-
-			// New actual after adjustment:
-			// Assuming 'actual' is what physically remains (claimed - item return)
-			const actual = weight;
-
-			const delta = (actual - claimed).toFixed(2);
-
-			// Update profit, margin calculations as before
+			// Compute revenue/profit,
 			let revenue = 0,
 				profit = 0,
 				profitG = 0,
 				margin = 0;
 			let statusHTML = "";
 
+			// When actual equals claimed and amount equals cost_basis (earlier logic)
 			if (Math.abs(actual - claimed) < 0.001 && Math.abs(amount - baseCostBasis) < 0.001) {
 				statusHTML = '<span class="status-icon success">&#10004;</span>';
 				reconRow.addClass("recon-row-green");
 			} else {
 				revenue = amount;
 				profit = revenue - baseCostBasis;
+
 				// Apply aggregated adjustment impact for this purity (if any)
 				const adjImpactForPurity = adjustmentImpactMap[purity] || 0;
 				profit += adjImpactForPurity;
@@ -803,8 +912,9 @@ class Step3TabReceiptReconciliation {
 				profitG = actual ? profit / actual : 0;
 				margin = revenue ? (profit / revenue) * 100 : 0;
 
-				const totalWeightAdjustments = itemReturnWeight + weightLoss + weightAdjustStones;
-
+				const totalWeightAdjustments =
+					itemReturnWeight + weightLoss + purityOut + weightAdjustStones - purityIn;
+				// Adjust status logic conservatively: success if positive profit/g or revenue > cost (as before)
 				if (
 					(profit > 0 && totalWeightAdjustments > 0) ||
 					profitG > 0 ||
@@ -832,6 +942,85 @@ class Step3TabReceiptReconciliation {
 				.text(`RM ${profitG.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`);
 			reconRow.find(".margin-cell").text(`${margin.toFixed(1)}%`);
 			reconRow.find(".status-cell").html(statusHTML);
+		});
+
+		// Additionally, update recon rows that are present in reconciliation table but not linked to a receipt row:
+		// (these might be pure 'to' purities that just got increased)
+		Object.keys(reconMap).forEach((purity) => {
+			// if there is no receipt-row with this purity, still update the claimed to reflect purityChangeInMap
+			const reconRow = reconMap[purity];
+			const hasReceiptRow = !!container
+				.find(`.receipt-table tbody tr[data-idx] .input-purity`)
+				.filter(function () {
+					return ($(this).val() || "").trim() === purity;
+				}).length;
+
+			if (!hasReceiptRow) {
+				let baseClaimed = parseFloat(reconRow.find(".claimed-cell").text()) || 0;
+
+				const purityIn = purityChangeInMap[purity] || 0;
+				const purityOut = purityChangeOutMap[purity] || 0;
+				const itemReturnWeight = itemReturnMap[purity] || 0;
+				const weightLoss = weightLossMap[purity] || 0;
+				const weightAdjustStones = weightAdjustStonesMap[purity] || 0;
+
+				const claimed =
+					baseClaimed -
+					itemReturnWeight -
+					weightLoss -
+					purityOut +
+					purityIn +
+					weightAdjustStones;
+
+				if (Math.abs(claimed - baseClaimed) > 0.0009) {
+					reconRow
+						.find(".claimed-cell")
+						.html(`<s>${baseClaimed.toFixed(2)}</s> &rarr; ${claimed.toFixed(2)}`);
+				} else {
+					reconRow.find(".claimed-cell").text(baseClaimed.toFixed(2));
+				}
+
+				// For these, actual remains whatever existing value is (likely 0), so just update claimed and impacts
+				const actual = parseFloat(reconRow.find(".actual-cell").text()) || 0;
+				const delta = (actual - claimed).toFixed(2);
+
+				let baseCostBasis =
+					parseFloat(
+						reconRow
+							.find(".cost-basis")
+							.text()
+							.replace(/[^\d.-]/g, "")
+					) || 0;
+
+				let revenue = 0,
+					profit = 0,
+					profitG = 0,
+					margin = 0;
+				let statusHTML = "";
+
+				const adjImpactForPurity = adjustmentImpactMap[purity] || 0;
+				profit = revenue - baseCostBasis + adjImpactForPurity;
+				profitG = actual ? profit / actual : 0;
+				margin = revenue ? (profit / revenue) * 100 : 0;
+
+				if (profit > 0 || profitG > 0) {
+					statusHTML = '<span class="status-icon success">&#10004;</span>';
+					reconRow.addClass("recon-row-green");
+				} else {
+					statusHTML = '<span class="status-icon warning">&#9888;</span>';
+					reconRow.removeClass("recon-row-green");
+				}
+
+				reconRow.find(".delta-cell").text(delta);
+				reconRow
+					.find(".profit-cell")
+					.text(`RM ${profit.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`);
+				reconRow
+					.find(".profit-g-cell")
+					.text(`RM ${profitG.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`);
+				reconRow.find(".margin-cell").text(`${margin.toFixed(1)}%`);
+				reconRow.find(".status-cell").html(statusHTML);
+			}
 		});
 	}
 
@@ -939,6 +1128,71 @@ class Step3TabReceiptReconciliation {
 				},
 			});
 		});
+	}
+
+	async callCreateMaterialReceiptAPI() {
+		try {
+			// Collect Purity Blend (Melting) items
+			const items = [];
+			(this.adjustments || []).forEach((adj) => {
+				const type = adj.type;
+				if (type === "Purity Blend (Melting)") {
+					const toPurity = (adj.to_purity || "").trim();
+					const addedWeight = parseFloat(adj.weight) || 0;
+
+					if (!toPurity || !addedWeight) return;
+
+					// Get cost basis and actual weight for this purity
+					const row = this.container.find(`.recon-table tr[data-purity='${toPurity}']`);
+					const costBasis = parseFloat(row.find(".cost-basis").text()) || 0;
+					const actualWeight = parseFloat(row.find(".actual-cell").text()) || 0;
+
+					// Try getting pre-stored per-gram rate
+					let basicRate = parseFloat(row.data("per-gram-rate")) || 0;
+
+					// If not found, fallback calculation
+					if (!basicRate && actualWeight > 0) {
+						basicRate = costBasis / actualWeight;
+					}
+
+					items.push({
+						purity: toPurity,
+						qty: addedWeight,
+						basic_rate: basicRate,
+					});
+				}
+			});
+
+			console.log("Material Receipt Items:", items);
+
+			if (items.length === 0) {
+				console.log("No Purity Blend items found to create stock entry.");
+				return;
+			}
+
+			// Call backend API to create Stock Entry
+			await frappe.call({
+				method: "gold_app.api.sales.wholesale_warehouse.create_material_receipt",
+				args: { items },
+				freeze: true,
+				freeze_message: "Creating Material Receipt...",
+				callback: (r) => {
+					if (r.message) {
+						frappe.show_alert({
+							message: `Stock Entry Created: ${r.message.stock_entry_name}`,
+							indicator: "green",
+						});
+					}
+				},
+			});
+		} catch (error) {
+			console.error("Error creating Material Receipt:", error);
+			frappe.msgprint({
+				title: "Error",
+				message: `Failed to create Material Receipt: ${error.message}`,
+				indicator: "red",
+			});
+		}
 	}
 
 	bindUploadReceipt() {
@@ -1135,13 +1389,6 @@ class Step3TabReceiptReconciliation {
 	}
 
 	// Prfit Impact
-	// --- ADD THESE HELPERS INSIDE THE CLASS ---
-
-	/**
-	 * Build maps:
-	 *  - unit_revenue[purity] = average RM per g from receipt rows (amount/weight)
-	 *  - unit_cost[purity] = cost_basis per g from reconSummary (cost_basis / claimed)
-	 */
 	computeUnitMaps() {
 		const unit_revenue = {};
 		const unit_cost = {};
@@ -1184,10 +1431,6 @@ class Step3TabReceiptReconciliation {
 		return { unit_revenue, unit_cost };
 	}
 
-	/**
-	 * Compute profit impact for a single adjustment row (numeric RM),
-	 * update the row's `.profit-impact` cell text, and return numeric impact.
-	 */
 	computeProfitImpactForRow($row) {
 		const type = $row.find(".adjust-type").val();
 		const from = ($row.find(".from-purity").val() || "").trim();
@@ -1227,9 +1470,18 @@ class Step3TabReceiptReconciliation {
 		}
 
 		// Update UI cell text with sign and two decimals
+		// --- Update UI cell styling and text based on sign ---
+		const $impactCell = $row.find(".profit-impact");
 		const sign = impact >= 0 ? "+" : "-";
 		const absVal = Math.abs(impact).toFixed(2);
-		$row.find(".profit-impact").text(`${sign}RM ${absVal}`);
+		$impactCell.text(`${sign}RM ${absVal}`);
+
+		// Apply color classes
+		if (impact >= 0) {
+			$impactCell.removeClass("text-danger").addClass("text-success");
+		} else {
+			$impactCell.removeClass("text-success").addClass("text-danger");
+		}
 
 		// return signed numeric value
 		return impact;

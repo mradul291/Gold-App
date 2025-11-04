@@ -241,6 +241,11 @@
   text-align: center;  /* optional - center align content */
   padding: 4px 8px;    /* optional - adjust padding */
 }
+.profit-impact {
+    font-weight: 600;
+    text-align: right;
+}
+
 
 
 

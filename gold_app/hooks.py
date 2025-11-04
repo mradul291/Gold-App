@@ -94,6 +94,9 @@ doc_events = {
         "after_insert": "gold_app.api.api.sync_supplier_with_customer",
         "on_update": "gold_app.api.api.sync_supplier_with_customer",
     },
+    "Purity": {
+        "after_insert": "gold_app.gold_app.doctype.purity.purity.create_item_for_purity"
+    }
 }
 
 permission_query_conditions = {

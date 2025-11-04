@@ -97,7 +97,6 @@ def get_warehouse_stock(warehouse_name=None):
 #         frappe.log_error(frappe.get_traceback(), "Sales Flow API Error")
 #         frappe.throw(f"Error while creating Sales Flow: {str(e)}")
 
-
 # Create Sales Invoice for Stock Reduction
 @frappe.whitelist()
 def create_sales_invoice(customer, items, company=None):
@@ -156,3 +155,73 @@ def get_wholesale_transaction_by_bag(wholesale_bag):
     doc_dict = doc.as_dict()
 
     return {'status': 'success', 'data': doc_dict}
+
+# @frappe.whitelist()
+# def create_material_receipt(items):
+#     import json
+#     if isinstance(items, str):
+#         items = json.loads(items)
+
+#     if not items:
+#         frappe.throw(_("Items data is required"))
+
+#     # Build Stock Entry document
+#     stock_entry = frappe.get_doc({
+#         "doctype": "Stock Entry",
+#         "stock_entry_type": "Material Receipt",
+#         "to_warehouse": "Unsorted - AGSB",
+#         "items": [
+#             {
+#                 # Build item_code dynamically from purity
+#                 "item_code": f"Unsorted-{d.get('purity')}",
+#                 "qty": d.get("qty"),
+#                 "basic_rate": d.get("basic_rate")
+#             }
+#             for d in items
+#         ]
+#     })
+
+#     stock_entry.insert(ignore_permissions=True)
+#     stock_entry.submit()
+
+#     return {
+#         "message": "Stock Entry created successfully",
+#         "stock_entry_name": stock_entry.name
+#     }
+
+@frappe.whitelist()
+def create_material_receipt(items):
+    import json
+    if isinstance(items, str):
+        items = json.loads(items)
+
+    if not items:
+        frappe.throw(_("Items data is required"))
+
+    stock_entry = frappe.get_doc({
+        "doctype": "Stock Entry",
+        "stock_entry_type": "Material Receipt",
+        "to_warehouse": "Unsorted - AGSB",
+        "items": []
+    })
+
+    for d in items:
+        item_code = f"Unsorted-{d.get('purity')}"
+        qty = flt(d.get("qty"))
+        basic_rate = flt(d.get("basic_rate")) or 0
+
+        stock_entry.append("items", {
+            "item_code": item_code,
+            "qty": qty,
+            "basic_rate": basic_rate,
+            # ✅ Important part:
+            "allow_zero_valuation_rate": 1 if basic_rate == 0 else 0
+        })
+
+    stock_entry.insert(ignore_permissions=True)
+    stock_entry.submit()
+
+    return {
+        "message": "Stock Entry created successfully",
+        "stock_entry_name": stock_entry.name
+    }
