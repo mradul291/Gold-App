@@ -24,6 +24,7 @@ class Step3ReceiptAndReconciliation {
 		this.adjustments = adjustments;
 		this.backCallback = backCallback;
 		this.activeTab = "Sale Details";
+		this.sales_invoice = null;
 		this.render();
 	}
 
@@ -111,6 +112,11 @@ class Step3ReceiptAndReconciliation {
 					// Optional: Sync adjustments & reconciliation if changed
 					this.reconSummary = nextReconSummary;
 					this.adjustments = nextAdjustments;
+				},
+				(invoiceRef) => {
+					// This callback receives the invoice ref from receipt tab
+					this.sales_invoice = invoiceRef;
+					console.log("Invoice reference saved in controller:", invoiceRef);
 				}
 			);
 		} else if (this.activeTab === "Payment Entry") {
@@ -123,15 +129,9 @@ class Step3ReceiptAndReconciliation {
 					totalAmount: this.totalAmount,
 					reconSummary: this.reconSummary,
 					adjustments: this.adjustments,
+					sales_invoice: this.sales_invoice || null,
 				},
-				tabContentContainer,
-				() => {
-					// Final submit API logic here (use all up-to-date props)
-					frappe.show_alert({
-						message: "Payment submitted. Implement your API call here.",
-						indicator: "green",
-					});
-				}
+				tabContentContainer
 			);
 		}
 	}

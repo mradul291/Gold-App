@@ -1,10 +1,18 @@
 class Step3TabReceiptReconciliation {
-	constructor(props, container, backCallback, continueCallback, syncDataCallback) {
+	constructor(
+		props,
+		container,
+		backCallback,
+		continueCallback,
+		syncDataCallback,
+		onSalesInvoiceCreated
+	) {
 		this.props = props;
 		this.container = container;
 		this.backCallback = backCallback;
 		this.continueCallback = continueCallback;
 		this.syncDataCallback = syncDataCallback;
+		this.onSalesInvoiceCreated = onSalesInvoiceCreated;
 		this.reconSummary = props.reconSummary.length
 			? props.reconSummary
 			: this.initializeReconSummary();
@@ -344,24 +352,26 @@ class Step3TabReceiptReconciliation {
 
 		// Handler for ANY adjustment value changes (type, from_purity, weight)
 		// canonical single handler for adjustment input changes
-		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
-			// Recompute per-row profit impact and sync adjustments array
+		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", (e) => {
+			const $changedRow = $(e.currentTarget).closest("tr");
+			// Compute impact only for changed row
+			this.computeProfitImpactForRow($changedRow);
+
+			// Update adjustments array fully after change
 			this.adjustments = [];
 			tbody.find("tr").each((_, tr) => {
 				const $tr = $(tr);
-				// compute numeric impact and update cell
-				const numericImpact = this.computeProfitImpactForRow($tr);
-
 				this.adjustments.push({
 					type: $tr.find(".adjust-type").val(),
 					from_purity: $tr.find(".from-purity").val(),
 					to_purity: $tr.find(".to-purity").val(),
 					weight: $tr.find(".weight").val(),
 					notes: $tr.find(".notes").val(),
-					impact: numericImpact, // store numeric impact for persistence
+					impact: $tr.find(".profit-impact").text(),
 				});
 			});
-			// Refresh reconciliation summary to apply aggregated impacts
+
+			// Update reconciliation summary
 			this.updateReconciliationSummary();
 		});
 
@@ -744,7 +754,6 @@ class Step3TabReceiptReconciliation {
 				// Allocate negative impact on 'from' and positive on 'to'
 				impactFrom = -net; // remove margin from 'from' (show as negative)
 				impactTo = net; // add margin to 'to'
-				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impactFrom;
 				adjustmentImpactMap[to] = (adjustmentImpactMap[to] || 0) + impactTo;
 			}
 		});
@@ -1037,19 +1046,26 @@ class Step3TabReceiptReconciliation {
 			this.updateReconciliationSummary();
 		});
 
-		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", () => {
+		tbody.off("input.adjust-update").on("input.adjust-update", "input,select", (e) => {
+			const $changedRow = $(e.currentTarget).closest("tr");
+			// Compute impact only for changed row
+			this.computeProfitImpactForRow($changedRow);
+
+			// Update adjustments array fully after change
 			this.adjustments = [];
 			tbody.find("tr").each((_, tr) => {
-				const row = $(tr);
+				const $tr = $(tr);
 				this.adjustments.push({
-					type: row.find(".adjust-type").val(),
-					from_purity: row.find(".from-purity").val(),
-					to_purity: row.find(".to-purity").val(),
-					weight: row.find(".weight").val(),
-					notes: row.find(".notes").val(),
-					impact: row.find(".profit-impact").text(),
+					type: $tr.find(".adjust-type").val(),
+					from_purity: $tr.find(".from-purity").val(),
+					to_purity: $tr.find(".to-purity").val(),
+					weight: $tr.find(".weight").val(),
+					notes: $tr.find(".notes").val(),
+					impact: $tr.find(".profit-impact").text(),
 				});
 			});
+
+			// Update reconciliation summary
 			this.updateReconciliationSummary();
 		});
 
@@ -1110,6 +1126,8 @@ class Step3TabReceiptReconciliation {
 			company: this.props.company || null,
 		};
 
+		console.log("Calling create_sales_invoice API with payload:", payload);
+
 		await new Promise((resolve, reject) => {
 			frappe.call({
 				method: "gold_app.api.sales.wholesale_warehouse.create_sales_invoice",
@@ -1117,6 +1135,11 @@ class Step3TabReceiptReconciliation {
 				callback: (r) => {
 					console.log("API response:", r);
 					if (r.message && r.message.status === "success") {
+						console.log("API response message full content:", r.message);
+						const invoiceRef = r.message.sales_invoice; // or whatever field contains the invoice ref
+						if (this.onSalesInvoiceCreated) {
+							this.onSalesInvoiceCreated(invoiceRef); // call callback
+						}
 						resolve(r.message);
 					} else {
 						reject(new Error("API returned failure"));
@@ -1433,6 +1456,14 @@ class Step3TabReceiptReconciliation {
 
 	computeProfitImpactForRow($row) {
 		const type = $row.find(".adjust-type").val();
+		if (type === "Purity Blend (Melting)") {
+			// For purity blend, do not update profit impact
+			$row.find(".profit-impact")
+				.text("+RM 0.00")
+				.removeClass("text-danger")
+				.addClass("text-success");
+			return 0;
+		}
 		const from = ($row.find(".from-purity").val() || "").trim();
 		const to = ($row.find(".to-purity").val() || "").trim();
 		const weight = parseFloat($row.find(".weight").val()) || 0;
@@ -1460,11 +1491,22 @@ class Step3TabReceiptReconciliation {
 				break;
 			case "Purity Change":
 			case "Purity Blend (Melting)":
-				// Move from -> to: net change = (margin_to - margin_from) * weight
-				const margin_to = getUR(to) - getUC(to);
-				const margin_from = getUR(from) - getUC(from);
-				impact = (margin_to - margin_from) * weight;
+				// For this adjustment row, impact depends on whether this row relates to 'from' or 'to' purity
+				if (
+					$row.find(".from-purity").is(":focus") ||
+					$row.find(".to-purity").is(":focus")
+				) {
+					// No change—just keep logic to calculate net margin difference * weight
+				}
+				// Clarify impact per each purity side:
+				// Since UI row represents entire adjustment, show net impact as positive if profit improves, negative otherwise
+				const marginFrom = getUR(from) - getUC(from);
+				const marginTo = getUR(to) - getUC(to);
+				// net margin change per gram
+				const netMarginDifference = marginTo - marginFrom;
+				impact = netMarginDifference * weight;
 				break;
+
 			default:
 				impact = 0;
 		}
