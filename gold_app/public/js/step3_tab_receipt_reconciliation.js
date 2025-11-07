@@ -21,6 +21,8 @@ class Step3TabReceiptReconciliation {
 		this.uploadedReceiptUrl = "";
 		this.availablePurities = [];
 
+		this.showLoader();
+
 		this.fetchPuritiesFromDoctype().then((purities) => {
 			this.availablePurities = purities;
 			this.render();
@@ -28,8 +30,21 @@ class Step3TabReceiptReconciliation {
 			this.bindUploadReceipt();
 			this.renderAdjustmentsSection();
 			this.attachNavHandlers();
+
+			this.hideLoader();
 		});
 	}
+
+	showLoader() {
+		this.container.html(`
+            <div class="loader-overlay">
+                <div class="loader"></div>
+                <p>Loading receipt details, please wait...</p>
+            </div>
+        `);
+	}
+
+	hideLoader() {}
 
 	initializeReconSummary() {
 		return this.bagSummary.map((r) => ({
@@ -222,6 +237,7 @@ class Step3TabReceiptReconciliation {
 		const tbody = section.find("tbody");
 		tbody.empty();
 		const purities = this.availablePurities; // get fresh purity list
+
 		const addRow = () => {
 			const idx = tbody.children().length + 1;
 			const optionHTML = adjustmentOptions
@@ -231,7 +247,12 @@ class Step3TabReceiptReconciliation {
 			const row = $(`
                 <tr data-idx="${idx}">
                     <td>${idx}</td>
-                    <td><select class="adjust-type">${optionHTML}</select></td>
+					<td class="adjustment-type-cell">
+            <div class="adjustment-controls">
+                <select class="adjust-type">${optionHTML}</select>
+                <button class="btn-create-purity" title="Create New Purity">+</button>
+            </div>
+        </td>
                     <td>
   <input list="from-purity-list-${idx}" class="from-purity" />
   <datalist id="from-purity-list-${idx}">
@@ -269,8 +290,13 @@ class Step3TabReceiptReconciliation {
 				const row = $(`
         <tr data-idx="${idx}">
             <td>${idx}</td>
-            <td><select class="adjust-type">${optionHTML}</select></td>
-          <td>
+			 <td class="adjustment-type-cell">
+            <div class="adjustment-controls">
+                <select class="adjust-type">${optionHTML}</select>
+               <button class="btn-create-purity" title="Create New Purity">+</button>
+            </div>
+        </td>
+            <td>
   <input list="from-purity-list-${idx}" class="from-purity" />
   <datalist id="from-purity-list-${idx}">
     ${purities.map((p) => `<option value="${p}">`).join("")}
@@ -402,6 +428,16 @@ class Step3TabReceiptReconciliation {
 		// Event handler for change on adjustment type select dropdown
 		tbody.off("change", ".adjust-type").on("change", ".adjust-type", (e) => {
 			const row = $(e.currentTarget).closest("tr");
+			const selectedType = $(e.currentTarget).val();
+			const createPurityBtn = row.find(".btn-create-purity");
+
+			// NEW: Show/hide Create Purity button based on selection
+			if (selectedType === "Purity Blend (Melting)") {
+				createPurityBtn.show();
+			} else {
+				createPurityBtn.hide();
+			}
+
 			toggleToPurityField(row);
 			// Same as above: refresh adjustments and update recon
 			this.adjustments = [];
@@ -417,6 +453,13 @@ class Step3TabReceiptReconciliation {
 				});
 			});
 			this.updateReconciliationSummary();
+		});
+
+		// NEW: Event handler for Create Purity button click
+		tbody.off("click", ".btn-create-purity").on("click", ".btn-create-purity", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.showCreatePurityDialog();
 		});
 
 		// Real-time sync from_purity to to_purity for weight loss rows
@@ -435,7 +478,7 @@ class Step3TabReceiptReconciliation {
 
 	attachNavHandlers() {
 		this.container.find(".back-to-sale-btn").on("click", this.backCallback);
-		container
+		this.container
 			.find(".save-continue-btn")
 			.off("click")
 			.on("click", async () => {
@@ -662,8 +705,8 @@ class Step3TabReceiptReconciliation {
 
 					frappe.show_alert({
 						message: hasPurityBlend
-							? "Sales, Delivery, and Material Receipt created successfully."
-							: "Sales and Delivery created successfully.",
+							? "Sales created successfully."
+							: "Sales created successfully.",
 						indicator: "green",
 					});
 
@@ -745,7 +788,7 @@ class Step3TabReceiptReconciliation {
 			} else if (type === "Weight Adjustment - Stones") {
 				impactFrom = (urFrom - ucFrom) * wt;
 				adjustmentImpactMap[from] = (adjustmentImpactMap[from] || 0) + impactFrom;
-			} else if (type === "Purity Change" || type === "Purity Blend (Melting)") {
+			} else if (type === "Purity Change") {
 				// margin difference moved from => to
 				const margin_from = urFrom - ucFrom;
 				const margin_to = urTo - ucTo;
@@ -819,26 +862,6 @@ class Step3TabReceiptReconciliation {
 									.text()
 									.replace(/[^\d.-]/g, "")
 							) || 0;
-
-						if (fromCostBasis > 0 && fromClaimed > 0) {
-							const perGramRate = fromCostBasis / fromClaimed;
-							const totalCost = perGramRate * addedWeight;
-
-							newRow.find(".cost-basis").text(totalCost.toFixed(2));
-							newRow.data("per-gram-rate", perGramRate); // store per-gram rate for later use
-
-							console.log(
-								`Copied cost basis ${fromCostBasis} from purity ${fromPurity} → ${toPurity}, per-gram rate ${perGramRate.toFixed(
-									2
-								)}`
-							);
-						} else {
-							console.warn(
-								`Source purity ${fromPurity} has 0 cost basis or 0 claimed weight.`
-							);
-						}
-					} else {
-						console.warn(`No valid source row found for from_purity ${fromPurity}.`);
 					}
 				}
 			}
@@ -1069,8 +1092,19 @@ class Step3TabReceiptReconciliation {
 			this.updateReconciliationSummary();
 		});
 
+		// UPDATED: Add Create Purity button logic here
 		tbody.off("change", ".adjust-type").on("change", ".adjust-type", (e) => {
 			const row = $(e.currentTarget).closest("tr");
+			const selectedType = $(e.currentTarget).val();
+			const createPurityBtn = row.find(".btn-create-purity");
+
+			// Show/hide Create Purity button based on selection
+			if (selectedType === "Purity Blend (Melting)") {
+				createPurityBtn.show();
+			} else {
+				createPurityBtn.hide();
+			}
+
 			this.toggleToPurityField(row);
 			this.updateReconciliationSummary();
 		});
@@ -1086,6 +1120,120 @@ class Step3TabReceiptReconciliation {
 				].includes(adjustmentType)
 			) {
 				row.find(".to-purity").val($(this).val());
+			}
+		});
+	}
+
+	showCreatePurityDialog() {
+		const dialog = new frappe.ui.Dialog({
+			title: "Create New Purity",
+			fields: [
+				{
+					label: "Purity Name",
+					fieldname: "purity_name",
+					fieldtype: "Data",
+					reqd: 1,
+					description: "Enter purity value (e.g., 916, 999, 750)",
+				},
+			],
+			primary_action_label: "Create",
+			primary_action: async (values) => {
+				const purityName = values.purity_name.trim();
+
+				if (!purityName) {
+					frappe.msgprint("Please enter a purity name");
+					return;
+				}
+
+				// Check if purity already exists locally
+				if (this.availablePurities.includes(purityName)) {
+					frappe.msgprint({
+						title: "Purity Exists",
+						message: `Purity "${purityName}" already exists`,
+						indicator: "orange",
+					});
+					return;
+				}
+
+				try {
+					// Disable primary button and show loading
+					dialog.get_primary_btn().prop("disabled", true).text("Creating...");
+
+					// Call Python API to create purity
+					const response = await frappe.call({
+						method: "gold_app.api.sales.wholesale_warehouse.create_purity", // Adjust path to your API
+						args: {
+							purity_name: purityName,
+						},
+					});
+
+					if (response.message && response.message.status === "success") {
+						// Add to local array
+						this.availablePurities.push(purityName);
+						this.availablePurities.sort(); // Keep sorted
+
+						// Refresh the adjustment section to update datalists
+						this.updatePurityDatalistsOnly();
+
+						frappe.show_alert({
+							message: `Purity "${purityName}" created successfully`,
+							indicator: "green",
+						});
+
+						dialog.hide();
+					} else {
+						throw new Error("Unexpected response from server");
+					}
+				} catch (error) {
+					console.error("Error creating purity:", error);
+
+					let errorMsg = "Unknown error";
+					if (error.message) {
+						errorMsg = error.message;
+					} else if (error._server_messages) {
+						try {
+							const messages = JSON.parse(error._server_messages);
+							errorMsg = messages.map((m) => JSON.parse(m).message).join(", ");
+						} catch (e) {
+							errorMsg = error._server_messages;
+						}
+					}
+
+					frappe.msgprint({
+						title: "Error",
+						message: `Failed to create purity: ${errorMsg}`,
+						indicator: "red",
+					});
+
+					// Re-enable button and restore label
+					dialog.get_primary_btn().prop("disabled", false).text("Create");
+				}
+			},
+		});
+
+		dialog.show();
+	}
+
+	updatePurityDatalistsOnly() {
+		const section = this.container.find(".section3-adjustments");
+		const tbody = section.find("tbody");
+		const purities = this.availablePurities;
+
+		// Update each row's datalist options
+		tbody.find("tr").each((_, tr) => {
+			const $row = $(tr);
+			const idx = $row.data("idx");
+
+			// Update "From Purity" datalist
+			const fromDatalist = $row.find(`#from-purity-list-${idx}`);
+			if (fromDatalist.length) {
+				fromDatalist.html(purities.map((p) => `<option value="${p}">`).join(""));
+			}
+
+			// Update "To Purity" datalist
+			const toDatalist = $row.find(`#to-purity-list-${idx}`);
+			if (toDatalist.length) {
+				toDatalist.html(purities.map((p) => `<option value="${p}">`).join(""));
 			}
 		});
 	}
@@ -1181,7 +1329,6 @@ class Step3TabReceiptReconciliation {
 					items.push({
 						purity: toPurity,
 						qty: addedWeight,
-						basic_rate: basicRate,
 					});
 				}
 			});
@@ -1456,76 +1603,51 @@ class Step3TabReceiptReconciliation {
 
 	computeProfitImpactForRow($row) {
 		const type = $row.find(".adjust-type").val();
-		if (type === "Purity Blend (Melting)") {
-			// For purity blend, do not update profit impact
-			$row.find(".profit-impact")
-				.text("+RM 0.00")
-				.removeClass("text-danger")
-				.addClass("text-success");
-			return 0;
-		}
 		const from = ($row.find(".from-purity").val() || "").trim();
-		const to = ($row.find(".to-purity").val() || "").trim();
 		const weight = parseFloat($row.find(".weight").val()) || 0;
 
-		const { unit_revenue, unit_cost } = this.computeUnitMaps();
+		// For Item Return, always show 0
+		if (type === "Item Return") {
+			$row.find(".profit-impact").text("RM 0.00").removeClass("text-danger text-success");
+			return 0;
+		}
 
-		const getUR = (p) => unit_revenue[p] || 0;
-		const getUC = (p) => unit_cost[p] || 0;
-
-		let impact = 0;
-
-		switch (type) {
-			case "Item Return":
-				// Profit lost = gross margin per g * weight
-				impact = -(getUR(from) - getUC(from)) * weight;
-				break;
-			case "Weight Loss - Torching/Cleaning":
-			case "Weight Loss - Other":
-				// Revenue lost (conservative)
-				impact = -getUR(from) * weight;
-				break;
-			case "Weight Adjustment - Stones":
-				// Stones removal increases saleable weight → gains margin
-				impact = (getUR(from) - getUC(from)) * weight;
-				break;
-			case "Purity Change":
-			case "Purity Blend (Melting)":
-				// For this adjustment row, impact depends on whether this row relates to 'from' or 'to' purity
-				if (
-					$row.find(".from-purity").is(":focus") ||
-					$row.find(".to-purity").is(":focus")
-				) {
-					// No change—just keep logic to calculate net margin difference * weight
+		// Get current rate (RM/g) for the from_purity
+		let currentRate = 0;
+		this.container.find(".receipt-table tbody tr[data-idx]").each((_, tr) => {
+			const $tr = $(tr);
+			const purity = ($tr.find(".input-purity").val() || "").trim();
+			if (purity === from) {
+				const rowWeight = parseFloat($tr.find(".input-weight").val()) || 0;
+				const rowAmount = parseFloat($tr.find(".input-amount").val()) || 0;
+				if (rowWeight > 0) {
+					currentRate = rowAmount / rowWeight; // RM/g
 				}
-				// Clarify impact per each purity side:
-				// Since UI row represents entire adjustment, show net impact as positive if profit improves, negative otherwise
-				const marginFrom = getUR(from) - getUC(from);
-				const marginTo = getUR(to) - getUC(to);
-				// net margin change per gram
-				const netMarginDifference = marginTo - marginFrom;
-				impact = netMarginDifference * weight;
-				break;
+			}
+		});
 
-			default:
-				impact = 0;
-		}
+		// Calculate impact = Rate × Weight
+		const impact = currentRate * weight;
 
-		// Update UI cell text with sign and two decimals
-		// --- Update UI cell styling and text based on sign ---
+		// Update UI cell styling and text
 		const $impactCell = $row.find(".profit-impact");
-		const sign = impact >= 0 ? "+" : "-";
-		const absVal = Math.abs(impact).toFixed(2);
-		$impactCell.text(`${sign}RM ${absVal}`);
 
-		// Apply color classes
-		if (impact >= 0) {
-			$impactCell.removeClass("text-danger").addClass("text-success");
-		} else {
-			$impactCell.removeClass("text-success").addClass("text-danger");
+		// Weight Adjustment - Stones shows in GREEN (positive)
+		if (type === "Weight Adjustment - Stones") {
+			$impactCell
+				.text(`+RM ${impact.toFixed(2)}`)
+				.removeClass("text-danger")
+				.addClass("text-success");
+		}
+		// All other types show in RED (negative)
+		else {
+			$impactCell
+				.text(`-RM ${impact.toFixed(2)}`)
+				.removeClass("text-success")
+				.addClass("text-danger");
 		}
 
-		// return signed numeric value
-		return impact;
+		// Return signed numeric value (negative for losses, positive for stones)
+		return type === "Weight Adjustment - Stones" ? impact : -impact;
 	}
 }

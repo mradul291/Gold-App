@@ -205,8 +205,7 @@ def create_material_receipt(items):
         stock_entry.append("items", {
             "item_code": item_code,
             "qty": qty,
-            "basic_rate": basic_rate,
-            # ✅ Important part:
+            "basic_rate": 0,
             "allow_zero_valuation_rate": 1 if basic_rate == 0 else 0
         })
 
@@ -217,3 +216,37 @@ def create_material_receipt(items):
         "message": "Stock Entry created successfully",
         "stock_entry_name": stock_entry.name
     }
+
+# Create Purity
+@frappe.whitelist()
+def create_purity(purity_name):
+
+    try:
+        # Validate input
+        if not purity_name or not purity_name.strip():
+            frappe.throw(_("Purity name is required"))
+        
+        purity_name = purity_name.strip()
+        
+        # Check if purity already exists
+        if frappe.db.exists("Purity", {"purity_name": purity_name}):
+            frappe.throw(_("Purity {0} already exists").format(purity_name))
+        
+        # Create new Purity document
+        purity_doc = frappe.get_doc({
+            "doctype": "Purity",
+            "purity_name": purity_name
+        })
+        
+        purity_doc.insert()
+        frappe.db.commit()
+        
+        return {
+            "status": "success",
+            "message": _("Purity {0} created successfully").format(purity_name),
+            "purity_name": purity_name
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error creating purity: {str(e)}", "Purity Creation Error")
+        frappe.throw(_("Failed to create purity: {0}").format(str(e)))

@@ -4,26 +4,52 @@ class Step3TabPaymentEntry {
 		this.container = container;
 		this.submitCallback = submitCallback;
 		this.render();
-		this.attachHandlers();
 	}
 
-	render() {
-		this.container.html(`
-			<div class="payment-entry-section mt-4">
-				<h4 class="section-title mb-3">Payment Entry Section</h4>
-				<div class="form-group mb-3">
-					<label for="payment-method" class="form-label fw-bold">Select Payment Method</label>
-					<select id="payment-method" class="form-select">
-						<option value="Cash" selected>Cash</option>
-						<option value="Bank Transfer">Bank Transfer</option>
-						<option value="Mix">Mix</option>
-					</select>
-				</div>
-				<div class="text-end">
-					<button id="submit-payment" class="btn btn-primary mt-3">Submit Payment</button>
-				</div>
-			</div>
-		`);
+	async render() {
+		// Wrap content with loader
+		let html = `
+            <div class="payment-entry-wrapper">
+                <!-- Loader (shown initially) -->
+                <div class="loader-overlay">
+                    <div class="loader"></div>
+                    <p>Loading payment details, please wait...</p>
+                </div>
+                
+                <!-- Content (hidden initially) -->
+                <div class="payment-entry-content" style="display:none;">
+                    <div class="payment-entry-section mt-4">
+                        <h4 class="section-title mb-3">Payment Entry Section</h4>
+                        <div class="form-group mb-3">
+                            <label for="payment-method" class="form-label fw-bold">Select Payment Method</label>
+                            <select id="payment-method" class="form-select">
+                                <option value="Cash" selected>Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Mix">Mix</option>
+                            </select>
+                        </div>
+                        <div class="text-end">
+                            <button id="submit-payment" class="btn btn-primary mt-3">Submit Payment</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+		this.container.html(html);
+
+		// Simulate loading for visual consistency
+		await new Promise((resolve) => setTimeout(resolve, 300));
+
+		// Hide loader and show content
+		const loader = this.container.find(".loader-overlay");
+		const content = this.container.find(".payment-entry-content");
+
+		loader.fadeOut(200, () => {
+			content.fadeIn(200);
+			// Attach handlers after content is visible
+			this.attachHandlers();
+		});
 	}
 
 	attachHandlers() {
