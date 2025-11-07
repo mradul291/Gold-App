@@ -13,6 +13,9 @@ class Step3TabReceiptReconciliation {
 		this.continueCallback = continueCallback;
 		this.syncDataCallback = syncDataCallback;
 		this.onSalesInvoiceCreated = onSalesInvoiceCreated;
+
+		this.salesDetailData = JSON.parse(JSON.stringify(props.bagSummary || []));
+
 		this.reconSummary = props.reconSummary.length
 			? props.reconSummary
 			: this.initializeReconSummary();
@@ -30,7 +33,6 @@ class Step3TabReceiptReconciliation {
 			this.bindUploadReceipt();
 			this.renderAdjustmentsSection();
 			this.attachNavHandlers();
-
 			this.hideLoader();
 		});
 	}
@@ -1257,7 +1259,7 @@ class Step3TabReceiptReconciliation {
 		}
 
 		const warehouse = this.props.selected_bag + " - AGSB";
-		const items = this.bagSummary.map((line) => {
+		const items = this.salesDetailData.map((line) => {
 			const purityStr = line.purity || "";
 			return {
 				item_code: `Unsorted-${purityStr}`,
@@ -1558,7 +1560,6 @@ class Step3TabReceiptReconciliation {
 		});
 	}
 
-	// Prfit Impact
 	computeUnitMaps() {
 		const unit_revenue = {};
 		const unit_cost = {};

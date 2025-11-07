@@ -2,7 +2,6 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_delivery_note
 
 #Fetching Bag with Full data on page
 @frappe.whitelist()
@@ -36,60 +35,6 @@ def get_warehouse_stock(warehouse_name=None):
 
     frappe.logger().info(f"Stock found for {warehouse_name}: {data}")
     return data
-
-# @frappe.whitelist()
-# def create_complete_sales_flow(customer, item_code, purity, weight, rate, payment_mode="Cash", company=None):
-#     try:
-#         if not company:
-#             company = frappe.defaults.get_user_default("Company")
-        
-#         # Step 1: Create Sales Invoice
-#         si = frappe.get_doc({
-#             "doctype": "Sales Invoice",
-#             "customer": customer,
-#             "company": company,
-#             "posting_date": frappe.utils.nowdate(),
-#             "update_stock": 1,
-#             "items": [{
-#                 "item_code": item_code,
-#                 "qty": flt(weight),
-#                 "rate": flt(rate),
-#             }]
-#         })
-
-#         # Add purity if custom field exists
-#         si_item_meta = frappe.get_meta("Sales Invoice Item")
-#         if "purity" in [df.fieldname for df in si_item_meta.fields]:
-#             si.items[0].purity = purity
-
-#         si.insert(ignore_permissions=True)
-#         si.submit()
-#         frappe.db.commit()
-
-#         # Step 2: Create Payment Entry
-#         pe = get_payment_entry("Sales Invoice", si.name)
-#         pe.mode_of_payment = payment_mode
-        
-#         # Always ensure reference info is populated to avoid validation issues
-#         if not getattr(pe, "reference_no", None):
-#             pe.reference_no = "CASH-TXN"  # or generate dynamically
-#         if not getattr(pe, "reference_date", None):
-#             pe.reference_date = frappe.utils.nowdate()
-        
-#         pe.insert(ignore_permissions=True)
-#         pe.submit()
-#         frappe.db.commit()
-
-#         return {
-#             "status": "success",
-#             "sales_invoice": si.name,
-#             "payment_entry": pe.name,
-#         }
-
-#     except Exception as e:
-#         frappe.db.rollback()
-#         frappe.log_error(frappe.get_traceback(), "Sales Flow API Error")
-#         frappe.throw(f"Error while creating Sales Flow: {str(e)}")
 
 # Create Sales Invoice for Stock Reduction
 @frappe.whitelist()
@@ -156,7 +101,6 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode):
         frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
 
-
 # Fetching Entire Wholesale Transaction Doctype data
 @frappe.whitelist()
 def get_wholesale_transaction_by_bag(wholesale_bag):
@@ -164,23 +108,54 @@ def get_wholesale_transaction_by_bag(wholesale_bag):
     if not wholesale_bag:
         frappe.throw(_("Parameter 'wholesale_bag' is required"))
 
-    # Fetch list of docnames matching bag
     docs = frappe.get_all('Wholesale Transaction', filters={'wholesale_bag': wholesale_bag}, fields=['name'])
 
     if not docs:
         return {'status': 'error', 'message': f'No Wholesale Transaction found for bag: {wholesale_bag}'}
 
     docname = docs[0].name
-
-    # Fetch full document including child tables
     doc = frappe.get_doc('Wholesale Transaction', docname)
-    
-    # Convert to dict/json to return
     doc_dict = doc.as_dict()
 
     return {'status': 'success', 'data': doc_dict}
 
 # Create Stock Entry for Newly Created Purity in Blending
+# @frappe.whitelist()
+# def create_material_receipt(items):
+#     import json
+#     if isinstance(items, str):
+#         items = json.loads(items)
+
+#     if not items:
+#         frappe.throw(_("Items data is required"))
+
+#     stock_entry = frappe.get_doc({
+#         "doctype": "Stock Entry",
+#         "stock_entry_type": "Material Receipt",
+#         "to_warehouse": "Unsorted - AGSB",
+#         "items": []
+#     })
+
+#     for d in items:
+#         item_code = f"Unsorted-{d.get('purity')}"
+#         qty = flt(d.get("qty"))
+#         basic_rate = flt(d.get("basic_rate")) or 0
+
+#         stock_entry.append("items", {
+#             "item_code": item_code,
+#             "qty": qty,
+#             "basic_rate": 0,
+#             "allow_zero_valuation_rate": 1 if basic_rate == 0 else 0
+#         })
+
+#     stock_entry.insert(ignore_permissions=True)
+#     stock_entry.submit()
+
+#     return {
+#         "message": "Stock Entry created successfully",
+#         "stock_entry_name": stock_entry.name
+#     }
+
 @frappe.whitelist()
 def create_material_receipt(items):
     import json
@@ -212,10 +187,34 @@ def create_material_receipt(items):
     stock_entry.insert(ignore_permissions=True)
     stock_entry.submit()
 
+    material_issue = frappe.get_doc({
+        "doctype": "Stock Entry",
+        "stock_entry_type": "Material Issue",
+        "from_warehouse": "Unsorted - AGSB",
+        "items": []
+    })
+
+    for d in items:
+        item_code = f"Unsorted-{d.get('purity')}"
+        qty = flt(d.get("qty"))
+        basic_rate = flt(d.get("basic_rate")) or 0
+
+        material_issue.append("items", {
+            "item_code": item_code,
+            "qty": qty,
+            "basic_rate": 0,
+            "allow_zero_valuation_rate": 1 if basic_rate == 0 else 0
+        })
+
+    material_issue.insert(ignore_permissions=True)
+    material_issue.submit()
+
     return {
         "message": "Stock Entry created successfully",
-        "stock_entry_name": stock_entry.name
+        "stock_entry_name": stock_entry.name  
     }
+
+
 
 # Create Purity
 @frappe.whitelist()

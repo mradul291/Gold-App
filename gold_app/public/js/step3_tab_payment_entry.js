@@ -100,8 +100,12 @@ class Step3TabPaymentEntry {
 								indicator: "green",
 							});
 
+							setTimeout(() => {
+								location.reload();
+							}, 1500);
+
 							// Move to next tab or summary screen if callback exists
-							if (this.submitCallback) this.submitCallback(r.message);
+							//if (this.submitCallback) this.submitCallback(r.message);
 						} else {
 							frappe.show_alert({
 								message: "Failed to create payment entry. Please try again.",
