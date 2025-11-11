@@ -16,7 +16,14 @@
   "section_break_qayb",
   "receipt_lines",
   "reconciliation_lines",
-  "adjustments"
+  "adjustments",
+  "payments_tab",
+  "total_payment_amount",
+  "amount_paid",
+  "column_break_uemo",
+  "balance_due",
+  "section_break_ml78",
+  "payments"
  ],
  "fields": [
   {
@@ -84,13 +91,52 @@
   {
    "fieldname": "upload_receipt",
    "fieldtype": "Attach",
-   "label": "Upload Receipt"
+   "label": "Upload Receipt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payments_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payments"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "Wholesale Payment Line",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_payment_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_paid",
+   "fieldtype": "Currency",
+   "label": "Amount Paid",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_ml78",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_uemo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "balance_due",
+   "fieldtype": "Currency",
+   "label": "Balance Due",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-30 18:13:36.747498",
+ "modified": "2025-11-11 15:54:31.318674",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Transaction",

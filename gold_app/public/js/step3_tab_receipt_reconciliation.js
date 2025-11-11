@@ -13,8 +13,8 @@ class Step3TabReceiptReconciliation {
 		this.continueCallback = continueCallback;
 		this.syncDataCallback = syncDataCallback;
 		this.onSalesInvoiceCreated = onSalesInvoiceCreated;
-
 		this.salesDetailData = JSON.parse(JSON.stringify(props.bagSummary || []));
+		this.selected_bag = props.selected_bag || "";
 
 		this.reconSummary = props.reconSummary.length
 			? props.reconSummary
@@ -577,18 +577,9 @@ class Step3TabReceiptReconciliation {
 			}
 
 			// Format on blur: always to 2 decimals
-			row.find(".input-weight").val(function (_, v) {
-				v = parseFloat(v) || 0;
-				return v.toFixed(2);
-			});
-			row.find(".input-rate").val(function (_, v) {
-				v = parseFloat(v) || 0;
-				return v.toFixed(2);
-			});
-			row.find(".input-amount").val(function (_, v) {
-				v = parseFloat(v) || 0;
-				return v.toFixed(2);
-			});
+			row.find(".input-weight").val(weight.toFixed(2));
+			row.find(".input-rate").val(rate.toFixed(2));
+			row.find(".input-amount").val(amount.toFixed(2));
 
 			if (this.bagSummary[idx]) {
 				this.bagSummary[idx].weight = weight;
@@ -687,6 +678,7 @@ class Step3TabReceiptReconciliation {
 				const hasPurityBlend = adjustments.some(
 					(adj) => adj.type === "Purity Blend (Melting)"
 				);
+				const hasItemReturn = adjustments.some((adj) => adj.type === "Item Return");
 
 				if (!this.isFullyReconciled() && !hasPurityBlend) {
 					frappe.msgprint({
@@ -701,6 +693,9 @@ class Step3TabReceiptReconciliation {
 				try {
 					if (hasPurityBlend) {
 						await this.callCreateMaterialReceiptAPI();
+					}
+					if (hasItemReturn) {
+						await this.callCreateItemReturnStockEntryAPI();
 					}
 
 					await this.callCreateSalesAndDeliveryAPI();
@@ -1345,9 +1340,8 @@ class Step3TabReceiptReconciliation {
 			// Call backend API to create Stock Entry
 			await frappe.call({
 				method: "gold_app.api.sales.wholesale_warehouse.create_material_receipt",
-				args: { items },
+				args: { items, to_warehouse: this.selected_bag },
 				freeze: true,
-				freeze_message: "Creating Material Receipt...",
 				callback: (r) => {
 					if (r.message) {
 						frappe.show_alert({
@@ -1362,6 +1356,59 @@ class Step3TabReceiptReconciliation {
 			frappe.msgprint({
 				title: "Error",
 				message: `Failed to create Material Receipt: ${error.message}`,
+				indicator: "red",
+			});
+		}
+	}
+
+	getRateFromBagSummary(purity) {
+		const item = this.bagSummary.find((r) => r.purity === purity);
+		return item ? item.rate || 0 : 0;
+	}
+
+	async callCreateItemReturnStockEntryAPI() {
+		try {
+			const itemReturnItems = [];
+			(this.adjustments || []).forEach((adj) => {
+				if (adj.type === "Item Return") {
+					const fromPurity = adj.from_purity.trim();
+					const weight = parseFloat(adj.weight) || 0;
+					if (!fromPurity || weight === 0) return;
+
+					const basicRate = this.getRateFromBagSummary(fromPurity);
+
+					itemReturnItems.push({
+						purity: fromPurity,
+						qty: weight,
+						basic_rate: basicRate,
+					});
+				}
+			});
+
+			if (itemReturnItems.length === 0) {
+				console.log("No Item Return items found to create stock entry.");
+				return;
+			}
+
+			await frappe.call({
+				method: "gold_app.api.sales.wholesale_warehouse.create_item_return_stock_entry",
+				args: { items: itemReturnItems, to_warehouse: this.selected_bag },
+				freeze: true,
+				freeze_message: "Creating Item Return Stock Entry...",
+				callback: (r) => {
+					if (r.message) {
+						frappe.show_alert({
+							message: `Item Return Stock Entry Created: ${r.message.stock_entry_name}`,
+							indicator: "green",
+						});
+					}
+				},
+			});
+		} catch (error) {
+			console.error("Error creating Item Return Stock Entry:", error);
+			frappe.msgprint({
+				title: "Error",
+				message: `Failed to create Item Return Stock Entry: ${error.message}`,
 				indicator: "red",
 			});
 		}
