@@ -150,57 +150,71 @@ class Step3TabPaymentEntry {
 			return;
 		}
 
-		for (const payment of pendingPayments) {
-			try {
-				// Step 1: Create Payment Entry
-				const peResponse = await frappe.call({
-					method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
-					args: {
-						sales_invoice_name: sales_invoice,
-						payment_mode: payment.method,
-						paid_amount: payment.amount,
-					},
-				});
+		// 🟡 Confirmation Dialog
+		frappe.confirm(
+			`Are you sure you want to submit <b>${pendingPayments.length}</b> pending payment(s)?`,
+			async () => {
+				// --- Proceed only if user confirms
+				for (const payment of pendingPayments) {
+					try {
+						// Step 1: Create Payment Entry
+						const peResponse = await frappe.call({
+							method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
+							args: {
+								sales_invoice_name: sales_invoice,
+								payment_mode: payment.method,
+								paid_amount: payment.amount,
+							},
+						});
 
-				if (peResponse.message && peResponse.message.status === "success") {
-					// Step 2: Record Wholesale Transaction Payment
-					const wtResponse = await frappe.call({
-						method: "gold_app.api.sales.wholesale_warehouse.record_wholesale_payment",
-						args: {
-							wholesale_bag: selected_bag,
-							method: payment.method,
-							amount: payment.amount,
-							ref_no: payment.ref || "",
-							status: "Received",
-							total_amount: this.total,
-						},
-					});
+						if (peResponse.message && peResponse.message.status === "success") {
+							// Step 2: Record Wholesale Transaction Payment
+							const wtResponse = await frappe.call({
+								method: "gold_app.api.sales.wholesale_warehouse.record_wholesale_payment",
+								args: {
+									wholesale_bag: selected_bag,
+									method: payment.method,
+									amount: payment.amount,
+									ref_no: payment.ref || "",
+									status: "Received",
+									total_amount: this.total,
+								},
+							});
 
-					if (wtResponse.message && wtResponse.message.status === "success") {
-						payment.status = "Received";
+							if (wtResponse.message && wtResponse.message.status === "success") {
+								payment.status = "Received";
+								frappe.show_alert({
+									message: `Payment of RM${payment.amount} (${payment.method}) submitted successfully.`,
+									indicator: "green",
+								});
+							}
+						} else {
+							frappe.show_alert({
+								message: `Failed to create payment entry for RM${payment.amount}.`,
+								indicator: "red",
+							});
+						}
+					} catch (err) {
+						console.error("Error in submitPayments:", err);
 						frappe.show_alert({
-							message: `Payment of RM${payment.amount} (${payment.method}) submitted successfully.`,
-							indicator: "green",
+							message: "Error while submitting payments.",
+							indicator: "red",
 						});
 					}
-				} else {
-					frappe.show_alert({
-						message: `Failed to create payment entry for RM${payment.amount}.`,
-						indicator: "red",
-					});
 				}
-			} catch (err) {
-				console.error("Error in submitPayments:", err);
+
+				// Refresh UI after all submissions
+				this.renderHistory();
+				this.updateSummary();
+			},
+			() => {
+				// --- Cancelled by user
 				frappe.show_alert({
-					message: "Error while submitting payments.",
-					indicator: "red",
+					message: "Payment submission cancelled.",
+					indicator: "orange",
 				});
 			}
-		}
-
-		// Refresh UI after all submissions
-		this.renderHistory();
-		this.updateSummary();
+		);
 	}
 
 	async markFullyPaid() {
