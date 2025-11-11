@@ -17,15 +17,15 @@ class Step3TabPaymentEntry {
                     <div class="summary-grid wide">
                         <div>
                             <p class="label">Total Amount</p>
-                            <p id="total-amount" class="value">₹${this.total.toFixed(2)}</p>
+                            <p id="total-amount" class="value">RM${this.total.toFixed(2)}</p>
                         </div>
                         <div>
                             <p class="label">Amount Paid</p>
-                            <p id="total-paid" class="value paid">₹0.00</p>
+                            <p id="total-paid" class="value paid">RM0.00</p>
                         </div>
                         <div>
                             <p class="label">Balance Due</p>
-                            <p id="remaining-amount" class="value due">₹${this.total.toFixed(
+                            <p id="remaining-amount" class="value due">RM${this.total.toFixed(
 								2
 							)}</p>
                         </div>
@@ -77,7 +77,7 @@ class Step3TabPaymentEntry {
                         <tfoot>
                             <tr>
                                 <td colspan="2"></td>
-                                <td id="history-total">₹0.00</td>
+                                <td id="history-total">RM0.00</td>
                                 <td colspan="3" class="text-right">Total Paid</td>
                             </tr>
                         </tfoot>
@@ -179,13 +179,13 @@ class Step3TabPaymentEntry {
 					if (wtResponse.message && wtResponse.message.status === "success") {
 						payment.status = "Received";
 						frappe.show_alert({
-							message: `Payment of ₹${payment.amount} (${payment.method}) submitted successfully.`,
+							message: `Payment of RM${payment.amount} (${payment.method}) submitted successfully.`,
 							indicator: "green",
 						});
 					}
 				} else {
 					frappe.show_alert({
-						message: `Failed to create payment entry for ₹${payment.amount}.`,
+						message: `Failed to create payment entry for RM${payment.amount}.`,
 						indicator: "red",
 					});
 				}
@@ -253,9 +253,9 @@ class Step3TabPaymentEntry {
 	}
 
 	updateSummary() {
-		this.container.find("#total-paid").text(`₹${this.paid.toFixed(2)}`);
-		this.container.find("#remaining-amount").text(`₹${(this.total - this.paid).toFixed(2)}`);
-		this.container.find("#history-total").text(`₹${this.paid.toFixed(2)}`);
+		this.container.find("#total-paid").text(`RM${this.paid.toFixed(2)}`);
+		this.container.find("#remaining-amount").text(`RM${(this.total - this.paid).toFixed(2)}`);
+		this.container.find("#history-total").text(`RM${this.paid.toFixed(2)}`);
 	}
 
 	renderHistory() {
@@ -267,7 +267,7 @@ class Step3TabPaymentEntry {
                 <tr class="${p.status === "Received" ? "received-row" : "pending-row"}">
                     <td>${p.date}</td>
                     <td>${p.method}</td>
-                    <td>₹${p.amount.toFixed(2)}</td>
+                    <td>RM${p.amount.toFixed(2)}</td>
                     <td>${p.ref || "-"}</td>
                     <td>${p.status}</td>
 					<td>
@@ -302,7 +302,7 @@ class Step3TabPaymentEntry {
 					this.updateSummary();
 
 					frappe.show_alert({
-						message: `Removed ₹${payment.amount} (${payment.method}) from payment list.`,
+						message: `Removed RM${payment.amount} (${payment.method}) from payment list.`,
 						indicator: "orange",
 					});
 				});
