@@ -1702,261 +1702,282 @@ class Step3TabReceiptReconciliation {
 	}
 }
 
-// Payment Entry page - Old UI code
+// Payment Entry page - New UI code
 
 class Step3TabPaymentEntry {
 	constructor(props, container, submitCallback) {
 		this.props = props || {};
 		this.container = container;
 		this.submitCallback = submitCallback;
-		this.splits = [];
-		this.targetAmount = props.totalAmount || 0; // Total amount to be paid
+		this.payments = [];
+		this.total = props.totalAmount || 0;
+		this.paid = 0;
 		this.render();
 	}
 
 	async render() {
 		let html = `
-			<div class="payment-entry-wrapper">
-				<!-- Loader -->
-				<div class="loader-overlay">
-					<div class="loader"></div>
-					<p>Loading payment details, please wait...</p>
-				</div>
+                <!-- Payment Summary -->
+                <div class="summary-box full-width">
+                    <h3>Payment Summary</h3>
+                    <div class="summary-grid wide">
+                        <div>
+                            <p class="label">Total Amount</p>
+                            <p id="total-amount" class="value">₹${this.total.toFixed(2)}</p>
+                        </div>
+                        <div>
+                            <p class="label">Amount Paid</p>
+                            <p id="total-paid" class="value paid">₹0.00</p>
+                        </div>
+                        <div>
+                            <p class="label">Balance Due</p>
+                            <p id="remaining-amount" class="value due">₹${this.total.toFixed(
+								2
+							)}</p>
+                        </div>
+                    </div>
+                </div>
 
-				<!-- Content -->
-				<div class="payment-entry-content" style="display:none;">
-					<div class="payment-entry-section mt-4">
-						<h4 class="section-title mb-3">Payment Entry Section</h4>
+                <!-- Add New Payment -->
+                <div class="payment-form full-width">
+                    <h3>Add New Payment</h3>
+                    <div class="form-grid full">
+                        <div>
+                            <label>Payment Method</label>
+                            <select id="pay-method">
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Amount to Pay</label>
+                            <input id="pay-amount" type="number" min="0" step="0.01" placeholder="Enter amount" />
+                        </div>
+                        <div style="grid-column: 1 / span 2;">
+                            <label>Reference No. (optional)</label>
+                            <input id="pay-ref" type="text" placeholder="e.g. TXN-1234" />
+                        </div>
+                    </div>
 
-						<div class="mb-2"><strong>Total Amount:</strong>
-							<span id="total-amount">${this.targetAmount}</span>
-						</div>
-						<div class="mb-2"><strong>Total Paid:</strong>
-							<span id="total-paid">0</span>
-						</div>
-						<div class="mb-3"><strong>Remaining:</strong>
-							<span id="remaining-amount">${this.targetAmount}</span>
-						</div>
+                    <div class="form-actions">
+                        <button id="add-payment" class="btn green">+ Add Payment</button>
+                        <button id="full-payment" class="btn blue right">Mark Fully Paid</button>
+                    </div>
+                </div>
 
-						<table class="table table-bordered" id="splits-table">
-							<thead>
-								<tr>
-									<th style="width:35%;">Payment Method</th>
-									<th style="width:35%;">Amount</th>
-									<th style="width:20%;">Actions</th>
-								</tr>
-							</thead>
-							<tbody></tbody>
-						</table>
+                <!-- Payment History -->
+                <div class="history-box full-width mt-4">
+                    <h3>Payment History</h3>
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Amount</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"></td>
+                                <td id="history-total">₹0.00</td>
+                                <td colspan="2" class="text-right">Total Paid</td>
+                            </tr>
+                        </tfoot>
+                    </table>
 
-						<button id="add-split-row" class="btn btn-secondary mb-3">Add Split</button>
-
-						<div class="text-end">
-							<button id="add-payment" class="btn btn-success mt-3 me-2">Add Payment</button>
-							<button id="full-payment" class="btn btn-primary mt-3">Full Payment</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		`;
+                    <div class="text-right mt-3">
+                        <button id="submit-payments" class="btn green">Submit Payments</button>
+                    </div>
+                </div>
+        `;
 
 		this.container.html(html);
-		await new Promise((resolve) => setTimeout(resolve, 300));
-
-		const loader = this.container.find(".loader-overlay");
-		const content = this.container.find(".payment-entry-content");
-		loader.fadeOut(200, () => {
-			content.fadeIn(200);
-			this.attachHandlers();
-			this.addSplitRow(); // Default first row
-		});
+		this.attachHandlers();
 	}
 
 	attachHandlers() {
-		const container = this.container;
-
-		// Add new split
-		container
-			.find("#add-split-row")
-			.off("click")
-			.on("click", () => this.addSplitRow());
-
-		// Add Payment (partial)
-		container
-			.find("#add-payment")
-			.off("click")
-			.on("click", () => {
-				const splits = this.getCurrentSplits();
-				if (!splits.length) {
-					frappe.msgprint("Please add at least one payment split!");
-					return;
-				}
-
-				const totalPaid = this.calculateTotalPaid(splits);
-				if (totalPaid <= 0) {
-					frappe.msgprint("Enter a valid paid amount!");
-					return;
-				}
-
-				const { sales_invoice } = this.props;
-				if (!sales_invoice) {
-					frappe.msgprint("Sales Invoice reference missing!");
-					return;
-				}
-
-				// Process each split separately (for multiple partials)
-				this.processPayments(splits, sales_invoice);
-			});
-
-		// Full Payment (remaining)
-		container
-			.find("#full-payment")
-			.off("click")
-			.on("click", () => {
-				const remaining = parseFloat(container.find("#remaining-amount").text());
-				if (remaining <= 0) {
-					frappe.msgprint("No remaining amount to pay.");
-					return;
-				}
-
-				const { sales_invoice } = this.props;
-				if (!sales_invoice) {
-					frappe.msgprint("Sales Invoice reference missing!");
-					return;
-				}
-
-				const firstMethod = this.container.find(".split-method").first().val() || "Cash";
-
-				// Create full payment using remaining amount
-				this.processPayments([{ mode: firstMethod, amount: remaining }], sales_invoice);
-			});
+		this.container.find("#add-payment").on("click", () => this.addPayment());
+		this.container.find("#full-payment").on("click", () => this.markFullyPaid());
+		this.container.find("#submit-payments").on("click", () => this.submitPayments());
 	}
 
-	async processPayments(splits, sales_invoice) {
-		const btns = this.container.find("#add-payment, #full-payment");
-		btns.prop("disabled", true).text("Processing...");
+	// --- Add new payment to list (no backend call yet)
+	async addPayment() {
+		const date = frappe.datetime.now_date();
+		const method = this.container.find("#pay-method").val();
+		const amount = parseFloat(this.container.find("#pay-amount").val() || 0);
+		const ref = this.container.find("#pay-ref").val();
 
-		try {
-			for (const split of splits) {
-				await frappe.call({
+		if (!amount || amount <= 0) {
+			frappe.msgprint("Enter a valid amount!");
+			return;
+		}
+		if (amount > this.total - this.paid) {
+			frappe.msgprint("Amount exceeds remaining balance!");
+			return;
+		}
+
+		const newPayment = {
+			date,
+			method,
+			amount,
+			ref,
+			status: "Not Received",
+		};
+
+		this.payments.push(newPayment);
+		this.paid += amount;
+		this.renderHistory();
+		this.updateSummary();
+
+		// Reset form
+		this.container.find("#pay-amount").val("");
+		this.container.find("#pay-ref").val("");
+	}
+
+	// --- Submit all pending payments to backend
+	async submitPayments() {
+		const { sales_invoice, selected_bag } = this.props;
+
+		if (!sales_invoice || !selected_bag) {
+			frappe.msgprint("Missing required data: Sales Invoice or Wholesale Bag.");
+			return;
+		}
+
+		// Filter only unsubmitted rows
+		const pendingPayments = this.payments.filter((p) => p.status === "Not Received");
+
+		if (!pendingPayments.length) {
+			frappe.msgprint("All payments already submitted.");
+			return;
+		}
+
+		for (const payment of pendingPayments) {
+			try {
+				// Step 1: Create Payment Entry
+				const peResponse = await frappe.call({
 					method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
 					args: {
 						sales_invoice_name: sales_invoice,
-						payment_mode: split.mode,
-						paid_amount: split.amount,
-					},
-					callback: (r) => {
-						if (r.message && r.message.status === "success") {
-							frappe.show_alert({
-								message: `Payment of ₹${split.amount} (${split.mode}) created successfully!`,
-								indicator: "green",
-							});
-							this.updateAfterPayment(split.amount);
-						} else {
-							frappe.show_alert({
-								message: "Payment Entry creation failed.",
-								indicator: "red",
-							});
-						}
+						payment_mode: payment.method,
+						paid_amount: payment.amount,
 					},
 				});
+
+				if (peResponse.message && peResponse.message.status === "success") {
+					// Step 2: Record Wholesale Transaction Payment
+					const wtResponse = await frappe.call({
+						method: "gold_app.api.sales.wholesale_warehouse.record_wholesale_payment",
+						args: {
+							wholesale_bag: selected_bag,
+							method: payment.method,
+							amount: payment.amount,
+							ref_no: payment.ref || "",
+							status: "Received",
+							total_amount: this.total,
+						},
+					});
+
+					if (wtResponse.message && wtResponse.message.status === "success") {
+						payment.status = "Received";
+						frappe.show_alert({
+							message: `Payment of ₹${payment.amount} (${payment.method}) submitted successfully.`,
+							indicator: "green",
+						});
+					}
+				} else {
+					frappe.show_alert({
+						message: `Failed to create payment entry for ₹${payment.amount}.`,
+						indicator: "red",
+					});
+				}
+			} catch (err) {
+				console.error("Error in submitPayments:", err);
+				frappe.show_alert({
+					message: "Error while submitting payments.",
+					indicator: "red",
+				});
 			}
-		} catch (err) {
-			console.error("Payment creation error:", err);
-			frappe.show_alert({
-				message: "Error while creating payment entry.",
-				indicator: "red",
-			});
-		} finally {
-			btns.prop("disabled", false);
-			btns.filter("#add-payment").text("Add Payment");
-			btns.filter("#full-payment").text("Full Payment");
 		}
+
+		// Refresh UI after all submissions
+		this.renderHistory();
+		this.updateSummary();
 	}
 
-	updateAfterPayment(amountPaid) {
-		const totalPaidElem = this.container.find("#total-paid");
-		const remainingElem = this.container.find("#remaining-amount");
+	async markFullyPaid() {
+		const remaining = this.total - this.paid;
+		if (remaining <= 0) {
+			frappe.msgprint("Already fully paid!");
+			return;
+		}
 
-		let totalPaid = parseFloat(totalPaidElem.text()) || 0;
-		let remaining = parseFloat(remainingElem.text()) || 0;
+		const { sales_invoice, selected_bag } = this.props;
+		if (!sales_invoice || !selected_bag) {
+			frappe.msgprint("Missing required data: Sales Invoice or Wholesale Bag.");
+			return;
+		}
 
-		totalPaid += amountPaid;
-		remaining = Math.max(remaining - amountPaid, 0);
+		const date = frappe.datetime.now_date();
+		const dialog = new frappe.ui.Dialog({
+			title: "Select Payment Method",
+			fields: [
+				{
+					label: "Payment Method",
+					fieldname: "payment_method",
+					fieldtype: "Select",
+					options: ["Cash", "Bank Transfer"],
+					reqd: 1,
+					default: "Cash",
+				},
+			],
+			primary_action_label: "Confirm",
+			primary_action: (values) => {
+				const method = values.payment_method;
+				dialog.hide();
 
-		totalPaidElem.text(totalPaid.toFixed(2));
-		remainingElem.text(remaining.toFixed(2));
-	}
-
-	addSplitRow() {
-		const remaining = this.targetAmount - this.calculateTotalPaid();
-		const defaultAmount = remaining > 0 ? remaining : 0;
-
-		const rowHtml = `
-			<tr>
-				<td>
-					<select class="form-select split-method">
-						<option value="Cash">Cash</option>
-						<option value="Bank Transfer">Bank Transfer</option>
-						<option value="UPI">UPI</option>
-					</select>
-				</td>
-				<td>
-					<input type="number" min="1" max="${this.targetAmount}" class="form-control split-amount" value="${defaultAmount}">
-				</td>
-				<td>
-					<button class="btn btn-danger btn-sm remove-split">Remove</button>
-				</td>
-			</tr>
-		`;
-
-		const tableBody = this.container.find("#splits-table tbody");
-		tableBody.append(rowHtml);
-
-		tableBody
-			.find(".remove-split")
-			.last()
-			.off("click")
-			.on("click", (e) => {
-				$(e.target).closest("tr").remove();
-				this.updateTotals();
-			});
-
-		tableBody
-			.find(".split-amount, .split-method")
-			.last()
-			.off("input change")
-			.on("input change", () => {
-				this.updateTotals();
-			});
-
-		this.updateTotals();
-	}
-
-	getCurrentSplits() {
-		const rows = this.container.find("#splits-table tbody tr");
-		let splits = [];
-		rows.each(function () {
-			const method = $(this).find(".split-method").val();
-			const amount = parseFloat($(this).find(".split-amount").val());
-			if (method && amount && amount > 0) {
-				splits.push({ mode: method, amount: amount });
-			}
+				// Add one final payment entry for remaining amount
+				const newPayment = {
+					date,
+					method,
+					amount: remaining,
+					ref: "Marked Fully Paid",
+					status: "Not Received",
+				};
+				this.payments.push(newPayment);
+				this.paid += remaining;
+				this.renderHistory();
+				this.updateSummary();
+			},
 		});
-		return splits;
+
+		dialog.show();
 	}
 
-	calculateTotalPaid(splits) {
-		if (!splits) splits = this.getCurrentSplits();
-		return splits.reduce((sum, s) => sum + s.amount, 0);
+	updateSummary() {
+		this.container.find("#total-paid").text(`₹${this.paid.toFixed(2)}`);
+		this.container.find("#remaining-amount").text(`₹${(this.total - this.paid).toFixed(2)}`);
+		this.container.find("#history-total").text(`₹${this.paid.toFixed(2)}`);
 	}
 
-	updateTotals() {
-		const splits = this.getCurrentSplits();
-		const totalPaid = this.calculateTotalPaid(splits);
-		const remaining = Math.max(this.targetAmount - totalPaid, 0);
+	renderHistory() {
+		const tbody = this.container.find("#history-body");
+		tbody.empty();
 
-		this.container.find("#total-paid").text(totalPaid.toFixed(2));
-		this.container.find("#remaining-amount").text(remaining.toFixed(2));
+		this.payments.forEach((p) => {
+			const row = `
+                <tr class="${p.status === "Received" ? "received-row" : "pending-row"}">
+                    <td>${p.date}</td>
+                    <td>${p.method}</td>
+                    <td>₹${p.amount.toFixed(2)}</td>
+                    <td>${p.ref || "-"}</td>
+                    <td>${p.status}</td>
+                </tr>
+            `;
+			tbody.append(row);
+		});
 	}
 }

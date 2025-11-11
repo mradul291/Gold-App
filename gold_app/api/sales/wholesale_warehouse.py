@@ -298,3 +298,64 @@ def create_item_return_stock_entry(items, to_warehouse=None):
         "status": "success",
         "stock_entry_name": stock_entry.name
     }
+
+# Storing Payment Entry into Wholesale Transactions
+@frappe.whitelist()
+def record_wholesale_payment(wholesale_bag, method, amount, ref_no=None, status="Received", total_amount=None):
+    """
+    Save payment in Wholesale Transaction child table and update summary totals,
+    using 'wholesale_bag' as the unique reference key instead of transaction name.
+    """
+    try:
+        if not wholesale_bag:
+            frappe.throw("Wholesale Bag is required to record payment.")
+
+        amount = float(amount)
+
+        transaction = frappe.db.get_value(
+            "Wholesale Transaction",
+            {"wholesale_bag": wholesale_bag},
+            "name"
+        )
+
+        if not transaction:
+            frappe.throw(f"No Wholesale Transaction found for Bag: {wholesale_bag}")
+
+        doc = frappe.get_doc("Wholesale Transaction", transaction)
+
+        # --- Append a new payment line ---
+        doc.append("payments", {
+            "payment_date": frappe.utils.nowdate(),
+            "payment_method": method,
+            "amount": amount,
+            "reference_no": ref_no or "",
+            "status": status,
+        })
+
+        # --- Initialize total_payment_amount if not already set ---
+        if total_amount is not None and not doc.total_payment_amount:
+            doc.total_payment_amount = float(total_amount)
+
+        # --- Compute summary using a different local name to avoid shadowing ---
+        total_payment_amount = float(doc.total_payment_amount or 0)
+        paid = float(doc.amount_paid or 0) + amount
+        balance = max(total_payment_amount - paid, 0)
+
+        doc.amount_paid = paid
+        doc.balance_due = balance
+
+        doc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Payment of ₹{amount} ({method}) saved successfully for Bag {wholesale_bag}.",
+            "total_payment_amount": total_payment_amount,
+            "amount_paid": paid,
+            "balance_due": balance,
+        }
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Wholesale Payment Save Failed")
+        frappe.throw(f"Failed to record payment: {str(e)}")
+

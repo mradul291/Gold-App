@@ -31,6 +31,7 @@ class Step3TabPaymentEntry {
                         </div>
                     </div>
                 </div>
+
                 <!-- Add New Payment -->
                 <div class="payment-form full-width">
                     <h3>Add New Payment</h3>
@@ -69,7 +70,7 @@ class Step3TabPaymentEntry {
                                 <th>Amount</th>
                                 <th>Reference</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+								<th>Remove</th>
                             </tr>
                         </thead>
                         <tbody id="history-body"></tbody>
@@ -81,10 +82,10 @@ class Step3TabPaymentEntry {
                             </tr>
                         </tfoot>
                     </table>
-                </div>
 
-                <div class="text-right mt-3">
-                    <button id="submit-all" class="btn green">Submit All Payments</button>
+                    <div class="text-right mt-3">
+                        <button id="submit-payments" class="btn green">Submit Payments</button>
+                    </div>
                 </div>
         `;
 
@@ -95,9 +96,10 @@ class Step3TabPaymentEntry {
 	attachHandlers() {
 		this.container.find("#add-payment").on("click", () => this.addPayment());
 		this.container.find("#full-payment").on("click", () => this.markFullyPaid());
-		this.container.find("#submit-all").on("click", () => this.submitAll());
+		this.container.find("#submit-payments").on("click", () => this.submitPayments());
 	}
 
+	// --- Add new payment to list (no backend call yet)
 	async addPayment() {
 		const date = frappe.datetime.now_date();
 		const method = this.container.find("#pay-method").val();
@@ -109,49 +111,96 @@ class Step3TabPaymentEntry {
 			return;
 		}
 		if (amount > this.total - this.paid) {
-			frappe.confirm("Amount exceeds remaining balance. Mark fully paid instead?", () => {
-				this.markFullyPaid();
-			});
+			frappe.msgprint("Amount exceeds remaining balance!");
 			return;
 		}
 
-		// --- Call backend API immediately ---
-		const { sales_invoice } = this.props;
-		if (!sales_invoice) {
-			frappe.msgprint("Sales Invoice reference missing!");
+		const newPayment = {
+			date,
+			method,
+			amount,
+			ref,
+			status: "Not Received",
+		};
+
+		this.payments.push(newPayment);
+		this.paid += amount;
+		this.renderHistory();
+		this.updateSummary();
+
+		// Reset form
+		this.container.find("#pay-amount").val("");
+		this.container.find("#pay-ref").val("");
+	}
+
+	// --- Submit all pending payments to backend
+	async submitPayments() {
+		const { sales_invoice, selected_bag } = this.props;
+
+		if (!sales_invoice || !selected_bag) {
+			frappe.msgprint("Missing required data: Sales Invoice or Wholesale Bag.");
 			return;
 		}
 
-		frappe.call({
-			method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
-			args: {
-				sales_invoice_name: sales_invoice,
-				payment_mode: method,
-				paid_amount: amount,
-			},
-			callback: (r) => {
-				if (r.message && r.message.status === "success") {
-					// Update UI only on success
-					const newPayment = { date, method, amount, ref, status: "Received" };
-					this.payments.push(newPayment);
-					this.paid += amount;
-					this.renderHistory();
-					this.updateSummary();
-					this.container.find("#pay-amount").val("");
-					this.container.find("#pay-ref").val("");
+		// Filter only unsubmitted rows
+		const pendingPayments = this.payments.filter((p) => p.status === "Not Received");
 
-					frappe.show_alert({
-						message: `Payment of ₹${amount} (${method}) recorded.`,
-						indicator: "green",
+		if (!pendingPayments.length) {
+			frappe.msgprint("All payments already submitted.");
+			return;
+		}
+
+		for (const payment of pendingPayments) {
+			try {
+				// Step 1: Create Payment Entry
+				const peResponse = await frappe.call({
+					method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
+					args: {
+						sales_invoice_name: sales_invoice,
+						payment_mode: payment.method,
+						paid_amount: payment.amount,
+					},
+				});
+
+				if (peResponse.message && peResponse.message.status === "success") {
+					// Step 2: Record Wholesale Transaction Payment
+					const wtResponse = await frappe.call({
+						method: "gold_app.api.sales.wholesale_warehouse.record_wholesale_payment",
+						args: {
+							wholesale_bag: selected_bag,
+							method: payment.method,
+							amount: payment.amount,
+							ref_no: payment.ref || "",
+							status: "Received",
+							total_amount: this.total,
+						},
 					});
+
+					if (wtResponse.message && wtResponse.message.status === "success") {
+						payment.status = "Received";
+						frappe.show_alert({
+							message: `Payment of ₹${payment.amount} (${payment.method}) submitted successfully.`,
+							indicator: "green",
+						});
+					}
 				} else {
 					frappe.show_alert({
-						message: "Payment entry creation failed.",
+						message: `Failed to create payment entry for ₹${payment.amount}.`,
 						indicator: "red",
 					});
 				}
-			},
-		});
+			} catch (err) {
+				console.error("Error in submitPayments:", err);
+				frappe.show_alert({
+					message: "Error while submitting payments.",
+					indicator: "red",
+				});
+			}
+		}
+
+		// Refresh UI after all submissions
+		this.renderHistory();
+		this.updateSummary();
 	}
 
 	async markFullyPaid() {
@@ -161,11 +210,14 @@ class Step3TabPaymentEntry {
 			return;
 		}
 
-		const me = this;
-		const { sales_invoice } = this.props;
+		const { sales_invoice, selected_bag } = this.props;
+		if (!sales_invoice || !selected_bag) {
+			frappe.msgprint("Missing required data: Sales Invoice or Wholesale Bag.");
+			return;
+		}
 
-		// 🔹 Step 1: Show popup dialog to select payment method
-		const d = new frappe.ui.Dialog({
+		const date = frappe.datetime.now_date();
+		const dialog = new frappe.ui.Dialog({
 			title: "Select Payment Method",
 			fields: [
 				{
@@ -174,89 +226,30 @@ class Step3TabPaymentEntry {
 					fieldtype: "Select",
 					options: ["Cash", "Bank Transfer"],
 					reqd: 1,
+					default: "Cash",
 				},
 			],
 			primary_action_label: "Confirm",
-			primary_action(values) {
+			primary_action: (values) => {
 				const method = values.payment_method;
-				d.hide();
+				dialog.hide();
 
-				// 🔹 Step 2: Proceed with backend API call
-				frappe.call({
-					method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
-					args: {
-						sales_invoice_name: sales_invoice,
-						payment_mode: method,
-						paid_amount: remaining,
-					},
-					callback: (r) => {
-						if (r.message && r.message.status === "success") {
-							const date = frappe.datetime.now_date();
-							const payment = {
-								date,
-								method,
-								amount: remaining,
-								ref: "Marked Fully Paid",
-								status: "Received",
-							};
-							me.payments.push(payment);
-							me.paid += remaining;
-							me.renderHistory();
-							me.updateSummary();
-
-							frappe.show_alert({
-								message: `Full payment of ₹${remaining} (${method}) recorded.`,
-								indicator: "green",
-							});
-						} else {
-							frappe.show_alert({
-								message: "Payment entry creation failed.",
-								indicator: "red",
-							});
-						}
-					},
-				});
+				// Add one final payment entry for remaining amount
+				const newPayment = {
+					date,
+					method,
+					amount: remaining,
+					ref: "Marked Fully Paid",
+					status: "Not Received",
+				};
+				this.payments.push(newPayment);
+				this.paid += remaining;
+				this.renderHistory();
+				this.updateSummary();
 			},
 		});
 
-		d.show();
-	}
-
-	async submitAll() {
-		if (!this.payments.length) {
-			frappe.msgprint("No payments to submit.");
-			return;
-		}
-
-		const { sales_invoice } = this.props;
-		if (!sales_invoice) {
-			frappe.msgprint("Sales Invoice reference missing!");
-			return;
-		}
-
-		for (const split of this.payments) {
-			await frappe.call({
-				method: "gold_app.api.sales.wholesale_warehouse.create_payment_entry_for_invoice",
-				args: {
-					sales_invoice_name: sales_invoice,
-					payment_mode: split.method,
-					paid_amount: split.amount,
-				},
-				callback: (r) => {
-					if (r.message && r.message.status === "success") {
-						frappe.show_alert({
-							message: `Payment of ₹${split.amount} (${split.method}) recorded.`,
-							indicator: "green",
-						});
-					} else {
-						frappe.show_alert({
-							message: "Payment entry creation failed.",
-							indicator: "red",
-						});
-					}
-				},
-			});
-		}
+		dialog.show();
 	}
 
 	updateSummary() {
@@ -268,41 +261,51 @@ class Step3TabPaymentEntry {
 	renderHistory() {
 		const tbody = this.container.find("#history-body");
 		tbody.empty();
+
 		this.payments.forEach((p, i) => {
 			const row = `
-                <tr>
+                <tr class="${p.status === "Received" ? "received-row" : "pending-row"}">
                     <td>${p.date}</td>
                     <td>${p.method}</td>
                     <td>₹${p.amount.toFixed(2)}</td>
                     <td>${p.ref || "-"}</td>
                     <td>${p.status}</td>
-                    <td>
-                        <button class="edit-btn" data-index="${i}">Edit</button>
-                        <button class="remove-btn" data-index="${i}">Remove</button>
-                    </td>
+					<td>
+            ${
+				p.status === "Not Received"
+					? `<button class="btn-remove" data-index="${i}" title="Remove">🗑️</button>`
+					: "-"
+			}
+        </td>
                 </tr>
             `;
 			tbody.append(row);
-		});
 
-		tbody.find(".remove-btn").on("click", (e) => {
-			const idx = $(e.currentTarget).data("index");
-			this.paid -= this.payments[idx].amount;
-			this.payments.splice(idx, 1);
-			this.renderHistory();
-			this.updateSummary();
-		});
+			// Attach remove handler for Not Received rows
+			tbody
+				.find(".btn-remove")
+				.off("click")
+				.on("click", (e) => {
+					const index = $(e.currentTarget).data("index");
+					const payment = this.payments[index];
 
-		tbody.find(".edit-btn").on("click", (e) => {
-			const idx = $(e.currentTarget).data("index");
-			const p = this.payments[idx];
-			this.container.find("#pay-method").val(p.method);
-			this.container.find("#pay-amount").val(p.amount);
-			this.container.find("#pay-ref").val(p.ref);
-			this.paid -= p.amount;
-			this.payments.splice(idx, 1);
-			this.renderHistory();
-			this.updateSummary();
+					if (payment.status === "Received") {
+						frappe.msgprint("You cannot remove an already received payment.");
+						return;
+					}
+
+					// Adjust totals before removing
+					this.paid -= payment.amount;
+					this.payments.splice(index, 1);
+
+					this.renderHistory();
+					this.updateSummary();
+
+					frappe.show_alert({
+						message: `Removed ₹${payment.amount} (${payment.method}) from payment list.`,
+						indicator: "orange",
+					});
+				});
 		});
 	}
 }
