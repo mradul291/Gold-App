@@ -499,7 +499,7 @@
     "insert_after": "other_id_type",
     "allow_in_quick_entry": 1,
     "read_only": 1,
-     "name": "Customer-other_id_number",
+    "name": "Customer-other_id_number",
     "module": "Gold App"
   },
   {
@@ -543,8 +543,7 @@
     "dt": "Purchase Receipt",
     "fieldname": "purchase_invoice_ref",
     "label": "Purchase Invoice Ref",
-    "fieldtype": "Link",
-    "options": "Purchase Invoice",
+    "fieldtype": "Data",
     "insert_after": "is_return",
     "read_only": 1,
     "name": "Purchase Receipt-purchase_invoice_ref",
