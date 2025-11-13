@@ -64,23 +64,23 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends (
 			});
 		}
 
-		// --- Mobile Number validation ---
+		// --- Mobile Number validation (enhanced with NA option) ---
 		const mobile_field = dialog.get_field("mobile_number");
 		if (mobile_field && mobile_field.$input) {
 			mobile_field.$input.on("blur", () => {
+				// SKIP ALL VALIDATION IF NA IS CHECKED
+				if (dialog.get_value("mobile_number_na")) return;
+
 				let val = mobile_field.$input.val() || "";
 				if (!val) return;
 
-				// Remove all non-digit characters
 				let digits = val.replace(/\D/g, "");
 
-				// Validate length
 				if (digits.length !== 10 && digits.length !== 11) {
 					frappe.msgprint(__("Mobile number must be 10 or 11 digits"));
 					return;
 				}
 
-				// Format number dynamically
 				let formatted;
 				if (digits.length === 10) {
 					formatted = `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6)}`;
@@ -92,11 +92,31 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends (
 			});
 		}
 
+		// --- Toggle Mobile Number Mandatory State Based on NA Checkbox ---
+		const mobile_na_field = dialog.get_field("mobile_number_na");
+		if (mobile_na_field && mobile_na_field.$input) {
+			mobile_na_field.$input.on("change", () => {
+				const is_na = dialog.get_value("mobile_number_na");
+				const mobile_f = dialog.get_field("mobile_number");
+
+				dialog.set_df_property("mobile_number", "reqd", is_na ? 0 : 1);
+
+				if (is_na) {
+					dialog.set_value("mobile_number", "");
+				}
+
+				mobile_f.refresh();
+			});
+		}
+
+		// --- Primary Save Action ---
 		dialog.set_primary_action(__("Save"), async () => {
 			const nationality = dialog.get_value("customer_nationality");
 			const mid_val = dialog.get_value("malaysian_id");
+
 			const mobile_val = dialog.get_value("mobile_number") || "";
 			const mobile_digits = mobile_val.replace(/\D/g, "");
+			const mobile_na = dialog.get_value("mobile_number_na");
 
 			if (nationality === "Malaysian") {
 				if (!mid_val || mid_val.replace(/\D/g, "").length !== 12) {
@@ -107,11 +127,13 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends (
 				}
 			}
 
-			if (!mobile_val || (mobile_digits.length !== 10 && mobile_digits.length !== 11)) {
-				frappe.msgprint(
-					__("Please enter a valid 10 or 11-digit mobile number before saving.")
-				);
-				return;
+			if (!mobile_na) {
+				if (!mobile_val || (mobile_digits.length !== 10 && mobile_digits.length !== 11)) {
+					frappe.msgprint(
+						__("Please enter a valid 10 or 11-digit mobile number before saving.")
+					);
+					return;
+				}
 			}
 
 			await this.insert();
@@ -126,9 +148,13 @@ frappe.ui.form.SupplierQuickEntryForm = class SupplierQuickEntryForm extends (
 				fieldtype: "Data",
 				reqd: 1,
 			},
+			{
+				label: __("Mobile Number NA"),
+				fieldname: "mobile_number_na",
+				fieldtype: "Check",
+				default: 0,
+			},
 		];
 		return fields;
 	}
 };
-
-
