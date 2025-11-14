@@ -26,8 +26,11 @@ class Step3TabReceiptReconciliation {
 
 		this.showLoader();
 
-		this.fetchPuritiesFromDoctype().then((purities) => {
+		this.fetchPuritiesFromDoctype().then(async (purities) => {
 			this.availablePurities = purities;
+
+			await this.loadExistingTransactionData();
+
 			this.render();
 			this.bindReceiptEvents();
 			this.bindUploadReceipt();
@@ -89,6 +92,126 @@ class Step3TabReceiptReconciliation {
 		}
 	}
 
+	// async loadExistingTransactionData() {
+	// 	try {
+	// 		const res = await frappe.call({
+	// 			method: "frappe.client.get_list",
+	// 			args: {
+	// 				doctype: "Wholesale Transaction",
+	// 				filters: {
+	// 					wholesale_bag: this.props.selected_bag,
+	// 					buyer: this.props.customer,
+	// 				},
+	// 				fields: ["name"],
+	// 				limit: 1,
+	// 			},
+	// 		});
+
+	// 		if (!res.message || res.message.length === 0) return;
+
+	// 		const docname = res.message[0].name;
+
+	// 		const txn = await frappe.call({
+	// 			method: "frappe.client.get",
+	// 			args: { doctype: "Wholesale Transaction", name: docname },
+	// 		});
+
+	// 		if (!txn.message) return;
+
+	// 		const doc = txn.message;
+
+	// 		// ⭐ 1. Load existing receipt_lines
+	// 		if (doc.receipt_lines && doc.receipt_lines.length > 0) {
+	// 			this.bagSummary = doc.receipt_lines.map((r) => ({
+	// 				purity: r.purity,
+	// 				weight: parseFloat(r.weight) || 0,
+	// 				rate: parseFloat(r.rate) || 0,
+	// 				amount: parseFloat(r.amount) || 0,
+	// 			}));
+	// 		} else {
+	// 			this.bagSummary = this.props.bagSummary || [];
+	// 		}
+
+	// 		// ⭐ 2. Load existing adjustments
+	// 		if (doc.adjustments && doc.adjustments.length > 0) {
+	// 			this.adjustments = doc.adjustments.map((a) => ({
+	// 				type: a.adjustment_type,
+	// 				from_purity: a.from_purity,
+	// 				to_purity: a.to_purity,
+	// 				weight: a.weight,
+	// 				notes: a.notes,
+	// 				impact: a.profit_impact,
+	// 			}));
+	// 		} else {
+	// 			this.adjustments = this.props.adjustments || [];
+	// 		}
+	// 	} catch (err) {
+	// 		console.error("Failed to load existing transaction data:", err);
+	// 	}
+	// }
+
+	// ==============================
+	// Load saved receipt_lines & adjustments
+	// ==============================
+	async loadExistingTransactionData() {
+		try {
+			// Fetch existing transaction
+			const res = await frappe.call({
+				method: "frappe.client.get_list",
+				args: {
+					doctype: "Wholesale Transaction",
+					filters: {
+						wholesale_bag: this.props.selected_bag,
+						buyer: this.props.customer,
+					},
+					fields: ["name"],
+					limit: 1,
+				},
+			});
+
+			if (!res.message || res.message.length === 0) {
+				console.log("No existing transaction found → load empty UI");
+				return;
+			}
+
+			const txnName = res.message[0].name;
+
+			const txnDoc = await frappe.call({
+				method: "frappe.client.get",
+				args: { doctype: "Wholesale Transaction", name: txnName },
+			});
+
+			this.existing_txn = txnDoc.message;
+
+			// ⭐ Load receipt_lines into UI only if saved earlier
+			if (this.existing_txn.receipt_lines && this.existing_txn.receipt_lines.length > 0) {
+				this.bagSummary = this.existing_txn.receipt_lines.map((r) => ({
+					purity: r.purity,
+					weight: parseFloat(r.weight) || 0,
+					rate: parseFloat(r.rate) || 0,
+					amount: parseFloat(r.amount) || 0,
+				}));
+			} else {
+				// First time → Keep Table EMPTY
+				this.bagSummary = [];
+			}
+
+			// ⭐ Load saved adjustments
+			if (this.existing_txn.adjustments) {
+				this.adjustments = this.existing_txn.adjustments.map((a) => ({
+					type: a.adjustment_type,
+					from_purity: a.from_purity,
+					to_purity: a.to_purity,
+					weight: a.weight,
+					notes: a.notes,
+					impact: a.profit_impact,
+				}));
+			}
+		} catch (err) {
+			console.error("Failed to load existing txn:", err);
+		}
+	}
+
 	render() {
 		this.container.html(`
         <div class="section1-buyer-receipt">
@@ -136,6 +259,19 @@ class Step3TabReceiptReconciliation {
 
 	renderReceiptSection() {
 		const purities = this.availablePurities;
+		// FIRST TIME → EMPTY TABLE
+		if (!this.bagSummary || this.bagSummary.length === 0) {
+			this.container.find(".section1-buyer-receipt table.receipt-table tbody").html(`
+        <tr class="footer-total">
+            <td colspan="2">TOTAL</td>
+            <td class="total-weight">0.00 g</td>
+            <td>-</td>
+            <td class="total-amount">RM 0.00</td>
+            <td></td>
+        </tr>
+    `);
+			return;
+		}
 
 		// Helper to build options html
 		const purityOptions = (selected) => {
@@ -201,23 +337,32 @@ class Step3TabReceiptReconciliation {
 				(r) => `
             <tr data-idx="${r.purity}" data-purity="${r.purity}">
                 <td>${r.purity}</td>
-                <td class="actual-cell">${r.actual.toFixed(2)}</td>
-                <td class="claimed-cell">${(r.claimed || 0).toFixed(2)}</td>
-                <td class="delta-cell">${(r.actual - r.claimed).toFixed(2)}</td>
-                <td class="status-cell"><span class="status-icon info">&#9432;</span></td>
-                <td class="cost-basis">RM ${(r.cost_basis || 0).toLocaleString("en-MY", {
+                <td class="actual-cell text-yellow">${r.actual.toFixed(2)}</td>
+                <td class="claimed-cell text-yellow">${(r.claimed || 0).toFixed(2)}</td>
+                <td class="delta-cell text-yellow">${(r.actual - r.claimed).toFixed(2)}</td>
+                <td class="status-cell text-yellow"><span class="status-icon info">&#9432;</span></td>
+                <td class="cost-basis text-yellow">RM ${(r.cost_basis || 0).toLocaleString(
+					"en-MY",
+					{
+						minimumFractionDigits: 2,
+					}
+				)}</td>
+                <td class="revenue-cell text-yellow">RM ${(r.revenue || 0).toLocaleString(
+					"en-MY",
+					{
+						minimumFractionDigits: 2,
+					}
+				)}</td>
+                <td class="profit-cell text-yellow">RM ${r.profit.toLocaleString("en-MY", {
 					minimumFractionDigits: 2,
 				})}</td>
-                <td class="revenue-cell">RM ${(r.revenue || 0).toLocaleString("en-MY", {
-					minimumFractionDigits: 2,
-				})}</td>
-                <td class="profit-cell">RM ${r.profit.toLocaleString("en-MY", {
-					minimumFractionDigits: 2,
-				})}</td>
-                <td class="profit-g-cell">RM ${(r.profit_g || 0).toLocaleString("en-MY", {
-					minimumFractionDigits: 2,
-				})}</td>
-                <td class="margin-cell">${(r.margin_percent || 0).toFixed(1)}%</td>
+                <td class="profit-g-cell text-yellow">RM ${(r.profit_g || 0).toLocaleString(
+					"en-MY",
+					{
+						minimumFractionDigits: 2,
+					}
+				)}</td>
+                <td class="margin-cell text-yellow">${(r.margin_percent || 0).toFixed(1)}%</td>
             </tr>
         `
 			)
@@ -237,8 +382,60 @@ class Step3TabReceiptReconciliation {
 		];
 		const section = this.container.find(".section3-adjustments");
 		const tbody = section.find("tbody");
+
 		tbody.empty();
 		const purities = this.availablePurities; // get fresh purity list
+
+		// 1️⃣ First load ADJUSTMENTS FROM DB
+		if (this.adjustments && this.adjustments.length > 0) {
+			this.adjustments.forEach((adj, idx) => {
+				const optionHTML = adjustmentOptions
+					.map(
+						(o) =>
+							`<option value="${o}" ${
+								o === adj.type ? "selected" : ""
+							}>${o}</option>`
+					)
+					.join("");
+
+				const row = $(`
+            <tr data-idx="${idx + 1}">
+                <td>${idx + 1}</td>
+                <td class="adjustment-type-cell">
+                    <div class="adjustment-controls">
+                        <select class="adjust-type">${optionHTML}</select>
+                        <button class="btn-create-purity" title="Create New Purity">+</button>
+                    </div>
+                </td>
+
+                <td>
+                    <input list="from-purity-list-${idx + 1}" class="from-purity" value="${
+					adj.from_purity
+				}">
+                    <datalist id="from-purity-list-${idx + 1}">
+                        ${purities.map((p) => `<option value="${p}">`).join("")}
+                    </datalist>
+                </td>
+
+                <td>
+                    <input list="to-purity-list-${idx + 1}" class="to-purity" value="${
+					adj.to_purity
+				}">
+                    <datalist id="to-purity-list-${idx + 1}">
+                        ${purities.map((p) => `<option value="${p}">`).join("")}
+                    </datalist>
+                </td>
+
+                <td><input type="number" class="weight" value="${adj.weight}" /></td>
+                <td><input type="text" class="notes" value="${adj.notes}" /></td>
+                <td class="profit-impact text-success">${adj.impact}</td>
+                <td><button class="btn-delete-row" title="Remove">🗑️</button></td>
+            </tr>
+        `);
+
+				tbody.append(row);
+			});
+		}
 
 		const addRow = () => {
 			const idx = tbody.children().length + 1;
@@ -278,6 +475,7 @@ class Step3TabReceiptReconciliation {
 			// update the impact display for this freshly-added row
 			this.computeProfitImpactForRow(tbody.find("tr").last());
 		};
+		// If NO existing adjustments → Add 1 empty row
 
 		section
 			.find(".add-adjustment-btn")
@@ -373,8 +571,6 @@ class Step3TabReceiptReconciliation {
 					indicator: "green",
 				});
 			});
-
-		addRow();
 
 		// After "addRow();" and after setting up existing handlers:
 
@@ -971,6 +1167,25 @@ class Step3TabReceiptReconciliation {
 				.text(`RM ${profitG.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`);
 			reconRow.find(".margin-cell").text(`${margin.toFixed(1)}%`);
 			reconRow.find(".status-cell").html(statusHTML);
+
+			// --------------------------------------
+			// FINAL COLOR LOGIC (text color only)
+			// --------------------------------------
+			const cellsToColor = reconRow.find(
+				".profit-cell, .profit-g-cell, .margin-cell, .delta-cell, .revenue-cell, .status-cell"
+			);
+
+			// remove previous color classes
+			cellsToColor.removeClass("text-green text-red text-yellow");
+
+			// apply new color based on profit
+			if (profit > 0) {
+				cellsToColor.addClass("text-green");
+			} else if (profit < 0) {
+				cellsToColor.addClass("text-red");
+			} else {
+				cellsToColor.addClass("text-yellow");
+			}
 		});
 
 		// Additionally, update recon rows that are present in reconciliation table but not linked to a receipt row:
@@ -1049,6 +1264,21 @@ class Step3TabReceiptReconciliation {
 					.text(`RM ${profitG.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`);
 				reconRow.find(".margin-cell").text(`${margin.toFixed(1)}%`);
 				reconRow.find(".status-cell").html(statusHTML);
+
+				// FINAL COLOR LOGIC (text color only)
+				const cellsToColor = reconRow.find(
+					".profit-cell, .profit-g-cell, .margin-cell, .delta-cell, .revenue-cell, .status-cell"
+				);
+
+				cellsToColor.removeClass("text-green text-red text-yellow");
+
+				if (profit > 0) {
+					cellsToColor.addClass("text-green");
+				} else if (profit < 0) {
+					cellsToColor.addClass("text-red");
+				} else {
+					cellsToColor.addClass("text-yellow");
+				}
 			}
 		});
 	}
@@ -1239,8 +1469,8 @@ class Step3TabReceiptReconciliation {
 		let reconciled = true;
 		this.container.find(".recon-table tbody tr").each((_, tr) => {
 			const delta = parseFloat($(tr).find(".delta-cell").text());
-			const isGreen = $(tr).hasClass("recon-row-green");
-			if (Math.abs(delta) > 0.001 || !isGreen) {
+			// ONLY check delta value now
+			if (Math.abs(delta) > 0.001) {
 				reconciled = false;
 				return false; // exit loop early if any row fails
 			}
@@ -1254,16 +1484,13 @@ class Step3TabReceiptReconciliation {
 		}
 
 		const warehouse = this.props.selected_bag + " - AGSB";
-		const items = this.salesDetailData.map((line) => {
-			const purityStr = line.purity || "";
-			return {
-				item_code: `Unsorted-${purityStr}`,
-				purity: purityStr,
-				weight: parseFloat(line.weight) || 0,
-				rate: parseFloat(line.rate) || 0,
-				warehouse: warehouse,
-			};
-		});
+		const items = this.salesDetailData.map((line) => ({
+			item_code: `Unsorted-${line.purity || ""}`,
+			purity: line.purity || "",
+			weight: parseFloat(line.weight) || 0,
+			rate: parseFloat(line.rate) || 0,
+			warehouse: warehouse,
+		}));
 
 		const payload = {
 			customer: this.props.customer,
@@ -1273,29 +1500,36 @@ class Step3TabReceiptReconciliation {
 
 		console.log("Calling create_sales_invoice API with payload:", payload);
 
-		await new Promise((resolve, reject) => {
-			frappe.call({
-				method: "gold_app.api.sales.wholesale_warehouse.create_sales_invoice",
-				args: payload,
-				callback: (r) => {
-					console.log("API response:", r);
-					if (r.message && r.message.status === "success") {
-						console.log("API response message full content:", r.message);
-						const invoiceRef = r.message.sales_invoice; // or whatever field contains the invoice ref
-						if (this.onSalesInvoiceCreated) {
-							this.onSalesInvoiceCreated(invoiceRef); // call callback
-						}
-						resolve(r.message);
-					} else {
-						reject(new Error("API returned failure"));
-					}
-				},
-				errorHandler: (err) => {
-					console.error("API call error:", err);
-					reject(err);
-				},
-			});
+		const r = await frappe.call({
+			method: "gold_app.api.sales.wholesale_warehouse.create_sales_invoice",
+			args: payload,
 		});
+
+		if (!(r.message && r.message.status === "success")) {
+			throw new Error("API returned failure");
+		}
+
+		const invoiceRef = r.message.sales_invoice;
+		console.log("Sales Invoice Created:", invoiceRef);
+
+		// ⭐ CLEANEST WAY → Store invoice in Wholesale Transaction
+		await frappe.call({
+			method: "gold_app.api.sales.wholesale_warehouse.update_sales_invoice_ref",
+			args: {
+				wholesale_bag: this.props.selected_bag,
+				buyer: this.props.customer,
+				invoice_ref: invoiceRef,
+			},
+		});
+
+		frappe.show_alert("Invoice linked to Wholesale Transaction");
+
+		// Send invoiceRef to step controller only if you need
+		if (this.onSalesInvoiceCreated) {
+			this.onSalesInvoiceCreated(invoiceRef);
+		}
+
+		return invoiceRef;
 	}
 
 	async callCreateMaterialReceiptAPI() {
@@ -1479,127 +1713,174 @@ class Step3TabReceiptReconciliation {
 	}
 
 	onClickSaveAdjustments() {
+		// Always fetch existing transaction for (bag + buyer)
 		frappe.call({
 			method: "frappe.client.get_list",
 			args: {
 				doctype: "Wholesale Transaction",
-				filters: { wholesale_bag: this.props.selected_bag },
-				fields: ["name"],
-			},
-			callback: (res) => {
-				let transactionDoc = {
-					doctype: "Wholesale Transaction",
+				filters: {
 					wholesale_bag: this.props.selected_bag,
 					buyer: this.props.customer,
-					buyer_name: this.props.buyer_name || "",
-					sale_date: this.props.sale_date,
-					total_cost_basis: this.props.totalAmount,
-					receipt_lines: this.bagSummary.map((line) => ({
-						purity: line.purity,
-						weight: line.weight,
-						rate: line.rate,
-						amount: line.amount,
-					})),
-					reconciliation_lines: [],
-					adjustments: this.adjustments.map((adj) => ({
-						adjustment_type: adj.type,
-						from_purity: adj.from_purity,
-						to_purity: adj.to_purity,
-						weight: adj.weight,
-						notes: adj.notes,
-						profit_impact: adj.impact,
-					})),
-				};
-
-				this.container.find(".recon-table tbody tr").each((_, tr) => {
-					const $tr = $(tr);
-					transactionDoc.reconciliation_lines.push({
-						purity: $tr.find("td:eq(0)").text().trim(),
-						actual: parseFloat($tr.find(".actual-cell").text()) || 0,
-						claimed: parseFloat($tr.find(".claimed-cell").text()) || 0,
-						delta: parseFloat($tr.find(".delta-cell").text()) || 0,
-						status: $tr.find(".status-cell").text().trim() || "",
-						cost_basis:
-							parseFloat(
-								$tr
-									.find(".cost-basis")
-									.text()
-									.replace(/[^\d\.-]/g, "")
-							) || 0,
-						revenue:
-							parseFloat(
-								$tr
-									.find(".revenue-cell")
-									.text()
-									.replace(/[^\d\.-]/g, "")
-							) || 0,
-						profit:
-							parseFloat(
-								$tr
-									.find(".profit-cell")
-									.text()
-									.replace(/[^\d\.-]/g, "")
-							) || 0,
-						profit_g:
-							parseFloat(
-								$tr
-									.find(".profit-g-cell")
-									.text()
-									.replace(/[^\d\.-]/g, "")
-							) || 0,
-						margin_percent: parseFloat($tr.find(".margin-cell").text()) || 0,
-					});
-				});
-
-				// 1. Transaction exists: update, then upload
-				if (res.message && res.message.length > 0) {
-					const docname = res.message[0].name;
-
-					frappe.call({
-						method: "frappe.client.get",
-						args: { doctype: "Wholesale Transaction", name: docname },
-						callback: (r) => {
-							if (r.message) {
-								Object.assign(r.message, transactionDoc);
-								frappe.call({
-									method: "frappe.client.save",
-									args: { doc: r.message },
-									callback: (saveRes) => {
-										frappe.show_alert({
-											message: "Transaction updated successfully.",
-											indicator: "green",
-										});
-										this.uploadReceiptFile(docname); // <- Always use docname!
-									},
-									error: (e) => {
-										frappe.msgprint("Update failed: " + (e.message || e));
-									},
-								});
-							}
-						},
-						error: (e) => {
-							frappe.msgprint("Failed to fetch latest doc: " + (e.message || e));
-						},
-					});
-				} else {
-					// 2. New transaction: insert, then upload receipt
-					frappe.call({
-						method: "frappe.client.insert",
-						args: { doc: transactionDoc },
-						callback: (insertRes) => {
-							frappe.show_alert({
-								message: "Transaction saved successfully.",
-								indicator: "green",
-							});
-							if (insertRes.message && insertRes.message.name) {
-								this.uploadReceiptFile(insertRes.message.name); // <- Use the REAL docname!
-							}
-						},
-						error: (e) => {
-							frappe.msgprint("Save failed: " + (e.message || e));
-						},
-					});
+				},
+				fields: ["name"],
+				limit: 1,
+			},
+			callback: (res) => {
+				if (!res.message || res.message.length === 0) {
+					frappe.msgprint(
+						"No existing Wholesale Transaction found for this Bag & Buyer. Please return to Step 2 and save buyer details first."
+					);
+					return;
 				}
+
+				const docname = res.message[0].name;
+				console.log("Updating existing Wholesale Transaction:", docname);
+
+				// ⭐ STEP 1 — Fetch full document first (to load avg_rate)
+				frappe.call({
+					method: "frappe.client.get",
+					args: { doctype: "Wholesale Transaction", name: docname },
+					callback: (docRes) => {
+						if (!docRes.message) {
+							frappe.msgprint("Failed to fetch transaction.");
+							return;
+						}
+
+						const existingDoc = docRes.message;
+
+						// ⭐ STEP 2 — Build avgRateMap from existing reconciliation_lines
+						const avgRateMap = {};
+						(existingDoc.reconciliation_lines || []).forEach((row) => {
+							if (row && row.purity) {
+								avgRateMap[row.purity] = parseFloat(row.avg_rate) || 0;
+							}
+						});
+
+						// ----------------------------------------------------
+						// Build updated fields (your original logic)
+						// ----------------------------------------------------
+						let updatedData = {
+							total_cost_basis: this.props.totalAmount,
+
+							// ✔ You WANT to update receipt_lines → keep it here
+							receipt_lines: this.bagSummary.map((line) => ({
+								purity: line.purity,
+								weight: line.weight,
+								rate: line.rate,
+								amount: line.amount,
+							})),
+
+							reconciliation_lines: [],
+							adjustments: this.adjustments.map((adj) => ({
+								adjustment_type: adj.type,
+								from_purity: adj.from_purity,
+								to_purity: adj.to_purity,
+								weight: adj.weight,
+								notes: adj.notes,
+								profit_impact: adj.impact,
+							})),
+						};
+
+						// ----------------------------------------------------
+						// Build reconciliation_lines from UI
+						// ----------------------------------------------------
+						this.container.find(".recon-table tbody tr").each((_, tr) => {
+							const $tr = $(tr);
+							const purity = $tr.find("td:eq(0)").text().trim();
+
+							updatedData.reconciliation_lines.push({
+								purity: purity,
+								actual: parseFloat($tr.find(".actual-cell").text()) || 0,
+								claimed: parseFloat($tr.find(".claimed-cell").text()) || 0,
+								delta: parseFloat($tr.find(".delta-cell").text()) || 0,
+								status: $tr.find(".status-cell").text().trim() || "",
+
+								// ⭐ PRESERVE EXISTING avg_rate (critical fix)
+								avg_rate: avgRateMap[purity] || 0,
+
+								cost_basis:
+									parseFloat(
+										$tr
+											.find(".cost-basis")
+											.text()
+											.replace(/[^\d\.-]/g, "")
+									) || 0,
+
+								revenue:
+									parseFloat(
+										$tr
+											.find(".revenue-cell")
+											.text()
+											.replace(/[^\d\.-]/g, "")
+									) || 0,
+
+								profit:
+									parseFloat(
+										$tr
+											.find(".profit-cell")
+											.text()
+											.replace(/[^\d\.-]/g, "")
+									) || 0,
+
+								profit_g:
+									parseFloat(
+										$tr
+											.find(".profit-g-cell")
+											.text()
+											.replace(/[^\d\.-]/g, "")
+									) || 0,
+
+								margin_percent: parseFloat($tr.find(".margin-cell").text()) || 0,
+							});
+						});
+
+						// ----------------------------------------------------
+						// Your existing total profit calculations
+						// ----------------------------------------------------
+						let totalProfit = 0;
+						let totalActualWeight = 0;
+
+						(updatedData.reconciliation_lines || []).forEach((row) => {
+							const p = parseFloat(row.profit) || 0;
+							const w = parseFloat(row.actual) || 0;
+							totalProfit += p;
+							totalActualWeight += w;
+						});
+
+						const totalProfitPerG =
+							totalActualWeight !== 0 ? totalProfit / totalActualWeight : 0;
+
+						const formattedTotalProfit =
+							(totalProfit >= 0 ? "+" : "") + totalProfit.toFixed(2);
+
+						const formattedTotalProfitPerG =
+							(totalProfitPerG >= 0 ? "+" : "") + totalProfitPerG.toFixed(2);
+
+						updatedData.total_profit = formattedTotalProfit;
+						updatedData.total_profit_per_g = formattedTotalProfitPerG;
+						updatedData.total_actual_weight = parseFloat(totalActualWeight.toFixed(3));
+
+						// ----------------------------------------------------
+						// Save back into doc (your original logic)
+						// ----------------------------------------------------
+						Object.assign(existingDoc, updatedData);
+
+						frappe.call({
+							method: "frappe.client.save",
+							args: { doc: existingDoc },
+							callback: () => {
+								frappe.show_alert({
+									message: "Wholesale Transaction updated successfully.",
+									indicator: "green",
+								});
+								this.uploadReceiptFile(docname);
+							},
+							error: (e) => {
+								frappe.msgprint("Update failed: " + (e.message || e));
+							},
+						});
+					},
+				});
 			},
 			error: (e) => {
 				frappe.msgprint("Error searching for transaction: " + (e.message || e));

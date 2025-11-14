@@ -16,14 +16,22 @@
   "section_break_qayb",
   "receipt_lines",
   "reconciliation_lines",
+  "section_break_qva3",
+  "total_profit",
+  "column_break_3lpr",
+  "total_profit_per_g",
+  "section_break_es9g",
   "adjustments",
   "payments_tab",
   "total_payment_amount",
   "amount_paid",
   "column_break_uemo",
   "balance_due",
+  "status",
   "section_break_ml78",
-  "payments"
+  "payments",
+  "section_break_epen",
+  "sales_invoice_ref"
  ],
  "fields": [
   {
@@ -131,12 +139,53 @@
    "fieldtype": "Currency",
    "label": "Balance Due",
    "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nCompleted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_profit",
+   "fieldtype": "Data",
+   "label": "Total Profit",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_profit_per_g",
+   "fieldtype": "Data",
+   "label": "Profit / g",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_es9g",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_3lpr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_qva3",
+   "fieldtype": "Section Break",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_epen",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sales_invoice_ref",
+   "fieldtype": "Data",
+   "label": "Sales Invoice Ref"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-11 15:54:31.318674",
+ "modified": "2025-11-14 20:17:30.854718",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Transaction",

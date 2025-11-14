@@ -76,33 +76,6 @@ def create_sales_invoice(customer, items, company=None):
     }
 
 # Create Payment Entry for the Sales Invoice
-# @frappe.whitelist()
-# def create_payment_entry_for_invoice(sales_invoice_name, payment_mode):
-   
-#     try:
-#         if not sales_invoice_name:
-#             frappe.throw("Sales Invoice name is required.")
-
-#         pe = get_payment_entry("Sales Invoice", sales_invoice_name)
-#         pe.mode_of_payment = payment_mode
-
-#         pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
-#         pe.reference_date = frappe.utils.nowdate()
-
-#         pe.insert(ignore_permissions=True)
-#         pe.submit()
-#         frappe.db.commit()
-
-#         return {
-#             "status": "success",
-#             "payment_entry": pe.name,
-#             "sales_invoice": sales_invoice_name,
-#         }
-
-#     except Exception as e:
-#         frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
-#         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
-
 @frappe.whitelist()
 def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount):
  
@@ -151,22 +124,47 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
 
 # Fetching Entire Wholesale Transaction Doctype data
-@frappe.whitelist()
-def get_wholesale_transaction_by_bag(wholesale_bag):
+# @frappe.whitelist()
+# def get_wholesale_transaction_by_bag(wholesale_bag):
  
+#     if not wholesale_bag:
+#         frappe.throw(_("Parameter 'wholesale_bag' is required"))
+
+#     docs = frappe.get_all('Wholesale Transaction', filters={'wholesale_bag': wholesale_bag}, fields=['name'])
+
+#     if not docs:
+#         return {'status': 'error', 'message': f'No Wholesale Transaction found for bag: {wholesale_bag}'}
+
+#     docname = docs[0].name
+#     doc = frappe.get_doc('Wholesale Transaction', docname)
+#     doc_dict = doc.as_dict()
+
+#     return {'status': 'success', 'data': doc_dict}
+
+@frappe.whitelist()
+def get_wholesale_transaction_by_bag(wholesale_bag, buyer=None):
+    """
+    Fetch an existing *Active* Wholesale Transaction for a specific bag and buyer.
+    Returns None if not found or if it belongs to a different buyer.
+    """
     if not wholesale_bag:
         frappe.throw(_("Parameter 'wholesale_bag' is required"))
 
-    docs = frappe.get_all('Wholesale Transaction', filters={'wholesale_bag': wholesale_bag}, fields=['name'])
+    filters = {"wholesale_bag": wholesale_bag, "status": ["!=", "Completed"]}  # 🔹 Only active
+
+    if buyer:
+        filters["buyer"] = buyer
+
+    docs = frappe.get_all("Wholesale Transaction", filters=filters, fields=["name"], limit=1)
 
     if not docs:
-        return {'status': 'error', 'message': f'No Wholesale Transaction found for bag: {wholesale_bag}'}
+        msg = f"No active Wholesale Transaction found for bag '{wholesale_bag}'"
+        if buyer:
+            msg += f" and buyer '{buyer}'"
+        return {"status": "error", "message": msg}
 
-    docname = docs[0].name
-    doc = frappe.get_doc('Wholesale Transaction', docname)
-    doc_dict = doc.as_dict()
-
-    return {'status': 'success', 'data': doc_dict}
+    doc = frappe.get_doc("Wholesale Transaction", docs[0].name)
+    return {"status": "success", "data": doc.as_dict()}
 
 # Create Stock Entry for Newly Created Purity in Blending and then also do Stock Reduction
 @frappe.whitelist()
@@ -302,10 +300,7 @@ def create_item_return_stock_entry(items, to_warehouse=None):
 # Storing Payment Entry into Wholesale Transactions
 @frappe.whitelist()
 def record_wholesale_payment(wholesale_bag, method, amount, ref_no=None, status="Received", total_amount=None):
-    """
-    Save payment in Wholesale Transaction child table and update summary totals,
-    using 'wholesale_bag' as the unique reference key instead of transaction name.
-    """
+    
     try:
         if not wholesale_bag:
             frappe.throw("Wholesale Bag is required to record payment.")
@@ -343,6 +338,11 @@ def record_wholesale_payment(wholesale_bag, method, amount, ref_no=None, status=
 
         doc.amount_paid = paid
         doc.balance_due = balance
+        
+        if total_payment_amount > 0 and paid >= total_payment_amount:
+            doc.status = "Completed"
+        else:
+            doc.status = "Active"
 
         doc.save(ignore_permissions=True)
         frappe.db.commit()
@@ -359,3 +359,119 @@ def record_wholesale_payment(wholesale_bag, method, amount, ref_no=None, status=
         frappe.log_error(frappe.get_traceback(), "Wholesale Payment Save Failed")
         frappe.throw(f"Failed to record payment: {str(e)}")
 
+
+@frappe.whitelist()
+def create_customer_direct_payment(party, mode_of_payment, paid_amount):
+    """
+    Clean and safe creation of Payment Entry for Customer advance.
+    No references added (HRMS safe).
+    """
+
+    try:
+        if not party:
+            frappe.throw("Customer is required.")
+        if not mode_of_payment:
+            frappe.throw("Mode of Payment is required.")
+        if not paid_amount or float(paid_amount) <= 0:
+            frappe.throw("Paid Amount must be greater than zero.")
+
+        paid_amount = float(paid_amount)
+
+        # -------------------
+        # Get default company
+        # -------------------
+        company = frappe.defaults.get_global_default("company")
+        if not company:
+            frappe.throw("Please set Default Company in System Settings.")
+
+        # -------------------
+        # PARTY ACCOUNT (AR)
+        # -------------------
+        party_account = frappe.db.get_value(
+            "Party Account",
+            {"parent": party, "company": company},
+            "account"
+        )
+
+        if not party_account:
+            party_account = frappe.get_cached_value(
+                "Company", company, "default_receivable_account"
+            )
+
+        if not party_account:
+            frappe.throw("No Accounts Receivable account found for this company.")
+
+        # -------------------
+        # MODE OF PAYMENT → ACCOUNT
+        # -------------------
+        cash_account = frappe.get_cached_value(
+            "Mode of Payment Account",
+            {"parent": mode_of_payment, "company": company},
+            "default_account"
+        )
+
+        if not cash_account:
+            frappe.throw(f"Set default account for Mode of Payment: {mode_of_payment}")
+
+        # -------------------
+        # CREATE PAYMENT ENTRY
+        # -------------------
+        pe = frappe.new_doc("Payment Entry")
+        pe.payment_type = "Receive"
+        pe.company = company
+
+        pe.party_type = "Customer"
+        pe.party = party
+
+        pe.mode_of_payment = mode_of_payment
+        pe.posting_date = frappe.utils.nowdate()
+
+        pe.paid_amount = paid_amount
+        pe.received_amount = paid_amount
+
+        pe.reference_no = f"AUTO-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+        pe.reference_date = frappe.utils.nowdate()
+
+        # -------------------
+        # MANUAL ACCOUNT SETUP (avoids HRMS override issues)
+        # -------------------
+        pe.paid_from = party_account       # Accounts Receivable
+        pe.paid_to = cash_account          # Cash/Bank
+
+        # -------------------
+        # ⚠️ IMPORTANT: DO NOT ADD ANY REFERENCES
+        # HRMS override expects valid docs → so leave table EMPTY
+        # -------------------
+
+        # Save & Submit
+        pe.insert(ignore_permissions=True)
+        pe.submit()
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "payment_entry": pe.name,
+            "paid_amount": paid_amount,
+            "party": party
+        }
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Direct Customer Payment Entry Failed")
+        frappe.throw(f"Failed: {str(e)}")
+
+
+
+@frappe.whitelist()
+def update_sales_invoice_ref(wholesale_bag, buyer, invoice_ref):
+    name = frappe.db.get_value(
+        "Wholesale Transaction",
+        {"wholesale_bag": wholesale_bag, "buyer": buyer},
+        "name"
+    )
+    if not name:
+        return {"status": "failed", "msg": "Transaction not found"}
+
+    frappe.db.set_value("Wholesale Transaction", name, "sales_invoice_ref", invoice_ref)
+    frappe.db.commit()
+
+    return {"status": "success", "msg": "Invoice linked"}

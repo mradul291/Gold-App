@@ -672,3 +672,16 @@
 	color: #b52b27;
 	transform: scale(1.1);
 }
+
+.text-green {
+	color: #16A34A !important;   /* soft green */
+	font-weight: 600;
+}
+.text-red {
+	color: #DC2626 !important;   /* light red */
+	font-weight: 600;
+}
+.text-yellow {
+	color: #D97706 !important;   /* light golden yellow */
+	font-weight: 600;
+}

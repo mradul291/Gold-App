@@ -7,14 +7,13 @@ class Step1SelectBag {
 
 	async render() {
 		const html = `
-		<div class="wholesale-container">
-			<div class="loader-overlay">
-				<div class="loader"></div>
-				<p>Loading bags, please wait...</p>
-			</div>
-			<div class="warehouse-list flex flex-wrap gap-6" style="display:none;"></div>
-		</div>
-	`;
+			<div class="wholesale-container">
+				<div class="loader-overlay">
+					<div class="loader"></div>
+					<p>Loading bags, please wait...</p>
+				</div>
+				<div class="warehouse-list flex flex-wrap gap-6" style="display:none;"></div>
+			</div>`;
 		this.container.append(html);
 
 		const warehouseList = this.container.find(".warehouse-list");
@@ -26,7 +25,7 @@ class Step1SelectBag {
 					["warehouse_name", "like", "Bag%"],
 					["parent_warehouse", "=", "Wholesale - AGSB"],
 				],
-				fields: ["name", "warehouse_name", "parent_warehouse"],
+				fields: ["name", "warehouse_name"],
 			});
 
 			if (!warehouses.length) {
@@ -35,24 +34,45 @@ class Step1SelectBag {
 			}
 
 			for (let wh of warehouses) {
-				const res = await frappe.call({
-					method: "gold_app.api.sales.wholesale_warehouse.get_warehouse_stock",
-					args: { warehouse_name: wh.name },
+				// 🔹 Check if this bag already exists in Wholesale Transaction
+				let existingTxn = await frappe.call({
+					method: "gold_app.api.sales.wholesale_warehouse.get_wholesale_transaction_by_bag",
+					args: { wholesale_bag: wh.warehouse_name },
 				});
-				const stockData = res && res.message ? res.message : [];
-				this.renderWarehouseCard(warehouseList, wh, stockData);
+
+				let txnData = existingTxn?.message?.data || null;
+				let hasBuyer = txnData && txnData.buyer;
+				let status = txnData?.status || "Active";
+				let isCompleted = status === "Completed";
+
+				let stockData = [];
+
+				// 🔸 If transaction with buyer exists, use its child tables
+				if (hasBuyer) {
+					const recon = txnData.reconciliation_lines || [];
+
+					stockData = recon.map((r) => ({
+						purity: r.purity,
+						total_qty: r.actual || 0,
+						avg_rate: r.avg_rate || 0,
+						total_amount_rm: r.cost_basis || 0,
+					}));
+				} else {
+					const res = await frappe.call({
+						method: "gold_app.api.sales.wholesale_warehouse.get_warehouse_stock",
+						args: { warehouse_name: wh.name },
+					});
+					stockData = res?.message || [];
+				}
+
+				this.renderWarehouseCard(warehouseList, wh, stockData, txnData, isCompleted);
 			}
 		} finally {
-			// Hide loader and show results
-			loader.fadeOut(200, () => {
-				warehouseList.fadeIn(200);
-			});
+			loader.fadeOut(200, () => warehouseList.fadeIn(200));
 		}
 	}
 
-	renderWarehouseCard(container, wh, stockData) {
-		const warehouse_name = wh.warehouse_name;
-
+	renderWarehouseCard(container, wh, stockData, txnData, isCompleted) {
 		let purityList = "";
 		let totalQty = 0;
 		let totalAmount = 0;
@@ -69,43 +89,52 @@ class Step1SelectBag {
 			totalAmount += row.total_amount_rm;
 		});
 
-		// Skip this card if totalQty is 0 (no weight)
-		if (totalQty === 0) {
-			return; // Do not render this warehouse card
-		}
+		if (totalQty === 0) return;
 
 		const formattedTotal = frappe.format(totalAmount, { fieldtype: "Currency" });
+		const hasBuyer = txnData && txnData.buyer;
 
 		const card = $(`
-			<div class="warehouse-card">
-				<div class="card-header">
-					<h3 class="warehouse-title">${warehouse_name}</h3>
-					<span class="status-tag">Ready for Sale</span>
-				</div>
-
-				<div class="purity-list">${purityList}</div>
-
-				<div class="summary-block">
-					<div class="summary-row">
-						<span class="summary-label">Total:</span>
-						<span class="summary-value">${totalQty} g</span>
-					</div>
-					<div class="summary-row">
-						<span class="summary-label cost-label">Cost:</span>
-						<span class="summary-value cost-value">${formattedTotal}</span>
-					</div>
-				</div>
-
-				<button class="select-btn">Select This Bag</button>
-			</div>
-		`);
+	<div class="warehouse-card ${hasBuyer && !isCompleted ? "has-buyer" : ""}">
+		<div class="card-header">
+			<h3 class="warehouse-title">${wh.warehouse_name}</h3>
+			<span class="status-tag">${
+				isCompleted ? "Completed" : hasBuyer ? "In Progress" : "Ready for Sale"
+			}</span>
+		</div>
+		<div class="purity-list">${purityList}</div>
+		<div class="summary-block">
+			<div class="summary-row"><span>Total:</span><span>${totalQty} g</span></div>
+			<div class="summary-row"><span>Cost:</span><span>${formattedTotal}</span></div>
+			${
+				hasBuyer && !isCompleted
+					? `<div class="summary-row buyer-row"><span>Buyer:</span><span>${
+							txnData.buyer_name || txnData.buyer
+					  }</span></div>`
+					: ""
+			}
+		</div>
+		<button class="select-btn">${
+			isCompleted ? "Select This Bag" : hasBuyer ? "Resume Transaction" : "Select This Bag"
+		}</button>
+	</div>
+`);
 
 		card.find(".select-btn").on("click", () => {
-			this.nextStepCallback({
-				warehouse_id: wh.name, // internal ID
-				warehouse_name: warehouse_name, // display name
-			});
+			if (hasBuyer && !isCompleted) {
+				this.nextStepCallback({
+					warehouse_id: wh.name,
+					warehouse_name: wh.warehouse_name,
+					existing_txn: txnData,
+				});
+			} else {
+				this.nextStepCallback({
+					warehouse_id: wh.name,
+					warehouse_name: wh.warehouse_name,
+				});
+			}
 		});
+
 		container.append(card);
 	}
 }

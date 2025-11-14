@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "purity",
+  "avg_rate",
   "actual",
   "claimed",
   "delta",
@@ -78,13 +79,18 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Margin Percent"
+  },
+  {
+   "fieldname": "avg_rate",
+   "fieldtype": "Float",
+   "label": "AVCO (RM/g)"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-10-28 20:15:29.973124",
+ "modified": "2025-11-14 18:14:01.533206",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Reconciliation Line",
