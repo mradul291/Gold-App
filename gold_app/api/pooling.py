@@ -192,8 +192,74 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
     if not pool_name:
         frappe.throw(_("Pool name is required"))
 
+    # Allow wholesale-only execution if retail rows are empty but remaining transfers exist
     if not data:
+        if remaining_transfers:
+            remaining_transfers = json.loads(remaining_transfers)
+            if remaining_transfers:
+                # ---- Wholesale Only Mode ----
+                company = frappe.db.get_single_value("Global Defaults", "default_company") \
+                    or frappe.db.get_value("Company", {}, "name")
+
+                created_entries = []
+
+                for rt in remaining_transfers:
+                    purity = str(rt.get("purity"))
+                    qty = flt(rt.get("qty") or 0)
+                    target_wh = rt.get("target_warehouse") or WHOLESALE_WAREHOUSE
+                    source_item = rt.get("source_item") or f"Unsorted-{purity}"
+
+                # find source warehouse
+                    source_warehouse = frappe.db.get_value("Bin", {"item_code": source_item}, "warehouse")
+                    if not source_warehouse:
+                        frappe.throw(_(f"No stock available for {source_item}"))
+
+                    se = frappe.new_doc("Stock Entry")
+                    se.stock_entry_type = "Material Transfer"
+                    se.company = company
+                    se.posting_date = nowdate()
+                    se.posting_time = nowtime()
+
+                    se.append("items", {
+                        "item_code": source_item,
+                        "qty": qty,
+                        "s_warehouse": source_warehouse,
+                        "t_warehouse": target_wh,
+                        "allow_zero_valuation_rate": 1
+                    })
+
+                    se.insert(ignore_permissions=True)
+                    se.submit()
+                    created_entries.append(se.name)
+
+                # ---- Update Remaining Weights in Pool for Wholesale-Only Mode ----
+                pool_doc = frappe.get_doc("Gold Pool", pool_name)
+                for pb in pool_doc.purity_breakdown:
+                    purity = str(pb.purity)
+                    for rt in remaining_transfers:
+                        if str(rt.get("purity")) == purity:
+                            pb.total_weight = 0
+                            pb.total_cost = 0
+
+                pool_doc.save(ignore_permissions=True)
+
+# Mark pool completed if all purities consumed
+                if all(flt(r.total_weight) <= 0 for r in pool_doc.purity_breakdown):
+                    pool_doc.status = "Completed"
+                    pool_doc.save(ignore_permissions=True)
+
+                return {
+                    "name": created_entries[0] if created_entries else None,
+                    "all_names": created_entries,
+                    "stock_entry_type": "Material Transfer",
+                    "created_items": [],
+                    "msg": "Wholesale only stock entry created"
+                    }
+
+
+    # If still nothing to process, throw error
         frappe.throw(_("No items found to create Stock Entry"))
+
         
     if remaining_transfers:
         remaining_transfers = json.loads(remaining_transfers)

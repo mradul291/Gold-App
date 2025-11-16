@@ -44,13 +44,15 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             "valuation_rate": flt(r.get("valuation_rate") or 0),
             "target_warehouse": r.get("target_warehouse"),
             "item_group": r.get("item_group"),
-            "source_item": source_item
+            "source_item": source_item  
         })
 
     # Group rows by source_item
     groups = {}
     for r in rows:
         groups.setdefault(r["source_item"], []).append(r)
+        
+    pool_remaining = {str(pb.purity): flt(pb.total_weight) for pb in pool_doc.purity_breakdown}
 
     created_entries = []
     processed_purities = set()
@@ -72,16 +74,13 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
 
         if not source_warehouse:
             source_warehouse = frappe.db.get_value("Bin", {"item_code": source_item_code}, "warehouse")
-
+            
+        reduce_qty = sum([r["qty"] for r in group_rows])
         available_qty = flt(frappe.db.get_value(
             "Bin",
             {"item_code": source_item_code, "warehouse": source_warehouse},
             "actual_qty"
         ) or 0)
-
-        reduce_qty = sum([r["qty"] for r in group_rows])
-        if reduce_qty > available_qty:
-            frappe.throw(_("Qty {0} exceeds available {1} for {2}").format(reduce_qty, available_qty, source_item_code))
 
         # Build Break Item Stock Entry
         se = frappe.new_doc("Stock Entry")
@@ -94,7 +93,7 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         se.item_quantity = available_qty
         se.source_valuation_rate = source_valuation_rate
         se.reduce_quantity = reduce_qty
-        se.remaining_quantity = available_qty - reduce_qty
+        se.remaining_quantity = max(available_qty - reduce_qty, 0) 
 
         for r in group_rows:
             item_code = r["item_code"]
@@ -114,37 +113,31 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
                 "item_length": flt(r.get("item_length")) if r.get("item_length") not in (None, "", "null") else None,
                 "item_size": r.get("item_size") if r.get("item_size") not in (None, "", "null") else None,
                 "valuation_rate": r["valuation_rate"],
-                "allow_zero_valuation_rate": 1 if r["valuation_rate"] == 0 else 0
+                "allow_zero_valuation_rate": 1 if not flt(r.get("valuation_rate")) else 0
             })
 
             # Update pool breakdown only for this purity
-            for row_pb in pool_doc.purity_breakdown:
-                if str(row_pb.purity) == r["purity"]:
-                    if r["qty"] > row_pb.total_weight:
-                        frappe.throw(_("Qty {0} > available {1} for Purity {2}").format(
-                            r["qty"], row_pb.total_weight, r["purity"]))
-                    row_pb.total_weight -= r["qty"]
-                    row_pb.total_cost = row_pb.total_weight * row_pb.avco_rate
-                    processed_purities.add(r["purity"])
-                    break
-
-        pool_doc.save(ignore_permissions=True)
-
+            purity = r["purity"]
+            pool_remaining[purity] = max(pool_remaining.get(purity, 0) - flt(r["qty"]), 0)
+            processed_purities.add(purity)
+            
         se.insert(ignore_permissions=True)
         se.submit()
         created_entries.append(se.name)
 
         # Handle remaining weights FOR ALL purities (create Material Transfer for any remaining weight)
         for row_pb in pool_doc.purity_breakdown:
-            # If nothing remains for this purity, skip
-            if flt(row_pb.total_weight) <= 0:
-                continue
+            purity = str(row_pb.purity)
+    
+            # Skip if nothing remains
+            remaining_qty = flt(pool_remaining.get(purity, 0))
+            if remaining_qty <= 0:
+                continue  # Skip SE creation if qty is zero
 
-            source_item = f"Unsorted-{row_pb.purity}"
+            source_item = f"Unsorted-{purity}"
 
-            # If source item for this purity doesn't exist in MG - Mixed Gold, skip (or optionally create)
+            # If source item for this purity doesn't exist in MG - Mixed Gold, skip (log)
             if not frappe.db.exists("Item", {"item_code": source_item, "item_group": "MG - Mixed Gold"}):
-                # Skip so we don't fail the whole operation; log for debugging
                 frappe.log_error(
                     title=f"Missing source Item for remaining transfer: {source_item}",
                     message=f"create_stock_entry_from_pool: {source_item} missing in Item table for pool {pool_name}"
@@ -154,23 +147,21 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             # find source warehouse for the source_item
             source_warehouse = frappe.db.get_value("Bin", {"item_code": source_item}, "warehouse")
             if not source_warehouse:
-                # no source warehouse found -> skip with a log (can't move if we don't know from where)
                 frappe.log_error(
                     title=f"No Bin (warehouse) for source Item: {source_item}",
                     message=f"create_stock_entry_from_pool: no Bin found for {source_item} while creating remaining transfer for pool {pool_name}"
                 )
                 continue
 
-            # Default to WHOLESALE_WAREHOUSE unless user selected otherwise for this purity
+            # Default to WHOLESALE_WAREHOUSE unless user selected otherwise
             target_wh = WHOLESALE_WAREHOUSE
             if remaining_transfers:
                 for rt in remaining_transfers:
-                    # match purity as string for robust comparison
-                    if str(rt.get("purity")) == str(row_pb.purity):
+                    if str(rt.get("purity")) == purity:
                         target_wh = rt.get("target_warehouse") or WHOLESALE_WAREHOUSE
                         break
 
-            # Create Material Transfer for the remaining weight
+            # Create Material Transfer for full remaining weight of this purity
             se_transfer = frappe.new_doc("Stock Entry")
             se_transfer.stock_entry_type = "Material Transfer"
             se_transfer.company = company
@@ -178,7 +169,7 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             se_transfer.posting_time = nowtime()
             se_transfer.append("items", {
                 "item_code": source_item,
-                "qty": flt(row_pb.total_weight),
+                "qty": flt(pool_remaining.get(purity, 0)),  # use pool_remaining to respect new safety check
                 "s_warehouse": source_warehouse,
                 "t_warehouse": target_wh,
                 "allow_zero_valuation_rate": 1
@@ -186,9 +177,14 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             se_transfer.insert(ignore_permissions=True)
             se_transfer.submit()
 
-            row_pb.total_weight = 0
-            row_pb.total_cost = 0
+            # Deduct everything from pool_remaining so SE + remaining transfer matches
+            pool_remaining[purity] = 0
 
+    # Update pool_doc once after all SEs
+    for pb in pool_doc.purity_breakdown:
+        purity = str(pb.purity)
+        pb.total_weight = pool_remaining.get(purity, 0)
+        pb.total_cost = pb.total_weight * pb.avco_rate
 
     pool_doc.save(ignore_permissions=True)
 
@@ -214,4 +210,3 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         "stock_entry_type": "Break Item",
         "created_items": created_items,
     }
-

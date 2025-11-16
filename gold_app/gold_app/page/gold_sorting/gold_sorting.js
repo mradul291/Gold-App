@@ -233,7 +233,9 @@ class PoolPage {
                 <td>${remainingQty.toFixed(3)}</td>
                 <td>${targetWarehouseSelect}</td>
 				 <td><input type="number" class="form-control avco-rate" value="${avco}" readonly></td>
-    			<td><input type="text" class="form-control total-cost" value="${this.formatCurrency(totalCost)}" readonly></td>
+    			<td><input type="text" class="form-control total-cost" value="${this.formatCurrency(
+					totalCost
+				)}" readonly></td>
             </tr>
         `);
 			});
@@ -341,10 +343,16 @@ class PoolPage {
 			let rows = [];
 			tbody.find("tr").each(function () {
 				let r = $(this);
+				let purity = r.find("select[name='purity']").val();
+				let qty = parseFloat(r.find("input[name='qty']").val()) || 0;
+
+				// Skip completely empty rows
+				if (!purity || qty <= 0) return;
+
 				rows.push({
-					purity: r.find("select[name='purity']").val(),
-					qty: r.find("input[name='qty']").val(),
-					valuation_rate: parseFloat(r.find("input[name='avco_rate']").val() || 0),
+					purity: purity,
+					qty: qty,
+					valuation_rate: parseFloat(r.find("input[name='avco_rate']").val()) || 0,
 					target_warehouse: r.find("select[name='target_warehouse']").val(),
 					item_group: r.find("select[name='item_group']").val(),
 					item_length: r.find("input[name='item_length']").val() || null,
@@ -370,9 +378,15 @@ class PoolPage {
 				}
 			});
 
-			if (!rows.length) {
-				frappe.msgprint("Please add at least one row before saving.");
-				return;
+			if (!rows.length && remainingTransfers.length) {
+				frappe.show_alert(
+					{
+						message:
+							"No retail items selected. Proceeding with wholesale stock entry only.",
+						indicator: "blue",
+					},
+					6
+				);
 			}
 
 			try {
