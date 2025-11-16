@@ -25,7 +25,32 @@ class Step3ReceiptAndReconciliation {
 		this.backCallback = backCallback;
 		this.activeTab = "Sale Details";
 		this.sales_invoice = null;
-		this.render();
+		this.checkExistingInvoiceAndRender();
+	}
+
+	async checkExistingInvoiceAndRender() {
+		try {
+			const r = await frappe.call({
+				method: "gold_app.api.sales.wholesale_warehouse.get_wholesale_transaction_by_bag",
+				args: { wholesale_bag: this.selected_bag },
+			});
+
+			const data = r?.message?.data;
+
+			// ⭐ Invoice already exists → skip to Payment Entry tab
+			if (data && data.sales_invoice_ref) {
+				console.log("Sales Invoice exists, auto-skipping to Payment Entry");
+				this.sales_invoice = data.sales_invoice_ref;
+				this.activeTab = "Payment Entry";
+			} else {
+				console.log("No invoice found, showing normal flow");
+			}
+
+			this.render();
+		} catch (err) {
+			console.error("Error checking invoice:", err);
+			this.render(); // fallback
+		}
 	}
 
 	initializeReconSummary() {
