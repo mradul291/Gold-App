@@ -1,8 +1,15 @@
 import frappe
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+from erpnext.accounts.party import get_party_account
+from erpnext.controllers.accounts_controller import (
+    get_advance_journal_entries,
+    get_advance_payment_entries_for_regional,
+)
 from frappe.model.naming import make_autoname
 from frappe.utils import nowdate, formatdate
+from frappe.utils import flt, nowdate
+
 
 def autoname(doc, method):
     # Custom format: PUR-DDMMYY-RUNNINGNUMBER
@@ -44,9 +51,7 @@ def validate_payment_split(doc, method):
                 f"Payment Split total ({split_total}) must match Purchase Receipt total ({doc.grand_total})"
             )
 
-# -----------------------------
 # 1. Auto-generate Bank Reference
-# -----------------------------
 def set_bank_reference_code(doc, method):
     """Auto-generate or update Bank Reference Code for PR"""
     if doc.payment_method == "Bank Transfer":
@@ -63,9 +68,7 @@ def set_bank_reference_code(doc, method):
     else:
         doc.bank_reference_no = None
 
-# -----------------------------
 # 2. Invoice & Payment Creation
-# -----------------------------
 @frappe.whitelist()
 def create_invoice_and_payment(doc, method):
     doc = frappe.get_doc("Purchase Receipt", doc.name)
@@ -116,9 +119,7 @@ def create_invoice_and_payment(doc, method):
 
     frappe.db.commit()
 
-# -----------------------------
 # 3. Helper: Payment Entry
-# -----------------------------
 def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, reference_date=None):
     """Helper to create Payment Entry"""
     pe = get_payment_entry("Purchase Invoice", pi.name)
@@ -165,3 +166,63 @@ def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, referen
 
     doc.db_set("payment_entry_ref", ",".join(existing_refs))
 
+# Fetch Supplier Advances in PR
+@frappe.whitelist()
+def get_supplier_advances_for_pr(supplier, company=None):
+
+    if not company:
+        company = frappe.defaults.get_user_default("Company")
+
+    party_type = "Supplier"
+    party = supplier
+    amount_field = "debit_in_account_currency"
+    order_doctype = "Purchase Order"
+    order_list = []  # Purchase Receipt does not link orders here, keep empty
+
+    # Get party account list: advance accounts included
+    party_accounts = get_party_account(
+        party_type, party=party, company=company, include_advance=True
+    )
+
+    party_account = []
+    default_advance_account = None
+
+    if party_accounts:
+        party_account.append(party_accounts[0])  # supplier payable account
+        if len(party_accounts) == 2:
+            default_advance_account = party_accounts[1]
+
+    # Fetch Advances from Journal Entries
+    journal_entries = get_advance_journal_entries(
+        party_type, party, party_account, amount_field,
+        order_doctype, order_list, include_unallocated=True
+    )
+
+    # Fetch Advances from Payment Entries
+    payment_entries = get_advance_payment_entries_for_regional(
+        party_type, party, party_account,
+        order_doctype, order_list, default_advance_account,
+        include_unallocated=True
+    )
+
+    result = []
+    for d in journal_entries + payment_entries:
+        row = {
+            "reference_type": d.reference_type,
+            "reference_name": d.reference_name,
+            "reference_row": d.reference_row,
+            "remarks": d.remarks,
+            "advance_amount": flt(d.amount),
+            "allocated_amount": 0,
+            "ref_exchange_rate": flt(d.exchange_rate),
+            "difference_posting_date": nowdate(),
+        }
+
+        if d.get("paid_from"):
+            row["account"] = d.paid_from
+        if d.get("paid_to"):
+            row["account"] = d.paid_to
+
+        result.append(row)
+
+    return result

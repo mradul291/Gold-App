@@ -563,6 +563,17 @@
   {
     "doctype": "Custom Field",
     "dt": "Purchase Receipt",
+    "fieldname": "supplier_advances",
+    "label": "Customer Advances",
+    "fieldtype": "Table",
+    "options": "Purchase Invoice Advance",
+    "insert_after": "set_posting_time",
+    "name": "Purchase Receipt-supplier_advances",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
     "fieldname": "payment_method",
     "label": "Payment Method",
     "fieldtype": "Select",

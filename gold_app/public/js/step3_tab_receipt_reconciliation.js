@@ -1092,16 +1092,18 @@ class Step3TabReceiptReconciliation {
 				const totalWeightAdjustments =
 					itemReturnWeight + weightLoss + purityOut + weightAdjustStones - purityIn;
 				// Adjust status logic conservatively: success if positive profit/g or revenue > cost (as before)
-				if (
-					(profit > 0 && totalWeightAdjustments > 0) ||
-					profitG > 0 ||
-					revenue > baseCostBasis
-				) {
+				if (Math.abs(delta) < 0.001) {
 					statusHTML = '<span class="status-icon success">&#10004;</span>';
-					reconRow.addClass("recon-row-green");
 				} else {
-					statusHTML = '<span class="status-icon warning">&#9888;</span>';
-					reconRow.removeClass("recon-row-green");
+					if (
+						(profit > 0 && totalWeightAdjustments > 0) ||
+						profitG > 0 ||
+						revenue > baseCostBasis
+					) {
+						statusHTML = '<span class="status-icon success">&#10004;</span>';
+					} else {
+						statusHTML = '<span class="status-icon warning">&#9888;</span>';
+					}
 				}
 			}
 
