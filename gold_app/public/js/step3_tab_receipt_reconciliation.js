@@ -92,67 +92,6 @@ class Step3TabReceiptReconciliation {
 		}
 	}
 
-	// async loadExistingTransactionData() {
-	// 	try {
-	// 		const res = await frappe.call({
-	// 			method: "frappe.client.get_list",
-	// 			args: {
-	// 				doctype: "Wholesale Transaction",
-	// 				filters: {
-	// 					wholesale_bag: this.props.selected_bag,
-	// 					buyer: this.props.customer,
-	// 				},
-	// 				fields: ["name"],
-	// 				limit: 1,
-	// 			},
-	// 		});
-
-	// 		if (!res.message || res.message.length === 0) return;
-
-	// 		const docname = res.message[0].name;
-
-	// 		const txn = await frappe.call({
-	// 			method: "frappe.client.get",
-	// 			args: { doctype: "Wholesale Transaction", name: docname },
-	// 		});
-
-	// 		if (!txn.message) return;
-
-	// 		const doc = txn.message;
-
-	// 		// ⭐ 1. Load existing receipt_lines
-	// 		if (doc.receipt_lines && doc.receipt_lines.length > 0) {
-	// 			this.bagSummary = doc.receipt_lines.map((r) => ({
-	// 				purity: r.purity,
-	// 				weight: parseFloat(r.weight) || 0,
-	// 				rate: parseFloat(r.rate) || 0,
-	// 				amount: parseFloat(r.amount) || 0,
-	// 			}));
-	// 		} else {
-	// 			this.bagSummary = this.props.bagSummary || [];
-	// 		}
-
-	// 		// ⭐ 2. Load existing adjustments
-	// 		if (doc.adjustments && doc.adjustments.length > 0) {
-	// 			this.adjustments = doc.adjustments.map((a) => ({
-	// 				type: a.adjustment_type,
-	// 				from_purity: a.from_purity,
-	// 				to_purity: a.to_purity,
-	// 				weight: a.weight,
-	// 				notes: a.notes,
-	// 				impact: a.profit_impact,
-	// 			}));
-	// 		} else {
-	// 			this.adjustments = this.props.adjustments || [];
-	// 		}
-	// 	} catch (err) {
-	// 		console.error("Failed to load existing transaction data:", err);
-	// 	}
-	// }
-
-	// ==============================
-	// Load saved receipt_lines & adjustments
-	// ==============================
 	async loadExistingTransactionData() {
 		try {
 			// Fetch existing transaction
@@ -670,6 +609,19 @@ class Step3TabReceiptReconciliation {
 				adjustmentType === "Weight Adjustment - Stones"
 			) {
 				row.find(".to-purity").val($(this).val());
+			}
+		});
+
+		section.find(".profit-impact").each((_, el) => {
+			const $cell = $(el);
+			const txt = ($cell.text() || "").trim();
+
+			$cell.removeClass("text-success text-danger");
+
+			if (txt.startsWith("+")) {
+				$cell.addClass("text-success");
+			} else if (txt.startsWith("-")) {
+				$cell.addClass("text-danger");
 			}
 		});
 	}
@@ -1961,19 +1913,24 @@ class Step3TabReceiptReconciliation {
 		// Update UI cell styling and text
 		const $impactCell = $row.find(".profit-impact");
 
-		// Weight Adjustment - Stones shows in GREEN (positive)
+		let displayText = "";
+
 		if (type === "Weight Adjustment - Stones") {
-			$impactCell
-				.text(`+RM ${impact.toFixed(2)}`)
-				.removeClass("text-danger")
-				.addClass("text-success");
+			displayText = `+RM ${impact.toFixed(2)}`;
+		} else {
+			displayText = `-RM ${impact.toFixed(2)}`;
 		}
-		// All other types show in RED (negative)
-		else {
-			$impactCell
-				.text(`-RM ${impact.toFixed(2)}`)
-				.removeClass("text-success")
-				.addClass("text-danger");
+
+		$impactCell.text(displayText);
+
+		// ---- Set color based on text sign (+ / -)
+		$impactCell.removeClass("text-success text-danger");
+
+		const txt = displayText.trim();
+		if (txt.startsWith("+")) {
+			$impactCell.addClass("text-success");
+		} else if (txt.startsWith("-")) {
+			$impactCell.addClass("text-danger");
 		}
 
 		// Return signed numeric value (negative for losses, positive for stones)

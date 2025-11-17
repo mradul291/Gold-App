@@ -74,6 +74,8 @@ def create_invoice_and_payment(doc, method):
     pi = make_purchase_invoice(doc.name)
     pi.supplier_invoice_date = doc.posting_date
     pi.custom_payment_mode = doc.payment_method
+    
+    pi.allocate_advances_automatically = 1
 
     pi.flags.ignore_permissions = True
     pi.insert()

@@ -63,6 +63,7 @@ def create_sales_invoice(customer, items, company=None):
         "company": company,
         "posting_date": frappe.utils.nowdate(),
         "update_stock": 1,
+        "allocate_advances_automatically": 1,
         "items": si_items
     })
 
