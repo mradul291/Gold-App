@@ -1,0 +1,89 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-19 15:25:38.009386",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "source_bag",
+  "purity",
+  "description",
+  "weight",
+  "avco_rate",
+  "sell_rate",
+  "amount",
+  "profit_per_g",
+  "total_profit"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_bag",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Source Bag"
+  },
+  {
+   "fieldname": "purity",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Purity"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Description"
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight (g)"
+  },
+  {
+   "fieldname": "avco_rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "AVCO (RM/g)"
+  },
+  {
+   "fieldname": "sell_rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Sell Rate (RM/g)"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount (MYR)"
+  },
+  {
+   "fieldname": "profit_per_g",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Profit/g (RM/g)"
+  },
+  {
+   "fieldname": "total_profit",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Profit (MYR)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-19 15:33:13.721954",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Wholesale Bag Direct Sale Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

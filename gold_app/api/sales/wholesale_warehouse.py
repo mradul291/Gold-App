@@ -360,7 +360,7 @@ def record_wholesale_payment(wholesale_bag, method, amount, ref_no=None, status=
         frappe.log_error(frappe.get_traceback(), "Wholesale Payment Save Failed")
         frappe.throw(f"Failed to record payment: {str(e)}")
 
-
+# Advance Payment Entry
 @frappe.whitelist()
 def create_customer_direct_payment(party, mode_of_payment, paid_amount):
     """
@@ -460,8 +460,7 @@ def create_customer_direct_payment(party, mode_of_payment, paid_amount):
         frappe.log_error(frappe.get_traceback(), "Direct Customer Payment Entry Failed")
         frappe.throw(f"Failed: {str(e)}")
 
-
-
+# Add Sales Invoice reference to Wholesale Transaction
 @frappe.whitelist()
 def update_sales_invoice_ref(wholesale_bag, buyer, invoice_ref):
     name = frappe.db.get_value(

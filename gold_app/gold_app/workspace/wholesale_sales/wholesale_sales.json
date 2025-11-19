@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"O7p3idsLCs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Wholesale Sales Management</span>\",\"col\":12}},{\"id\":\"XPmuLBgRxZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Create New Sale\",\"col\":3}}]",
+ "content": "[{\"id\":\"O7p3idsLCs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Wholesale Sales Management</span>\",\"col\":12}},{\"id\":\"XPmuLBgRxZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Wholesale Sale\",\"col\":3}},{\"id\":\"BGIj8XzI1B\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Wholesale Bag Direct Sale\",\"col\":3}}]",
  "creation": "2025-10-14 18:18:34.341343",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Wholesale Sales",
  "links": [],
- "modified": "2025-10-14 18:35:33.126402",
+ "modified": "2025-11-18 17:44:41.982532",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Sales",
@@ -35,7 +35,14 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Create New Sale",
+   "label": "New Wholesale Bag Direct Sale",
+   "link_to": "wholesale-bag-direct",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "New Wholesale Sale",
    "link_to": "wholesale-sale",
    "type": "Page"
   }
