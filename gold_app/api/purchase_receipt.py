@@ -40,16 +40,40 @@ def update_item_from_receipt(doc, method):
 
 # Validations on PR for Payment Methods
 def validate_payment_split(doc, method):
-    """Ensure Mix payment split totals are valid before submit"""
-    if doc.payment_method == "Mix":
-        if not doc.payment_split:
-            frappe.throw("Payment Split table is required for Mix payment method")
+    if doc.payment_method != "Mix":
+        return
 
-        split_total = sum([row.amount for row in doc.payment_split])
+    if not doc.payment_split:
+        frappe.throw("Payment Split table is required for Mix payment method")
+
+    split_total = sum(row.amount for row in doc.payment_split)
+
+    # Calculate total usable advances
+    advance_total = 0.0
+    if doc.supplier_advances:
+        advance_total = sum(
+            row.advance_amount for row in doc.supplier_advances
+        )
+
+    # Remaining amount the user must pay through Mix table
+    expected_mix_total = doc.grand_total - advance_total
+
+    # If no advances → normal validation
+    if advance_total == 0:
         if split_total != doc.grand_total:
             frappe.throw(
-                f"Payment Split total ({split_total}) must match Purchase Receipt total ({doc.grand_total})"
+                f"Payment Split total ({split_total}) must match "
+                f"Purchase Receipt total ({doc.grand_total})"
             )
+    else:
+        # Supplier has advances → Mix amount must match remaining
+        if split_total != expected_mix_total:
+            frappe.throw(
+                f"Supplier advance detected ({advance_total}).\n"
+                f"Payment Split total must be equal to remaining amount: {expected_mix_total}.\n"
+                f"Currently entered: {split_total}."
+            )
+
 
 # 1. Auto-generate Bank Reference
 def set_bank_reference_code(doc, method):

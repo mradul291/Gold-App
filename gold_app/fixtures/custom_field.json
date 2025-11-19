@@ -577,7 +577,7 @@
     "fieldname": "payment_method",
     "label": "Payment Method",
     "fieldtype": "Select",
-    "options": "Cash\nBank Transfer\nMix\nCustomer Payable Account",
+    "options": "Cash\nBank Transfer\nMix",
     "insert_after": "company",
     "reqd": 1,
     "name": "Purchase Receipt-payment_method",
