@@ -225,13 +225,43 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	}
 
 	const customerInput = document.getElementById("customerInput");
-	customerInput.addEventListener("input", function () {
-		let customer = this.value;
-		if (customer) fetchCustomerIDNumber(customer);
+
+	customerInput.addEventListener("input", async function () {
+		let query = this.value.trim();
+		if (query.length > 0) {
+			try {
+				const r = await frappe.call({
+					method: "frappe.client.get_list",
+					args: {
+						doctype: "Customer",
+						fields: ["name", "customer_name"],
+						filters: [["customer_name", "like", "%" + query + "%"]],
+						limit_page_length: 20,
+					},
+				});
+				renderCustomerOptions(r.message || []);
+			} catch (err) {
+				console.error("Error searching customers:", err);
+				renderCustomerOptions([]);
+			}
+		} else {
+			renderCustomerOptions([]);
+		}
 	});
+
 	customerInput.addEventListener("change", function () {
-		let customer = this.value;
-		if (customer) fetchCustomerIDNumber(customer);
+		const list = document.getElementById("customerOptions");
+		let selectedName = this.value;
+		let selectedId = null;
+		for (let opt of list.options) {
+			if (opt.value === selectedName) {
+				selectedId = opt.getAttribute("data-id");
+				break;
+			}
+		}
+		if (selectedId) {
+			fetchCustomerIDNumber(selectedId);
+		}
 	});
 
 	function renderCustomerOptions(customers) {
@@ -239,13 +269,11 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		list.innerHTML = "";
 		customers.forEach((c) => {
 			const option = document.createElement("option");
-			option.value = c.name; // actual Customer ID
-			option.textContent = c.customer_name || c.name; // label shown
+			option.value = c.customer_name;
+			option.setAttribute("data-id", c.name);
 			list.appendChild(option);
 		});
 	}
-
-	loadCustomerList();
 
 	// Helper functions for dynamic bag and purity options in table rows
 	function getBagOptionsHtml() {

@@ -2222,6 +2222,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 };
 
 // Dynamic Calculations
+// wholesale_bag_direct.js
 frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
   // -- Page Initialization --
   var page = frappe.ui.make_app_page({
@@ -2313,7 +2314,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
               <th><input type="checkbox" /></th>
               <th>No.</th>
               <th>Source Bag</th>
-              <th>Purity</th>
+              <th class="wbd-purity-col">Purity</th>
               <th>Description</th>
               <th>Weight (g)</th>
               <th>AVCO (RM/g)</th>
@@ -2390,6 +2391,14 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
     });
     return html;
   }
+
+  // Show loader in Bag Overview block
+  $("#bagCardsRow").html(`
+	<div class="loader-overlay">
+	  <div class="loader"></div>
+	  <p>Loading bags, please wait...</p>
+	</div>
+	`);
 
   // Fetch bag overview data from backend API and render cards & initialize table options
   frappe.call({
