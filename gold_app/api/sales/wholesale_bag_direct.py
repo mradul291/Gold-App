@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 @frappe.whitelist()
 def get_all_bag_overview():
@@ -46,3 +47,94 @@ def get_all_bag_overview():
         bag_list.append(bag)
 
     return bag_list
+
+@frappe.whitelist(allow_guest=False)
+def create_wholesale_bag_direct_sale(data):
+    import json
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    try:
+        doc = frappe.new_doc("Wholesale Bag Direct Sale")
+
+        # Parent fields
+        doc.naming_series = data.get('series')
+        doc.customer_type = data.get('customer_type')
+        doc.id_number = data.get('id_number')
+        doc.posting_date = data.get('date')
+        doc.customer = data.get('customer')
+        doc.posting_time = data.get('posting_time')
+        doc.payment_method = data.get('payment_method')
+
+        # Document Totals
+        doc.total_weight_sold = data.get('total_weight_sold')
+        doc.total_avco_cost = data.get('total_avco_cost')
+        doc.total_selling_amount = data.get('total_selling_amount')
+        doc.average_profit_per_g = data.get('average_profit_per_g')
+        doc.total_profit = data.get('total_profit')
+        doc.overall_profit_margin = data.get('overall_profit_margin')
+
+        # Child table - items
+        items = data.get('items', [])
+        for item in items:
+            doc.append('items', {
+                'source_bag': item.get('source_bag'),
+                'purity': item.get('purity'),
+                'description': item.get('description'),
+                'weight': item.get('weight'),
+                'avco_rate': item.get('avco_rate'),
+                'sell_rate': item.get('sell_rate'),
+                'amount': item.get('amount'),
+                'profit_per_g': item.get('profit_per_g'),
+                'total_profit': item.get('total_profit')
+            })
+
+        doc.save(ignore_permissions=True)
+        frappe.db.commit()
+        return {'status': 'success', 'name': doc.name}
+
+    except Exception as e:
+        frappe.log_error(f"Error in create_wholesale_bag_direct_sale: {str(e)}")
+        frappe.db.rollback()
+        return {'status': 'error', 'message': str(e)}
+
+@frappe.whitelist()
+def create_sales_invoice(customer, items, company=None):
+    import json
+    if not company:
+        company = frappe.defaults.get_user_default("Company")
+
+    # items is expected to be a JSON string from JS API
+    items_list = json.loads(items)
+
+    si_items = []
+    for i in items_list:
+        qty_val = flt(i.get("weight") or i.get("qty") or 1)
+        si_items.append({
+            "item_code": i.get("item_code"),
+            "qty": qty_val,
+            # Optional custom fields
+            "weight_per_unit": qty_val,
+            "rate": flt(i.get("rate")),
+            "purity": i.get("purity", ""),
+            "warehouse": i.get("warehouse", "")
+        })
+
+    si = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": customer,
+        "company": company,
+        "posting_date": frappe.utils.nowdate(),
+        "update_stock": 1,
+        "allocate_advances_automatically": 1,
+        "items": si_items
+    })
+
+    si.insert(ignore_permissions=True)
+    si.submit()
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "sales_invoice": si.name,
+    }

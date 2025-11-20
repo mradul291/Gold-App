@@ -2221,8 +2221,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
   });
 };
 
-// Dynamic Calculations
-// wholesale_bag_direct.js
+// wholesale_bag_direct.js - Dynamic
 frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
   // -- Page Initialization --
   var page = frappe.ui.make_app_page({
@@ -2236,9 +2235,12 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
   // -- Page Body Layout --
   $(page.body).html(`
     <!-- Status and Save Button -->
-    <div class="wbd-meta-row">
-      <span class="wbd-status-chip">Not Saved</span>
-      <button class="btn btn-dark wbd-save-btn">Save</button>
+    <div class="wbd-meta-row" style="display: flex; align-items: center; justify-content: space-between;">
+    	<span class="wbd-status-chip">Not Saved</span>
+    	<div>
+    		<button class="wbd-save-btn">Save</button>
+    		<button class="wbd-invoice-btn" style="margin-left: 10px;">Create Invoice</button>
+    	</div>
     </div>
 
     <div class="wbd-main-container">
@@ -2254,11 +2256,11 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
           </div>
           <div>
             <label>Date <span class="wbd-required">*</span></label>
-            <input type="date" value="2025-11-12">
+            <input type="date" value="">
           </div>
           <div>
             <label>Posting Time <span class="wbd-required">*</span></label>
-            <input type="time" value="14:04">
+            <input type="time" value="">
           </div>
         </div>
         <!-- Row 2: Customer Type, Customer, Payment Method -->
@@ -2359,6 +2361,19 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
       </div>
     </div>`);
 
+  // Set current date and time on page load
+  const now = new Date();
+  const padZero = (n) => n.toString().padStart(2, "0");
+
+  const currentDate = `${now.getFullYear()}-${padZero(
+    now.getMonth() + 1
+  )}-${padZero(now.getDate())}`;
+  const currentTime = `${padZero(now.getHours())}:${padZero(now.getMinutes())}`;
+
+  // Set values in the date and time inputs
+  $("input[type='date']").val(currentDate);
+  $("input[type='time']").val(currentTime);
+
   // Function to build dynamic bag card HTML
   function renderBagCards(bags) {
     let html = "";
@@ -2414,23 +2429,6 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
     },
   });
 
-  // Customer List functions
-  async function loadCustomerList() {
-    try {
-      const r = await frappe.call({
-        method: "frappe.client.get_list",
-        args: {
-          doctype: "Customer",
-          fields: ["name", "customer_name"],
-          limit_page_length: 500,
-        },
-      });
-      renderCustomerOptions(r.message || []);
-    } catch (err) {
-      console.error("Error loading customers:", err);
-    }
-  }
-
   async function fetchCustomerIDNumber(customerName) {
     try {
       const r = await frappe.call({
@@ -2452,13 +2450,43 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
   }
 
   const customerInput = document.getElementById("customerInput");
-  customerInput.addEventListener("input", function () {
-    let customer = this.value;
-    if (customer) fetchCustomerIDNumber(customer);
+
+  customerInput.addEventListener("input", async function () {
+    let query = this.value.trim();
+    if (query.length > 0) {
+      try {
+        const r = await frappe.call({
+          method: "frappe.client.get_list",
+          args: {
+            doctype: "Customer",
+            fields: ["name", "customer_name"],
+            filters: [["customer_name", "like", "%" + query + "%"]],
+            limit_page_length: 20,
+          },
+        });
+        renderCustomerOptions(r.message || []);
+      } catch (err) {
+        console.error("Error searching customers:", err);
+        renderCustomerOptions([]);
+      }
+    } else {
+      renderCustomerOptions([]);
+    }
   });
+
   customerInput.addEventListener("change", function () {
-    let customer = this.value;
-    if (customer) fetchCustomerIDNumber(customer);
+    const list = document.getElementById("customerOptions");
+    let selectedName = this.value;
+    let selectedId = null;
+    for (let opt of list.options) {
+      if (opt.value === selectedName) {
+        selectedId = opt.getAttribute("data-id");
+        break;
+      }
+    }
+    if (selectedId) {
+      fetchCustomerIDNumber(selectedId);
+    }
   });
 
   function renderCustomerOptions(customers) {
@@ -2466,13 +2494,11 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
     list.innerHTML = "";
     customers.forEach((c) => {
       const option = document.createElement("option");
-      option.value = c.name; // actual Customer ID
-      option.textContent = c.customer_name || c.name; // label shown
+      option.value = c.customer_name;
+      option.setAttribute("data-id", c.name);
       list.appendChild(option);
     });
   }
-
-  loadCustomerList();
 
   // Helper functions for dynamic bag and purity options in table rows
   function getBagOptionsHtml() {
@@ -2726,6 +2752,183 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
     });
     renderItemsTableOptions();
     updateDocumentTotals();
+  });
+
+  // Save Button Event
+  $(".wbd-save-btn").on("click", function () {
+    // 1. Compose the data object matching API schema
+    const data = {};
+
+    // -- Header fields --
+    data.series = $("select:contains('WBS-DDMMYY-')").val() || "WBS-DDMMYY-";
+    data.date = $("input[type='date']").val();
+    data.posting_time = $("input[type='time']").val();
+    data.customer_type = $(".wbd-form-row select").eq(1).val() || "Individual";
+    data.customer = $("#customerInput").val();
+    data.payment_method = $(".wbd-form-row select").eq(2).val() || "Cash";
+    data.id_number = $("#idNumberInput").val();
+
+    // -- Document Totals --
+    const $totals = $(".wbd-totals-card .wbd-totals-row");
+    data.total_weight_sold =
+      parseFloat($totals.eq(0).find("span").eq(1).text()) || 0;
+    data.total_avco_cost =
+      parseFloat(
+        ($totals.eq(1).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")
+      ) || 0;
+    data.total_selling_amount =
+      parseFloat(
+        ($totals.eq(2).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")
+      ) || 0;
+    data.average_profit_per_g =
+      parseFloat($totals.eq(3).find("span").eq(1).text()) || 0;
+    data.total_profit =
+      parseFloat(
+        ($totals.eq(4).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")
+      ) || 0;
+    data.overall_profit_margin = $totals.eq(5).find("span").eq(1).text();
+
+    // -- Items Table --
+    data.items = [];
+    $(".wbd-table tbody tr").each(function () {
+      const $tr = $(this);
+      const row = {
+        source_bag: $tr.find("select.wbd-src-bag").val() || "",
+        purity: $tr.find("select.wbd-src-purity").val() || "",
+        description: $tr.find("input[type='text']").eq(0).val() || "",
+        weight: parseFloat($tr.find(".wbd-weight").val()) || 0,
+        avco_rate:
+          parseFloat($tr.find("input[type='number']").eq(1).val()) || 0,
+        sell_rate:
+          parseFloat($tr.find("input[type='number']").eq(2).val()) || 0,
+        amount: parseFloat($tr.find("input[type='number']").eq(3).val()) || 0,
+        profit_per_g:
+          parseFloat($tr.find("input[type='number']").eq(4).val()) || 0,
+        total_profit:
+          parseFloat($tr.find("input[type='number']").eq(5).val()) || 0,
+      };
+      data.items.push(row);
+    });
+
+    // 2. Show loader or disable Save button for feedback
+    $(".wbd-save-btn").prop("disabled", true).text("Saving...");
+
+    // 3. Call API
+    frappe.call({
+      method:
+        "gold_app.api.sales.wholesale_bag_direct.create_wholesale_bag_direct_sale",
+      type: "POST",
+      args: { data },
+      callback: function (r) {
+        // 4. On Success or Error
+        const $chip = $(".wbd-status-chip");
+        if (r.message && r.message.status === "success") {
+          $chip
+            .text("Saved")
+            .removeClass() // removes any previous classes/styles
+            .addClass("wbd-status-chip saved");
+        } else {
+          $chip
+            .text("Not Saved")
+            .removeClass("saved")
+            .addClass("wbd-status-chip");
+          frappe.msgprint({
+            title: "Save Error",
+            message:
+              r.message && r.message.message
+                ? r.message.message
+                : "Unknown error.",
+            indicator: "red",
+          });
+        }
+        $(".wbd-save-btn").prop("disabled", false).text("Save");
+      },
+    });
+  });
+
+  // Sales Invoice Button Event
+  $(".wbd-invoice-btn").on("click", function () {
+    // Collect Sales Invoice item data as per mapping
+    // Get customer ID (doc.name) based on selected customer_name in the input
+    let selectedCustomerName = $("#customerInput").val();
+    let selectedCustomerId = null;
+    $("#customerOptions option").each(function () {
+      if ($(this).val() === selectedCustomerName) {
+        selectedCustomerId = $(this).attr("data-id");
+        return false;
+      }
+    });
+    if (!selectedCustomerId) {
+      frappe.msgprint("Please select a valid customer from the suggestions.");
+      return;
+    }
+    let customer = selectedCustomerId;
+
+    let items_data = [];
+
+    $(".wbd-table tbody tr").each(function () {
+      const $tr = $(this);
+
+      // Construct "item_code" as "Unsorted-{purity}"
+      const purity = $tr.find("select.wbd-src-purity").val() || "";
+      const item_code = purity ? `Unsorted-${purity}` : "";
+
+      // Get Source Bag for warehouse
+      const source_bag = $tr.find("select.wbd-src-bag").val() || "";
+
+      // Get Weight (g) as qty and weight_per_unit
+      const qty = parseFloat($tr.find(".wbd-weight").val()) || 0;
+
+      // Get AVCO (RM/g) as rate
+      const rate =
+        parseFloat($tr.find("input[type='number']").eq(2).val()) || 0;
+
+      items_data.push({
+        item_code: item_code,
+        qty: qty,
+        weight_per_unit: qty,
+        rate: rate,
+        purity: purity,
+        warehouse: source_bag,
+      });
+    });
+
+    // Optional: validate data
+    if (!customer || !items_data.length) {
+      frappe.msgprint(
+        "Customer and at least one item are required for Sales Invoice."
+      );
+      return;
+    }
+
+    // Disable button and show feedback
+    $(".wbd-invoice-btn").prop("disabled", true).text("Creating...");
+
+    frappe.call({
+      method: "gold_app.api.sales.wholesale_bag_direct.create_sales_invoice",
+      args: {
+        customer: customer,
+        items: JSON.stringify(items_data),
+      },
+      callback: function (r) {
+        $(".wbd-invoice-btn").prop("disabled", false).text("Create Invoice");
+        if (r.message && r.message.status === "success") {
+          frappe.show_alert({
+            message: "Sales Invoice Created: " + r.message.sales_invoice,
+            indicator: "green",
+          });
+          setTimeout(function () {
+            location.reload();
+          }, 1500);
+        } else {
+          frappe.msgprint({
+            message: "Failed to create Sales Invoice.",
+            title: "Error",
+            indicator: "red",
+          });
+        }
+      },
+    });
   });
 
   // Bag Overview Expand/Collapse

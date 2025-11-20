@@ -29,6 +29,15 @@
   margin-top: 0;
 }
 
+.wbd-status-chip.saved {
+  background: #e8f7e2; 
+  color: #1e7e34;  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;         
+}
+
 .wbd-save-btn {
   background: #273144;
   color: #fff;
@@ -46,6 +55,25 @@
   justify-content: center;
 }
 .wbd-save-btn:hover {
+  background: #13293d;
+}
+.wbd-invoice-btn {
+  background: #273144;
+  color: #fff;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 20px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(50,80,120,0.07);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  min-width: 80px;
+  justify-content: center;
+}
+.wbd-invoice-btn:hover {
   background: #13293d;
 }
 

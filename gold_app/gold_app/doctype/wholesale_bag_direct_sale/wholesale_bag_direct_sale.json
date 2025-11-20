@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "WBS-####",
+ "autoname": "format:WBS-{DD}{MM}{YY}-{###}",
  "creation": "2025-11-19 15:20:02.141268",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -30,6 +30,7 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Series",
    "read_only": 1
   },
@@ -124,11 +125,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-19 18:48:04.333757",
+ "modified": "2025-11-20 18:54:18.965152",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Bag Direct Sale",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

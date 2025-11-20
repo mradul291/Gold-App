@@ -29,6 +29,15 @@
   margin-top: 0;
 }
 
+.wbd-status-chip.saved {
+  background: #e8f7e2; 
+  color: #1e7e34;  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;         
+}
+
 .wbd-save-btn {
   background: #273144;
   color: #fff;
@@ -46,6 +55,25 @@
   justify-content: center;
 }
 .wbd-save-btn:hover {
+  background: #13293d;
+}
+.wbd-invoice-btn {
+  background: #273144;
+  color: #fff;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 20px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(50,80,120,0.07);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  min-width: 80px;
+  justify-content: center;
+}
+.wbd-invoice-btn:hover {
   background: #13293d;
 }
 
@@ -92,7 +120,7 @@
   color: #1a1a1a;
   margin-bottom: 4px;
   outline: none;
-  height: 38px;
+  height: 32px;
 }
 .wbd-form-row input:focus,
 .wbd-form-row select:focus {
@@ -109,6 +137,66 @@
   font-size: 12px;
   font-style: italic;
 }
+
+.customer-input-wrapper { position: relative; }
+
+#customerInput {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #ced1d8;
+  background: #fff;
+  transition: border 0.22s;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+  outline: none;
+  height: 32px; 
+}
+
+#customerInput:focus {
+  border: 1.5px solid #3858bb;
+  outline: none;
+}
+
+#customerSuggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  display: none;
+}
+
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+  transition: background 0.15s, color 0.15s;
+  align-items: center;
+}
+
+.suggestion-item:hover {
+  background: #f0f7ff;
+  color: #3858bb;
+}
+
+.no-results {
+  padding: 10px 12px;
+  color: #888;
+  font-size: 13px;
+  font-style: italic;
+}
+
 
 /* ===== Bag Overview Section ===== */
 .wbd-bag-overview-block {

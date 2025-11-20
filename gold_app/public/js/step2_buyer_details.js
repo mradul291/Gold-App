@@ -16,36 +16,30 @@ class Step2BuyerDetails {
 				</div>
 				<div class="buyer-content" style="display:none;">
 					<div class="bag-details-summary"></div>
-						<div class="buyer-form-block flex-row">		
-<div class="form-group" style="flex: 1; min-width: 200px;">
-    <label for="buyer-input">Select Buyer <span class="req">*</span></label>
+					<div class="buyer-form-block flex-row">
+						<div class="form-group" style="flex: 1; min-width: 200px;">
+							<label for="buyer-input">Select Buyer <span class="req">*</span></label>
 
-    <div style="display: flex; gap: 10px; align-items: center;">
+							<div style="display: flex; gap: 10px; align-items: center;">
 
-        <!-- Input Wrapper (dropdown sticks to this) -->
-        <div class="buyer-input-wrapper" style="flex: 1; position: relative;">
-            <input 
-                type="text" 
-                id="buyer-input" 
-                class="input-text"
-                placeholder="Search Buyer..."
-                style="width: 100%;"
-            />
+								<!-- Input Wrapper (dropdown sticks to this) -->
+								<div class="buyer-input-wrapper" style="flex: 1; position: relative;">
+									<input type="text" id="buyer-input" class="input-text" placeholder="Search Buyer..."
+										style="width: 100%;" />
 
-            <!-- Suggestions positioned correctly -->
-            <div id="buyer-suggestions" class="dropdown-suggestions"></div>
-        </div>
+									<!-- Suggestions positioned correctly -->
+									<div id="buyer-suggestions" class="dropdown-suggestions"></div>
+								</div>
 
-        <!-- Add Buyer Button -->
-        <button id="add-buyer-btn" class="btn-secondary" style="height: 38px;">
-            Add Buyer
-        </button>
-    </div>
-</div>
+								<!-- Add Buyer Button -->
+								<button id="add-buyer-btn" class="btn-secondary" style="height: 38px;">
+									Add Buyer
+								</button>
+							</div>
+						</div>
 						<div class="form-group" style="flex: 1; min-width: 200px; margin-left: 16px;">
 							<label for="sale-date">Sale Date</label>
-							<input type="date" class="input-date" id="sale-date"
-								value="${frappe.datetime.nowdate()}"/>
+							<input type="date" class="input-date" id="sale-date" value="${frappe.datetime.nowdate()}" />
 						</div>
 					</div>
 				</div>

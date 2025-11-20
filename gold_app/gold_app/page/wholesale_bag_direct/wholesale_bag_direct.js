@@ -12,9 +12,12 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	// -- Page Body Layout --
 	$(page.body).html(`
     <!-- Status and Save Button -->
-    <div class="wbd-meta-row">
-      <span class="wbd-status-chip">Not Saved</span>
-      <button class="btn btn-dark wbd-save-btn">Save</button>
+    <div class="wbd-meta-row" style="display: flex; align-items: center; justify-content: space-between;">
+    	<span class="wbd-status-chip">Not Saved</span>
+    	<div>
+    		<button class="wbd-save-btn">Save</button>
+    		<button class="wbd-invoice-btn" style="margin-left: 10px;">Create Invoice</button>
+    	</div>
     </div>
 
     <div class="wbd-main-container">
@@ -30,25 +33,29 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
           </div>
           <div>
             <label>Date <span class="wbd-required">*</span></label>
-            <input type="date" value="2025-11-12">
+            <input type="date" value="">
           </div>
           <div>
             <label>Posting Time <span class="wbd-required">*</span></label>
-            <input type="time" value="14:04">
+            <input type="time" value="">
           </div>
         </div>
         <!-- Row 2: Customer Type, Customer, Payment Method -->
         <div class="wbd-form-row">
           <div>
-            <label>Customer Type</label>
-            <select>
-              <option>Individual</option>
-            </select>
+          	<label>Customer Type</label>
+          	<select id="customerTypeSelect">
+          		<option value="Individual">Individual</option>
+          		<option value="Wholesale">Wholesale</option>
+				<option value="Retail">Retail</option>
+          	</select>
           </div>
           <div>
-            <label>Customer <span class="wbd-required">*</span></label>
-            <input type="text" id="customerInput" list="customerOptions" placeholder="Select or search customer">
-            <datalist id="customerOptions"></datalist>
+          	<label>Customer <span class="wbd-required">*</span></label>
+          	<div class="customer-input-wrapper" style="position: relative;">
+          		<input type="text" id="customerInput" placeholder="Select or search customer">
+          		<div id="customerSuggestions" class="dropdown-suggestions" style="display:none;"></div>
+          	</div>
           </div>
           <div>
             <label>Payment Method <span class="wbd-required">*</span></label>
@@ -135,6 +142,34 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
       </div>
     </div>`);
 
+	// Set current date and time on page load
+	const now = new Date();
+	const padZero = (n) => n.toString().padStart(2, "0");
+
+	const currentDate = `${now.getFullYear()}-${padZero(now.getMonth() + 1)}-${padZero(
+		now.getDate()
+	)}`;
+	const currentTime = `${padZero(now.getHours())}:${padZero(now.getMinutes())}`;
+
+	// Set values in the date and time inputs
+	$("input[type='date']").val(currentDate);
+	$("input[type='time']").val(currentTime);
+
+	// Change Status to Not Saved on Any Update.
+	function markNotSaved() {
+		const $chip = $(".wbd-status-chip");
+		$chip.text("Not Saved").removeClass("saved").addClass("wbd-status-chip");
+	}
+	// Revert to Not Saved on:
+	// Any input/select change in form, any table input, or row add/remove
+	$(document).on(
+		"input change",
+		".wbd-form-row input, .wbd-form-row select, .wbd-table input, .wbd-table select",
+		markNotSaved
+	);
+	$(".wbd-add-row-btn, .wbd-table").on("click", markNotSaved); // Handles add/remove row buttons
+	$("#customerSuggestions").on("click", ".suggestion-item", markNotSaved);
+
 	// Function to build dynamic bag card HTML
 	function renderBagCards(bags) {
 		let html = "";
@@ -187,23 +222,6 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		},
 	});
 
-	// Customer List functions
-	async function loadCustomerList() {
-		try {
-			const r = await frappe.call({
-				method: "frappe.client.get_list",
-				args: {
-					doctype: "Customer",
-					fields: ["name", "customer_name"],
-					limit_page_length: 500,
-				},
-			});
-			renderCustomerOptions(r.message || []);
-		} catch (err) {
-			console.error("Error loading customers:", err);
-		}
-	}
-
 	async function fetchCustomerIDNumber(customerName) {
 		try {
 			const r = await frappe.call({
@@ -224,56 +242,78 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		}
 	}
 
-	const customerInput = document.getElementById("customerInput");
+	// Load all customers on page load for suggestions
+	let allCustomersRaw = [];
 
-	customerInput.addEventListener("input", async function () {
-		let query = this.value.trim();
-		if (query.length > 0) {
-			try {
-				const r = await frappe.call({
-					method: "frappe.client.get_list",
-					args: {
-						doctype: "Customer",
-						fields: ["name", "customer_name"],
-						filters: [["customer_name", "like", "%" + query + "%"]],
-						limit_page_length: 20,
-					},
-				});
-				renderCustomerOptions(r.message || []);
-			} catch (err) {
-				console.error("Error searching customers:", err);
-				renderCustomerOptions([]);
-			}
-		} else {
-			renderCustomerOptions([]);
-		}
-	});
-
-	customerInput.addEventListener("change", function () {
-		const list = document.getElementById("customerOptions");
-		let selectedName = this.value;
-		let selectedId = null;
-		for (let opt of list.options) {
-			if (opt.value === selectedName) {
-				selectedId = opt.getAttribute("data-id");
-				break;
-			}
-		}
-		if (selectedId) {
-			fetchCustomerIDNumber(selectedId);
-		}
-	});
-
-	function renderCustomerOptions(customers) {
-		const list = document.getElementById("customerOptions");
-		list.innerHTML = "";
-		customers.forEach((c) => {
-			const option = document.createElement("option");
-			option.value = c.customer_name;
-			option.setAttribute("data-id", c.name);
-			list.appendChild(option);
+	function loadCustomers(callback) {
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Customer",
+				fields: ["name", "customer_name", "id_number", "customer_group"],
+				limit_page_length: 500,
+			},
+			callback: function (r) {
+				allCustomersRaw = r.message || [];
+				if (callback) callback();
+			},
 		});
 	}
+	loadCustomers();
+
+	const $customerInput = $("#customerInput");
+	const $customerSuggestions = $("#customerSuggestions");
+	let selectedCustomerId = null;
+
+	// Typeahead: show suggestions on input
+	$customerInput.on("input", function () {
+		const query = $(this).val().toLowerCase().trim();
+		if (!query) {
+			$customerSuggestions.hide();
+			return;
+		}
+		// Grab selected type, fallback to "Individual" if somehow blank
+		const selectedType = $("#customerTypeSelect").val() || "Individual";
+		// Filter customer base by group, then by search string
+		const filtered = allCustomersRaw
+			.filter((c) => c.customer_group === selectedType)
+			.filter((c) => c.customer_name.toLowerCase().includes(query))
+			.slice(0, 10);
+
+		$customerSuggestions.empty();
+
+		if (filtered.length === 0) {
+			$customerSuggestions.append('<div class="no-results">No customers found</div>').show();
+			return;
+		}
+
+		filtered.forEach((c) => {
+			const display = `${c.customer_name}${c.id_number ? " - " + c.id_number : ""}`;
+			$customerSuggestions.append(
+				`<div class="suggestion-item" data-id="${c.name}" data-name="${c.customer_name}">${display}</div>`
+			);
+		});
+		$customerSuggestions.show();
+	});
+
+	// When a suggestion is clicked, fill the input, store ID, and fetch ID Number
+	$customerSuggestions.on("click", ".suggestion-item", function () {
+		const name = $(this).data("name");
+		selectedCustomerId = $(this).data("id");
+		$customerInput.val(name);
+		$customerSuggestions.hide();
+
+		// Optional: fetch and fill ID number field if needed
+		fetchCustomerIDNumber(selectedCustomerId);
+	});
+
+	// Hide suggestions when focus lost
+	$customerInput.on("blur", function () {
+		setTimeout(() => $customerSuggestions.hide(), 150);
+	});
+	$customerInput.on("focus", function () {
+		if ($customerSuggestions.children().length > 0) $customerSuggestions.show();
+	});
 
 	// Helper functions for dynamic bag and purity options in table rows
 	function getBagOptionsHtml() {
@@ -495,6 +535,168 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		});
 		renderItemsTableOptions();
 		updateDocumentTotals();
+	});
+
+	// Save Button Event
+	$(".wbd-save-btn").on("click", function () {
+		// 1. Compose the data object matching API schema
+		const data = {};
+
+		// -- Header fields --
+		data.series = $("select:contains('WBS-DDMMYY-')").val() || "WBS-DDMMYY-";
+		data.date = $("input[type='date']").val();
+		data.posting_time = $("input[type='time']").val();
+		data.customer_type = $(".wbd-form-row select").eq(1).val() || "Individual";
+		data.customer = $("#customerInput").val();
+		data.payment_method = $(".wbd-form-row select").eq(2).val() || "Cash";
+		data.id_number = $("#idNumberInput").val();
+
+		// -- Document Totals --
+		const $totals = $(".wbd-totals-card .wbd-totals-row");
+		data.total_weight_sold = parseFloat($totals.eq(0).find("span").eq(1).text()) || 0;
+		data.total_avco_cost =
+			parseFloat(($totals.eq(1).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")) ||
+			0;
+		data.total_selling_amount =
+			parseFloat(($totals.eq(2).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")) ||
+			0;
+		data.average_profit_per_g = parseFloat($totals.eq(3).find("span").eq(1).text()) || 0;
+		data.total_profit =
+			parseFloat(($totals.eq(4).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")) ||
+			0;
+		data.overall_profit_margin = $totals.eq(5).find("span").eq(1).text();
+
+		// -- Items Table --
+		data.items = [];
+		$(".wbd-table tbody tr").each(function () {
+			const $tr = $(this);
+			const row = {
+				source_bag: $tr.find("select.wbd-src-bag").val() || "",
+				purity: $tr.find("select.wbd-src-purity").val() || "",
+				description: $tr.find("input[type='text']").eq(0).val() || "",
+				weight: parseFloat($tr.find(".wbd-weight").val()) || 0,
+				avco_rate: parseFloat($tr.find("input[type='number']").eq(1).val()) || 0,
+				sell_rate: parseFloat($tr.find("input[type='number']").eq(2).val()) || 0,
+				amount: parseFloat($tr.find("input[type='number']").eq(3).val()) || 0,
+				profit_per_g: parseFloat($tr.find("input[type='number']").eq(4).val()) || 0,
+				total_profit: parseFloat($tr.find("input[type='number']").eq(5).val()) || 0,
+			};
+			data.items.push(row);
+		});
+
+		// 2. Show loader or disable Save button for feedback
+		$(".wbd-save-btn").prop("disabled", true).text("Saving...");
+
+		// 3. Call API
+		frappe.call({
+			method: "gold_app.api.sales.wholesale_bag_direct.create_wholesale_bag_direct_sale",
+			type: "POST",
+			args: { data },
+			callback: function (r) {
+				// 4. On Success or Error
+				const $chip = $(".wbd-status-chip");
+				if (r.message && r.message.status === "success") {
+					$chip
+						.text("Saved")
+						.removeClass() // removes any previous classes/styles
+						.addClass("wbd-status-chip saved");
+				} else {
+					$chip.text("Not Saved").removeClass("saved").addClass("wbd-status-chip");
+					frappe.msgprint({
+						title: "Save Error",
+						message:
+							r.message && r.message.message ? r.message.message : "Unknown error.",
+						indicator: "red",
+					});
+				}
+				$(".wbd-save-btn").prop("disabled", false).text("Save");
+			},
+		});
+	});
+
+	// Sales Invoice Button Event
+	$(".wbd-invoice-btn").on("click", function () {
+		// Use the variable you set when picking from suggestions!
+		let customerId = null;
+		let inputName = $customerInput.val().trim();
+		let match = allCustomersRaw.find((c) => c.customer_name === inputName);
+		if (match) {
+			customerId = match.name;
+		} else {
+			frappe.msgprint("Please select a Customer.");
+			return;
+		}
+
+		let customer = selectedCustomerId;
+
+		let items_data = [];
+
+		$(".wbd-table tbody tr").each(function () {
+			const $tr = $(this);
+
+			// Construct "item_code" as "Unsorted-{purity}"
+			const purity = $tr.find("select.wbd-src-purity").val() || "";
+			const item_code = purity ? `Unsorted-${purity}` : "";
+
+			// Get Source Bag for warehouse
+			const source_bag = $tr.find("select.wbd-src-bag").val() || "";
+
+			// Get Weight (g) as qty and weight_per_unit
+			const qty = parseFloat($tr.find(".wbd-weight").val()) || 0;
+
+			// Get AVCO (RM/g) as rate
+			const rate = parseFloat($tr.find("input[type='number']").eq(2).val()) || 0;
+
+			items_data.push({
+				item_code: item_code,
+				qty: qty,
+				weight_per_unit: qty,
+				rate: rate,
+				purity: purity,
+				warehouse: source_bag,
+			});
+		});
+
+		// Block if status is not saved
+		if ($(".wbd-status-chip").text() !== "Saved") {
+			frappe.msgprint("Please save the document before creating a Sales Invoice.");
+			return;
+		}
+
+		// Optional: validate data
+		if (!customer || !items_data.length) {
+			frappe.msgprint("Customer and at least one item are required for Sales Invoice.");
+			return;
+		}
+
+		// Disable button and show feedback
+		$(".wbd-invoice-btn").prop("disabled", true).text("Creating...");
+
+		frappe.call({
+			method: "gold_app.api.sales.wholesale_bag_direct.create_sales_invoice",
+			args: {
+				customer: customer,
+				items: JSON.stringify(items_data),
+			},
+			callback: function (r) {
+				$(".wbd-invoice-btn").prop("disabled", false).text("Create Invoice");
+				if (r.message && r.message.status === "success") {
+					frappe.show_alert({
+						message: "Sales Invoice Created: " + r.message.sales_invoice,
+						indicator: "green",
+					});
+					setTimeout(function () {
+						location.reload();
+					}, 1500);
+				} else {
+					frappe.msgprint({
+						message: "Failed to create Sales Invoice.",
+						title: "Error",
+						indicator: "red",
+					});
+				}
+			},
+		});
 	});
 
 	// Bag Overview Expand/Collapse
