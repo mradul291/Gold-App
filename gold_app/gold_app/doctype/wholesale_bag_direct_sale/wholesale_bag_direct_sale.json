@@ -9,12 +9,14 @@
   "naming_series",
   "customer_type",
   "id_number",
+  "status",
   "column_break_fznn",
   "posting_date",
   "customer",
   "column_break_afbz",
   "posting_time",
   "payment_method",
+  "sales_invoice_ref",
   "section_break_qqno",
   "items",
   "section_break_rmjm",
@@ -41,7 +43,8 @@
   {
    "fieldname": "posting_date",
    "fieldtype": "Date",
-   "label": "Date"
+   "label": "Date",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_afbz",
@@ -50,27 +53,32 @@
   {
    "fieldname": "posting_time",
    "fieldtype": "Time",
-   "label": "Posting Time"
+   "label": "Posting Time",
+   "read_only": 1
   },
   {
    "fieldname": "customer_type",
    "fieldtype": "Data",
-   "label": "Customer Type"
+   "label": "Customer Type",
+   "read_only": 1
   },
   {
    "fieldname": "id_number",
    "fieldtype": "Data",
-   "label": "ID Number"
+   "label": "ID Number",
+   "read_only": 1
   },
   {
    "fieldname": "customer",
    "fieldtype": "Data",
-   "label": "Customer"
+   "label": "Customer",
+   "read_only": 1
   },
   {
    "fieldname": "payment_method",
    "fieldtype": "Data",
-   "label": "Payment Method"
+   "label": "Payment Method",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_qqno",
@@ -80,7 +88,8 @@
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "Wholesale Bag Direct Sale Item"
+   "options": "Wholesale Bag Direct Sale Item",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_rmjm",
@@ -90,17 +99,20 @@
   {
    "fieldname": "total_weight_sold",
    "fieldtype": "Float",
-   "label": "Total Weight Sold (g)"
+   "label": "Total Weight Sold (g)",
+   "read_only": 1
   },
   {
    "fieldname": "total_avco_cost",
    "fieldtype": "Currency",
-   "label": "Total AVCO Cost (MYR)"
+   "label": "Total AVCO Cost (MYR)",
+   "read_only": 1
   },
   {
    "fieldname": "total_selling_amount",
    "fieldtype": "Currency",
-   "label": "Total Selling Amount (MYR)"
+   "label": "Total Selling Amount (MYR)",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_gmle",
@@ -109,23 +121,40 @@
   {
    "fieldname": "average_profit_per_g",
    "fieldtype": "Currency",
-   "label": "Average Profit/g (RM/g)"
+   "label": "Average Profit/g (RM/g)",
+   "read_only": 1
   },
   {
    "fieldname": "total_profit",
    "fieldtype": "Currency",
-   "label": "Total Profit (MYR)"
+   "label": "Total Profit (MYR)",
+   "read_only": 1
   },
   {
    "fieldname": "overall_profit_margin",
    "fieldtype": "Data",
-   "label": "Overall Profit Margin (%)"
+   "label": "Overall Profit Margin (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_invoice_ref",
+   "fieldtype": "Data",
+   "label": "Sales Invoice Ref",
+   "read_only": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nInvoiced\nPaid",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-20 18:54:18.965152",
+ "modified": "2025-11-21 15:08:44.301719",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Bag Direct Sale",

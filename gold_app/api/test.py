@@ -1,212 +1,140 @@
-# Stock Entry Creation with Multiple Types
-WHOLESALE_WAREHOUSE = "Bag 1 - Wholesale - AGSB"
+import frappe
+from frappe import _
+from frappe.utils import flt
 
 @frappe.whitelist()
-def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfers=None):
-    """
-    Create Break Item Stock Entry(ies) from pool data.
-    Also auto-transfers remaining weight (only for processed purities)
-    to Bag 1 - Wholesale - AGSB via Material Transfer Stock Entry.
-    """
-    data = json.loads(purity_data)
+def get_all_bag_overview():
 
-    if not pool_name:
-        frappe.throw(_("Pool name is required"))
+    bag_rows = frappe.db.sql("""
+        SELECT
+            bin.warehouse AS bag_id,
+            item.purity AS purity,
+            SUM(bin.actual_qty) AS weight,
+            AVG(bin.valuation_rate) AS rate,
+            SUM(bin.actual_qty * bin.valuation_rate) AS amount
+        FROM
+            `tabBin` AS bin
+        JOIN `tabItem` AS item 
+            ON bin.item_code = item.name
+        JOIN `tabWarehouse` AS wh
+            ON wh.name = bin.warehouse
+        WHERE
+            wh.parent_warehouse = 'Wholesale - AGSB'
+        GROUP BY 
+            bin.warehouse, item.purity
+        HAVING 
+            SUM(bin.actual_qty) > 0
+    """, as_dict=True)
 
-    if not data:
-        frappe.throw(_("No items found to create Stock Entry"))
-        
-    if remaining_transfers:
-        remaining_transfers = json.loads(remaining_transfers)
+    # Organize per bag
+    bags = {}
+    for row in bag_rows:
+        bag = bags.setdefault(row["bag_id"], {
+            "bag_id": row["bag_id"],
+            "bag_total": 0,
+            "purities": []
+        })
+        bag["purities"].append({
+            "purity": row["purity"],
+            "weight": round(row["weight"], 2),
+            "rate": round(row["rate"], 2)
+        })
+        bag["bag_total"] += float(row["amount"])
 
-    pool_doc = frappe.get_doc("Gold Pool", pool_name)
+    bag_list = []
+    for bag in bags.values():
+        bag["bag_total"] = round(bag["bag_total"], 2)
+        bag_list.append(bag)
 
-    company = frappe.db.get_single_value("Global Defaults", "default_company") \
-        or frappe.db.get_value("Company", {}, "name")
+    return bag_list
 
-    rows = []
-    for r in data:
-        purity = str(r.get("purity") or "")
-        if not purity:
-            frappe.throw(_("Purity is required in each row"))
-            
-        if not r.get("item_code") and r.get("item_group"):
-            created = bulk_create_items([r])
-            r["item_code"] = created[0]["item_code"] if created else None
-        
-        source_item = r.get("source_item") or f"Unsorted-{purity}"
-        rows.append({
-            "purity": purity,
-            "qty": flt(r.get("qty") or 0),
-            "item_code": r.get("item_code"),
-            "item_length": r.get("item_length"),
-            "item_size": r.get("item_size"),
-            "valuation_rate": flt(r.get("valuation_rate") or 0),
-            "target_warehouse": r.get("target_warehouse"),
-            "item_group": r.get("item_group"),
-            "source_item": source_item  
+@frappe.whitelist(allow_guest=False)
+def create_wholesale_bag_direct_sale(data):
+    import json
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    try:
+        doc = frappe.new_doc("Wholesale Bag Direct Sale")
+
+        # Parent fields
+        doc.naming_series = data.get('series')
+        doc.customer_type = data.get('customer_type')
+        doc.id_number = data.get('id_number')
+        doc.posting_date = data.get('date')
+        doc.customer = data.get('customer')
+        doc.posting_time = data.get('posting_time')
+        doc.payment_method = data.get('payment_method')
+
+        # Document Totals
+        doc.total_weight_sold = data.get('total_weight_sold')
+        doc.total_avco_cost = data.get('total_avco_cost')
+        doc.total_selling_amount = data.get('total_selling_amount')
+        doc.average_profit_per_g = data.get('average_profit_per_g')
+        doc.total_profit = data.get('total_profit')
+        doc.overall_profit_margin = data.get('overall_profit_margin')
+
+        # Child table - items
+        items = data.get('items', [])
+        for item in items:
+            doc.append('items', {
+                'source_bag': item.get('source_bag'),
+                'purity': item.get('purity'),
+                'description': item.get('description'),
+                'weight': item.get('weight'),
+                'avco_rate': item.get('avco_rate'),
+                'sell_rate': item.get('sell_rate'),
+                'amount': item.get('amount'),
+                'profit_per_g': item.get('profit_per_g'),
+                'total_profit': item.get('total_profit')
+            })
+
+        doc.save(ignore_permissions=True)
+        frappe.db.commit()
+        return {'status': 'success', 'name': doc.name}
+
+    except Exception as e:
+        frappe.log_error(f"Error in create_wholesale_bag_direct_sale: {str(e)}")
+        frappe.db.rollback()
+        return {'status': 'error', 'message': str(e)}
+
+@frappe.whitelist()
+def create_sales_invoice(customer, items, company=None):
+    import json
+    if not company:
+        company = frappe.defaults.get_user_default("Company")
+
+    # items is expected to be a JSON string from JS API
+    items_list = json.loads(items)
+
+    si_items = []
+    for i in items_list:
+        qty_val = flt(i.get("weight") or i.get("qty") or 1)
+        si_items.append({
+            "item_code": i.get("item_code"),
+            "qty": qty_val,
+            # Optional custom fields
+            "weight_per_unit": qty_val,
+            "rate": flt(i.get("rate")),
+            "purity": i.get("purity", ""),
+            "warehouse": i.get("warehouse", "")
         })
 
-    # Group rows by source_item
-    groups = {}
-    for r in rows:
-        groups.setdefault(r["source_item"], []).append(r)
-        
-    pool_remaining = {str(pb.purity): flt(pb.total_weight) for pb in pool_doc.purity_breakdown}
+    si = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": customer,
+        "company": company,
+        "posting_date": frappe.utils.nowdate(),
+        "update_stock": 1,
+        "allocate_advances_automatically": 1,
+        "items": si_items
+    })
 
-    created_entries = []
-    processed_purities = set()
-
-    # Create Break Item Stock Entry per group
-    for source_item_code, group_rows in groups.items():
-        if not frappe.db.exists("Item", {"item_code": source_item_code, "item_group": "MG - Mixed Gold"}):
-            frappe.throw(_("Source Item '{0}' not found in Item Group 'MG - Mixed Gold'").format(source_item_code))
-
-        latest_sle = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"item_code": source_item_code},
-            ["warehouse", "valuation_rate"],
-            order_by="posting_date desc, posting_time desc",
-            as_dict=True
-        )
-        source_warehouse = latest_sle.warehouse if latest_sle else None
-        source_valuation_rate = flt(latest_sle.valuation_rate if latest_sle else 0)
-
-        if not source_warehouse:
-            source_warehouse = frappe.db.get_value("Bin", {"item_code": source_item_code}, "warehouse")
-            
-        reduce_qty = sum([r["qty"] for r in group_rows])
-        available_qty = flt(frappe.db.get_value(
-            "Bin",
-            {"item_code": source_item_code, "warehouse": source_warehouse},
-            "actual_qty"
-        ) or 0)
-
-        # Build Break Item Stock Entry
-        se = frappe.new_doc("Stock Entry")
-        se.stock_entry_type = "Break Item"
-        se.company = company
-        se.posting_date = nowdate()
-        se.posting_time = nowtime()
-        se.source_item = source_item_code
-        se.source_item_warehouse = source_warehouse
-        se.item_quantity = available_qty
-        se.source_valuation_rate = source_valuation_rate
-        se.reduce_quantity = reduce_qty
-        se.remaining_quantity = max(available_qty - reduce_qty, 0) 
-
-        for r in group_rows:
-            item_code = r["item_code"]
-            if not frappe.db.exists("Item", item_code):
-                new_item = frappe.new_doc("Item")
-                new_item.item_code = item_code
-                new_item.item_name = item_code
-                new_item.item_group = r["item_group"] or "All Item Groups"
-                new_item.stock_uom = "Gram"
-                new_item.insert(ignore_permissions=True)
-
-            se.append("items", {
-                "item_code": item_code,
-                "qty": r["qty"],
-                "t_warehouse": r["target_warehouse"],
-                "purity": r["purity"],
-                "item_length": flt(r.get("item_length")) if r.get("item_length") not in (None, "", "null") else None,
-                "item_size": r.get("item_size") if r.get("item_size") not in (None, "", "null") else None,
-                "valuation_rate": r["valuation_rate"],
-                "allow_zero_valuation_rate": 1 if not flt(r.get("valuation_rate")) else 0
-            })
-
-            # Update pool breakdown only for this purity
-            purity = r["purity"]
-            pool_remaining[purity] = max(pool_remaining.get(purity, 0) - flt(r["qty"]), 0)
-            processed_purities.add(purity)
-            
-        se.insert(ignore_permissions=True)
-        se.submit()
-        created_entries.append(se.name)
-
-        # Handle remaining weights FOR ALL purities (create Material Transfer for any remaining weight)
-        for row_pb in pool_doc.purity_breakdown:
-            purity = str(row_pb.purity)
-    
-            # Skip if nothing remains
-            remaining_qty = flt(pool_remaining.get(purity, 0))
-            if remaining_qty <= 0:
-                continue  # Skip SE creation if qty is zero
-
-            source_item = f"Unsorted-{purity}"
-
-            # If source item for this purity doesn't exist in MG - Mixed Gold, skip (log)
-            if not frappe.db.exists("Item", {"item_code": source_item, "item_group": "MG - Mixed Gold"}):
-                frappe.log_error(
-                    title=f"Missing source Item for remaining transfer: {source_item}",
-                    message=f"create_stock_entry_from_pool: {source_item} missing in Item table for pool {pool_name}"
-                )
-                continue
-
-            # find source warehouse for the source_item
-            source_warehouse = frappe.db.get_value("Bin", {"item_code": source_item}, "warehouse")
-            if not source_warehouse:
-                frappe.log_error(
-                    title=f"No Bin (warehouse) for source Item: {source_item}",
-                    message=f"create_stock_entry_from_pool: no Bin found for {source_item} while creating remaining transfer for pool {pool_name}"
-                )
-                continue
-
-            # Default to WHOLESALE_WAREHOUSE unless user selected otherwise
-            target_wh = WHOLESALE_WAREHOUSE
-            if remaining_transfers:
-                for rt in remaining_transfers:
-                    if str(rt.get("purity")) == purity:
-                        target_wh = rt.get("target_warehouse") or WHOLESALE_WAREHOUSE
-                        break
-
-            # Create Material Transfer for full remaining weight of this purity
-            se_transfer = frappe.new_doc("Stock Entry")
-            se_transfer.stock_entry_type = "Material Transfer"
-            se_transfer.company = company
-            se_transfer.posting_date = nowdate()
-            se_transfer.posting_time = nowtime()
-            se_transfer.append("items", {
-                "item_code": source_item,
-                "qty": flt(pool_remaining.get(purity, 0)),  # use pool_remaining to respect new safety check
-                "s_warehouse": source_warehouse,
-                "t_warehouse": target_wh,
-                "allow_zero_valuation_rate": 1
-            })
-            se_transfer.insert(ignore_permissions=True)
-            se_transfer.submit()
-
-            # Deduct everything from pool_remaining so SE + remaining transfer matches
-            pool_remaining[purity] = 0
-
-    # Update pool_doc once after all SEs
-    for pb in pool_doc.purity_breakdown:
-        purity = str(pb.purity)
-        pb.total_weight = pool_remaining.get(purity, 0)
-        pb.total_cost = pb.total_weight * pb.avco_rate
-
-    pool_doc.save(ignore_permissions=True)
-
-    if all(flt(r.total_weight) <= 0 for r in pool_doc.purity_breakdown):
-        pool_doc.status = "Completed"
-        pool_doc.save(ignore_permissions=True)
-        
-    created_items = []
-    for se_name in created_entries:
-            se_doc = frappe.get_doc("Stock Entry", se_name)
-            for it in se_doc.items:
-                created_items.append({
-                "purity": getattr(it, "purity", None),
-                "item_code": it.item_code,
-                "qty": it.qty,
-                "target_warehouse": it.t_warehouse,
-                "source_item": getattr(se_doc, "source_item", None)
-            })
+    si.insert(ignore_permissions=True)
+    si.submit()
+    frappe.db.commit()
 
     return {
-        "name": created_entries[0] if created_entries else None,
-        "all_names": created_entries,
-        "stock_entry_type": "Break Item",
-        "created_items": created_items,
+        "status": "success",
+        "sales_invoice": si.name,
     }
