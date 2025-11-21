@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 from frappe.utils import flt
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+
 
 @frappe.whitelist()
 def get_all_bag_overview():
@@ -194,3 +196,44 @@ def create_sales_invoice(customer, items, company=None):
         "status": "success",
         "sales_invoice": si.name,
     }
+
+
+@frappe.whitelist()
+def create_payment_entry_for_invoice(sales_invoice_name):
+    try:
+        if not sales_invoice_name:
+            frappe.throw("Sales Invoice name is required.")
+
+        pe = get_payment_entry("Sales Invoice", sales_invoice_name)
+
+        pe.mode_of_payment = "Cash"
+
+        pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+        pe.reference_date = frappe.utils.nowdate()
+
+        # Save and submit the Payment Entry
+        pe.insert(ignore_permissions=True)
+        pe.submit()
+        frappe.db.commit()
+        
+        # --- Update Wholesale Bag Direct Sale status to Paid ---
+        log_docs = frappe.get_all(
+            "Wholesale Bag Direct Sale",
+            filters={"sales_invoice_ref": sales_invoice_name},
+            fields=["name"]
+        )
+        if log_docs:
+            log_doc = frappe.get_doc("Wholesale Bag Direct Sale", log_docs[0].name)
+            log_doc.status = "Paid"
+            log_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": "Payment Entry created successfully.",
+            "payment_entry": pe.name,
+            "sales_invoice": sales_invoice_name,
+        }
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
+        frappe.throw(f"Failed to create Payment Entry: {str(e)}")

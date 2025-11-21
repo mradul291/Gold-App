@@ -55,9 +55,31 @@ def create_wholesale_bag_direct_sale(data):
         data = json.loads(data)
 
     try:
-        doc = frappe.new_doc("Wholesale Bag Direct Sale")
+        customer = data.get("customer")
 
-        # Parent fields
+        # ----------------------------------------------------------
+        #  FIXED FILTER → 100% correct syntax for Frappe 15
+        #  Find existing open log (no invoice_ref)
+        # ----------------------------------------------------------
+        existing = frappe.get_all(
+            "Wholesale Bag Direct Sale",
+            filters={
+                "customer": customer,
+                "sales_invoice_ref": ["in", ["", None]]
+            },
+            fields=["name"],
+            order_by="creation desc",
+            limit_page_length=1
+        )
+
+        if existing:
+            doc = frappe.get_doc("Wholesale Bag Direct Sale", existing[0].name)
+        else:
+            doc = frappe.new_doc("Wholesale Bag Direct Sale")
+
+        # ------------------------------
+        # Update Parent Fields
+        # ------------------------------
         doc.naming_series = data.get('series')
         doc.customer_type = data.get('customer_type')
         doc.id_number = data.get('id_number')
@@ -65,8 +87,11 @@ def create_wholesale_bag_direct_sale(data):
         doc.customer = data.get('customer')
         doc.posting_time = data.get('posting_time')
         doc.payment_method = data.get('payment_method')
+        doc.status = "Draft"
 
-        # Document Totals
+        # ------------------------------
+        # Totals
+        # ------------------------------
         doc.total_weight_sold = data.get('total_weight_sold')
         doc.total_avco_cost = data.get('total_avco_cost')
         doc.total_selling_amount = data.get('total_selling_amount')
@@ -74,9 +99,11 @@ def create_wholesale_bag_direct_sale(data):
         doc.total_profit = data.get('total_profit')
         doc.overall_profit_margin = data.get('overall_profit_margin')
 
-        # Child table - items
-        items = data.get('items', [])
-        for item in items:
+        # ------------------------------
+        # Items
+        # ------------------------------
+        doc.set("items", [])
+        for item in data.get('items', []):
             doc.append('items', {
                 'source_bag': item.get('source_bag'),
                 'purity': item.get('purity'),
@@ -91,6 +118,7 @@ def create_wholesale_bag_direct_sale(data):
 
         doc.save(ignore_permissions=True)
         frappe.db.commit()
+
         return {'status': 'success', 'name': doc.name}
 
     except Exception as e:
@@ -101,10 +129,10 @@ def create_wholesale_bag_direct_sale(data):
 @frappe.whitelist()
 def create_sales_invoice(customer, items, company=None):
     import json
+
     if not company:
         company = frappe.defaults.get_user_default("Company")
 
-    # items is expected to be a JSON string from JS API
     items_list = json.loads(items)
 
     si_items = []
@@ -113,13 +141,15 @@ def create_sales_invoice(customer, items, company=None):
         si_items.append({
             "item_code": i.get("item_code"),
             "qty": qty_val,
-            # Optional custom fields
             "weight_per_unit": qty_val,
             "rate": flt(i.get("rate")),
             "purity": i.get("purity", ""),
             "warehouse": i.get("warehouse", "")
         })
 
+    # ---------------------------
+    # Create Sales Invoice
+    # ---------------------------
     si = frappe.get_doc({
         "doctype": "Sales Invoice",
         "customer": customer,
@@ -133,6 +163,32 @@ def create_sales_invoice(customer, items, company=None):
     si.insert(ignore_permissions=True)
     si.submit()
     frappe.db.commit()
+
+    # ---------------------------
+    # UPDATE WHOLESALE BAG LOG
+    # ---------------------------
+    log_entry = frappe.get_all(
+        "Wholesale Bag Direct Sale",
+        filters=[
+            ["id_number", "=", customer],
+            ["sales_invoice_ref", "in", ("", None)]
+        ],
+        fields=["name"],
+        order_by="creation desc",
+        limit_page_length=1
+    )
+
+    if log_entry:
+        log_doc = frappe.get_doc("Wholesale Bag Direct Sale", log_entry[0].name)
+        log_doc.sales_invoice_ref = si.name
+        log_doc.status = "Invoiced"
+        try:
+            log_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+        except Exception as ex:
+            print(f"!!! FAILED to update Wholesale Bag Direct Sale doc: {ex} !!!\n")
+    else:
+        print("!!! No matching Wholesale Bag Direct Sale log found for update. !!!\n")
 
     return {
         "status": "success",

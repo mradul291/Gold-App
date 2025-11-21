@@ -616,35 +616,25 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 
 	// Sales Invoice Button Event
 	$(".wbd-invoice-btn").on("click", function () {
-		// Use the variable you set when picking from suggestions!
 		let customerId = null;
 		let inputName = $customerInput.val().trim();
 		let match = allCustomersRaw.find((c) => c.customer_name === inputName);
-		if (match) {
-			customerId = match.name;
-		} else {
+
+		if (!match) {
 			frappe.msgprint("Please select a Customer.");
 			return;
 		}
+		customerId = match.name;
 
 		let customer = selectedCustomerId;
-
 		let items_data = [];
 
 		$(".wbd-table tbody tr").each(function () {
 			const $tr = $(this);
-
-			// Construct "item_code" as "Unsorted-{purity}"
 			const purity = $tr.find("select.wbd-src-purity").val() || "";
 			const item_code = purity ? `Unsorted-${purity}` : "";
-
-			// Get Source Bag for warehouse
 			const source_bag = $tr.find("select.wbd-src-bag").val() || "";
-
-			// Get Weight (g) as qty and weight_per_unit
 			const qty = parseFloat($tr.find(".wbd-weight").val()) || 0;
-
-			// Get AVCO (RM/g) as rate
 			const rate = parseFloat($tr.find("input[type='number']").eq(2).val()) || 0;
 
 			items_data.push({
@@ -657,19 +647,15 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			});
 		});
 
-		// Block if status is not saved
 		if ($(".wbd-status-chip").text() !== "Saved") {
 			frappe.msgprint("Please save the document before creating a Sales Invoice.");
 			return;
 		}
-
-		// Optional: validate data
 		if (!customer || !items_data.length) {
 			frappe.msgprint("Customer and at least one item are required for Sales Invoice.");
 			return;
 		}
 
-		// Disable button and show feedback
 		$(".wbd-invoice-btn").prop("disabled", true).text("Creating...");
 
 		frappe.call({
@@ -681,13 +667,46 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			callback: function (r) {
 				$(".wbd-invoice-btn").prop("disabled", false).text("Create Invoice");
 				if (r.message && r.message.status === "success") {
+					const salesInvoice = r.message.sales_invoice;
 					frappe.show_alert({
-						message: "Sales Invoice Created: " + r.message.sales_invoice,
+						message: "Sales Invoice Created: " + salesInvoice,
 						indicator: "green",
 					});
-					setTimeout(function () {
-						location.reload();
-					}, 1500);
+
+					frappe.confirm(
+						"Do you want to make payment now?",
+						() => {
+							frappe.call({
+								method: "gold_app.api.sales.wholesale_bag_direct.create_payment_entry_for_invoice",
+								args: {
+									sales_invoice_name: salesInvoice,
+								},
+								callback: function (payment_res) {
+									if (
+										payment_res.message &&
+										payment_res.message.status === "success"
+									) {
+										frappe.show_alert({
+											message: payment_res.message.message,
+											indicator: "green",
+										});
+										setTimeout(() => {
+											location.reload();
+										}, 1500);
+									} else {
+										frappe.msgprint({
+											title: "Payment Error",
+											message: "Failed to create payment entry.",
+											indicator: "red",
+										});
+									}
+								},
+							});
+						},
+						() => {
+							frappe.msgprint("You can make payment later from the Sales Invoice.");
+						}
+					);
 				} else {
 					frappe.msgprint({
 						message: "Failed to create Sales Invoice.",
