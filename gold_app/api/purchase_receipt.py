@@ -193,6 +193,10 @@ def create_invoice_and_payment(doc, method):
 
     elif doc.payment_method == "Mix":
         for row in doc.payment_split:
+            
+            if row.mode_of_payment == "Unpaid":
+                continue
+            
             if row.mode_of_payment == "Cash":
                 _create_payment_entry(doc, pi, mode="Cash", amount=row.amount)
 
