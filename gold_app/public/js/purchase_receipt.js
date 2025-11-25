@@ -1,3 +1,4 @@
+//---------------------------------------Purchase Receipt----------------------------------
 // Rate Calculation based on Qty and Amount
 frappe.ui.form.on("Purchase Receipt Item", {
   amount: function (frm, cdt, cdn) {
@@ -327,6 +328,7 @@ frappe.ui.form.on("Purchase Receipt", {
     if (!frm.doc.supplier) {
       frm.clear_table("supplier_advances");
       frm.refresh_field("supplier_advances");
+      frm.set_value("total_advance", 0); // Clear total advance if no supplier
       return;
     }
 
@@ -341,6 +343,8 @@ frappe.ui.form.on("Purchase Receipt", {
       },
       callback: function (r) {
         frm.clear_table("supplier_advances");
+
+        let total_advance = 0.0; // Initialize total
 
         if (r.message && Array.isArray(r.message)) {
           r.message.forEach((row) => {
@@ -358,11 +362,108 @@ frappe.ui.form.on("Purchase Receipt", {
             if (row.account) {
               child.account = row.account;
             }
+
+            // Add to running total
+            total_advance += row.advance_amount || 0;
           });
         }
 
+        frm.set_value("total_advance", total_advance); // Set total advance field
         frm.refresh_field("supplier_advances");
       },
     });
   },
 });
+
+frappe.ui.form.on("Payment Split Entry", {
+  amount(frm, cdt, cdn) {
+    update_customer_advance_allocation(frm);
+    update_realtime_total_advance(frm);
+  },
+  mode_of_payment(frm, cdt, cdn) {
+    update_customer_advance_allocation(frm);
+    update_realtime_total_advance(frm);
+  },
+});
+
+frappe.ui.form.on("Purchase Receipt", {
+  validate(frm) {
+    if (!validate_payment_split_total(frm)) {
+      frappe.validated = false;
+    }
+  },
+});
+
+function update_customer_advance_allocation(frm) {
+  if (!frm.doc.payment_split) return;
+  if (!frm.doc.supplier_advances) return;
+
+  // 1. Calculate total customer-advance amount from payment_split
+  let customer_advance_total = 0;
+  frm.doc.payment_split.forEach((row) => {
+    if (row.mode_of_payment === "Customer Advance") {
+      customer_advance_total += flt(row.amount || 0);
+    }
+  });
+
+  // 2. Apply this amount directly into allocated_amount field
+  let remaining = customer_advance_total;
+
+  frm.doc.supplier_advances.forEach((row) => {
+    if (remaining <= 0) {
+      row.allocated_amount = 0;
+    } else {
+      // allocate FIFO into supplier advances
+      let alloc = Math.min(remaining, row.advance_amount);
+      row.allocated_amount = alloc;
+      remaining -= alloc;
+    }
+  });
+
+  frm.refresh_field("supplier_advances");
+}
+
+function update_realtime_total_advance(frm) {
+  // 1. Base total advance (from fetched table)
+  let supplier_total =
+    frm.doc.supplier_advances?.reduce((sum, row) => {
+      return sum + flt(row.advance_amount || 0);
+    }, 0) || 0;
+
+  // 2. Total customer advance used in payment_split
+  let used_customer_advance =
+    frm.doc.payment_split?.reduce((sum, row) => {
+      if (row.mode_of_payment === "Customer Advance") {
+        return sum + flt(row.amount || 0);
+      }
+      return sum;
+    }, 0) || 0;
+
+  // 3. Real-time remaining advance
+  let remaining = supplier_total - used_customer_advance;
+  if (remaining < 0) remaining = 0;
+
+  // 4. Update field
+  frm.set_value("total_advance", remaining);
+}
+
+function validate_payment_split_total(frm) {
+  // Only for Mix
+  if (frm.doc.payment_method !== "Mix") return true;
+
+  let total = 0;
+  (frm.doc.payment_split || []).forEach((row) => {
+    total += flt(row.amount || 0);
+  });
+
+  if (total !== flt(frm.doc.grand_total)) {
+    frappe.msgprint({
+      title: "Invalid Payment Allocation",
+      message: `Total of Payment Split (${total}) must equal Grand Total (${frm.doc.grand_total}).`,
+      indicator: "red",
+    });
+    return false;
+  }
+
+  return true;
+}

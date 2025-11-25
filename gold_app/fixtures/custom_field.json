@@ -563,11 +563,24 @@
   {
     "doctype": "Custom Field",
     "dt": "Purchase Receipt",
+    "fieldname": "total_advance",
+    "label": "Customer Advance Balance",
+    "fieldtype": "Currency",
+    "insert_after": "set_posting_time",
+    "read_only": 1,
+    "default": 0,
+    "name": "Purchase Receipt-total_advances",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
     "fieldname": "supplier_advances",
     "label": "Customer Advances",
     "fieldtype": "Table",
     "options": "Purchase Invoice Advance",
-    "insert_after": "set_posting_time",
+    "insert_after": "items_section",
+    "read_only": 1,
     "name": "Purchase Receipt-supplier_advances",
     "module": "Gold App"
   },
