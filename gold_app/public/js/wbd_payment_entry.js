@@ -602,6 +602,24 @@ class WholesaleBagDirectPayment {
 			// Create payment entries only for non-advance payments (Cash/Bank)
 			const regularPayments = this.payments.filter((p) => p.method !== "Customer Advance");
 
+			// >>> NEW: Handle fully-advance payments <<<
+			const hasOnlyAdvancePayments =
+				regularPayments.length === 0 &&
+				this.payments.some((p) => p.method === "Customer Advance");
+
+			if (hasOnlyAdvancePayments) {
+				const submitResult = await frappe.call({
+					method: "gold_app.api.sales.wholesale_bag_direct.submit_sales_invoice_if_draft",
+					args: {
+						sales_invoice_name: refs.invoice_id,
+					},
+				});
+
+				if (!submitResult.message || submitResult.message.status !== "success") {
+					throw new Error("Failed to submit Sales Invoice for advance-only payment.");
+				}
+			}
+
 			for (const payment of regularPayments) {
 				const result = await frappe.call({
 					method: "gold_app.api.sales.wholesale_bag_direct.create_payment_entry_for_invoice",

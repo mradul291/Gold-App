@@ -1002,6 +1002,11 @@ class WholesaleBagDirectPayment {
 				self.addPayment();
 			}
 		});
+
+		// Real-time Customer Advance balance preview
+		$(this.containerSelector).on("input", "#pay-amount", () => {
+			this.updateAdvancePreview();
+		});
 	}
 
 	updateSummary() {
@@ -1075,10 +1080,13 @@ class WholesaleBagDirectPayment {
 			callback: (r) => {
 				if (r.message && r.message.status === "success") {
 					const adv = r.message.advance_balance || 0;
+
+					this.customerAdvanceBalance = adv;
+
 					$(this.containerSelector)
 						.find("#customer-advance")
 						.text(
-							`RM ${adv.toLocaleString("en-MY", {
+							`RM ${this.customerAdvanceBalance.toLocaleString("en-MY", {
 								minimumFractionDigits: 2,
 							})}`
 						);
@@ -1087,6 +1095,25 @@ class WholesaleBagDirectPayment {
 				}
 			},
 		});
+	}
+
+	updateAdvancePreview() {
+		const method = $(this.containerSelector).find("#pay-method").val();
+		const amountInput = parseFloat($(this.containerSelector).find("#pay-amount").val()) || 0;
+
+		if (method !== "Customer Advance") {
+			return;
+		}
+
+		const previewBalance = Math.max(this.customerAdvanceBalance - amountInput, 0);
+
+		$(this.containerSelector)
+			.find("#customer-advance")
+			.text(
+				`RM ${previewBalance.toLocaleString("en-MY", {
+					minimumFractionDigits: 2,
+				})}`
+			);
 	}
 
 	addPayment() {
@@ -1159,6 +1186,100 @@ class WholesaleBagDirectPayment {
 			frappe.msgprint("Please enter a valid advance amount.");
 			return;
 		}
+
+		// ---- NEW LOGIC: UPDATE EXISTING ADVANCE ROW ----
+		const existingAdvance = this.payments.find((p) => p.method === "Customer Advance");
+
+		if (existingAdvance) {
+			// VALIDATION: Prevent overpayment
+			const refs = this.getRefs();
+			const totalAmount = refs.total_selling_amount || 0;
+
+			const otherPayments = this.payments
+				.filter((p) => p.method !== "Customer Advance")
+				.reduce((sum, p) => sum + p.amount, 0);
+
+			const newAdvanceTotal = existingAdvance.amount + amountInput;
+
+			if (otherPayments + newAdvanceTotal > totalAmount) {
+				frappe.msgprint(
+					"Advance payment exceeds total amount. Please enter a valid amount."
+				);
+				return;
+			}
+
+			// Update existing row amount
+			existingAdvance.amount += amountInput;
+
+			// Deduct from UI-level advance balance
+			this.customerAdvanceBalance -= amountInput;
+
+			// Update UI advance balance immediately
+			$(this.containerSelector)
+				.find("#customer-advance")
+				.text(
+					`RM ${this.customerAdvanceBalance.toLocaleString("en-MY", {
+						minimumFractionDigits: 2,
+					})}`
+				);
+
+			this.updateSummary();
+			this.renderPaymentHistory();
+
+			frappe.show_alert({
+				message: `Updated Customer Advance: RM ${existingAdvance.amount.toLocaleString(
+					"en-MY",
+					{ minimumFractionDigits: 2 }
+				)}`,
+				indicator: "blue",
+			});
+
+			// ---- NEW: Also allocate the newly added advance to backend ----
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_bag_direct.allocate_customer_advance_to_invoice",
+				args: {
+					sales_invoice_name: refs.invoice_id,
+					allocate_amount: amountInput, // ONLY allocate the new difference
+				},
+				callback: (r) => {
+					if (r.message && r.message.status === "success") {
+						frappe.show_alert({
+							message: `Allocated additional RM ${amountInput.toLocaleString(
+								"en-MY",
+								{
+									minimumFractionDigits: 2,
+								}
+							)} from Customer Advance`,
+							indicator: "blue",
+						});
+					} else {
+						frappe.msgprint(
+							`Advance allocation failed: ${r.message.message || "Unknown error"}`
+						);
+						// rollback UI change
+						existingAdvance.amount -= amountInput;
+						this.updateSummary();
+						this.renderPaymentHistory();
+					}
+				},
+				error: () => {
+					frappe.msgprint("Failed to allocate additional advance payment.");
+					// rollback UI change
+					existingAdvance.amount -= amountInput;
+					this.updateSummary();
+					this.renderPaymentHistory();
+				},
+			});
+
+			// Clear fields
+			$(this.containerSelector).find("#pay-amount").val("");
+			$(this.containerSelector).find("#pay-ref").val("");
+
+			return;
+		}
+
+		// ---- END NEW LOGIC ----
+
 		const refs = this.getRefs();
 		const totalAmount = refs.total_selling_amount || 0;
 		const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -1168,7 +1289,6 @@ class WholesaleBagDirectPayment {
 			return;
 		}
 
-		// Add advance payment locally
 		const now = new Date();
 		const dateStr = now.toLocaleDateString("en-GB", {
 			day: "2-digit",
@@ -1185,8 +1305,18 @@ class WholesaleBagDirectPayment {
 			invoice_id: refs.invoice_id,
 			log_id: refs.log_id,
 		});
+		// Deduct from UI managed balance
+		this.customerAdvanceBalance -= amountInput;
 
-		// Call backend API to allocate advance immediately
+		// Update UI advance balance immediately
+		$(this.containerSelector)
+			.find("#customer-advance")
+			.text(
+				`RM ${this.customerAdvanceBalance.toLocaleString("en-MY", {
+					minimumFractionDigits: 2,
+				})}`
+			);
+
 		frappe.call({
 			method: "gold_app.api.sales.wholesale_bag_direct.allocate_customer_advance_to_invoice",
 			args: {
@@ -1203,12 +1333,10 @@ class WholesaleBagDirectPayment {
 					});
 					this.updateSummary();
 					this.renderPaymentHistory();
-					this.loadCustomerAdvance(); // Refresh advance balance display
 				} else {
 					frappe.msgprint(
 						`Advance allocation failed: ${r.message.message || "Unknown error"}`
 					);
-					// Remove the failed advance payment from local array
 					this.payments = this.payments.filter(
 						(p) =>
 							!(
@@ -1221,9 +1349,8 @@ class WholesaleBagDirectPayment {
 					this.renderPaymentHistory();
 				}
 			},
-			error: (e) => {
+			error: () => {
 				frappe.msgprint("Failed to allocate advance payment.");
-				// Remove the pending advance payment from local array
 				this.payments = this.payments.filter(
 					(p) => !(p.method === method && p.amount === amountInput && p.date === dateStr)
 				);
@@ -1232,7 +1359,6 @@ class WholesaleBagDirectPayment {
 			},
 		});
 
-		// Clear input fields
 		$(this.containerSelector).find("#pay-amount").val("");
 		$(this.containerSelector).find("#pay-ref").val("");
 	}
@@ -1254,18 +1380,88 @@ class WholesaleBagDirectPayment {
 	}
 
 	removePayment(index) {
+		const removedPayment = this.payments[index];
+
+		// NEW: Handle Customer Advance removal with backend call
+		if (removedPayment.method === "Customer Advance") {
+			const refs = this.getRefs();
+
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_bag_direct.remove_customer_advance_allocation",
+				args: {
+					sales_invoice_name: refs.invoice_id,
+					remove_amount: removedPayment.amount,
+				},
+				callback: (r) => {
+					if (r.message && r.message.status === "success") {
+						// Remove row from UI
+						this.payments.splice(index, 1);
+
+						// Restore the UI-level advance balance
+						this.customerAdvanceBalance += removedPayment.amount;
+
+						// Update UI display
+						$(this.containerSelector)
+							.find("#customer-advance")
+							.text(
+								`RM ${this.customerAdvanceBalance.toLocaleString("en-MY", {
+									minimumFractionDigits: 2,
+								})}`
+							);
+
+						this.updateSummary();
+						this.renderPaymentHistory();
+
+						frappe.show_alert({
+							message: `Removed RM ${removedPayment.amount.toLocaleString("en-MY", {
+								minimumFractionDigits: 2,
+							})} Customer Advance allocation`,
+							indicator: "red",
+						});
+					} else {
+						frappe.msgprint("Failed to remove advance allocation from invoice.");
+					}
+				},
+				error: () => {
+					frappe.msgprint("Backend error while removing Customer Advance allocation.");
+				},
+			});
+
+			return; // Do NOT continue normal removal
+		}
+
+		// Normal removal for Cash/Bank rows
 		this.payments.splice(index, 1);
 		this.updateSummary();
 		this.renderPaymentHistory();
 	}
 
 	async submitAllPayments() {
+		const refs = this.getRefs();
+		const totalAmount = refs.total_selling_amount || 0;
+		const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
+
 		if (this.payments.length === 0) {
 			frappe.msgprint("No payments to submit.");
 			return;
 		}
 
-		const refs = this.getRefs();
+		// >>> NEW VALIDATION: Payment total must match Total Amount <<<
+		if (totalPaid < totalAmount) {
+			frappe.msgprint(
+				"Payments are less than total amount. Please complete the full payment before submitting."
+			);
+			return;
+		}
+
+		if (totalPaid > totalAmount) {
+			frappe.msgprint(
+				"Payments exceed total amount. Please adjust payment entries before submitting."
+			);
+			return;
+		}
+
+		// >>> END VALIDATION <<<
 		if (!refs.invoice_id) {
 			frappe.msgprint("Sales Invoice not created. Please save and create invoice first.");
 			return;
@@ -1331,6 +1527,10 @@ class WholesaleBagDirectPayment {
 				message: `All Payment Entries created successfully!`,
 				indicator: "green",
 			});
+			// Reload entire page after a short delay
+			setTimeout(() => {
+				location.reload();
+			}, 1000);
 		} catch (error) {
 			frappe.msgprint({
 				title: "Payment Submission Failed",

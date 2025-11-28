@@ -438,10 +438,7 @@ def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, co
         
         if available_advance_total < allocate_amount:
             frappe.throw(f"Insufficient advance balance. Available: {available_advance_total}, Requested: {allocate_amount}")
-        
-        # Clear existing advances table
-        si.set("advances", [])
-        
+                
         # Allocate from available advances (first-come-first-served)
         remaining_to_allocate = allocate_amount
         allocated_advances = []
@@ -545,3 +542,11 @@ def remove_customer_advance_allocation(sales_invoice_name, remove_amount):
             "status": "error",
             "message": str(e)
         }
+
+@frappe.whitelist()
+def submit_sales_invoice_if_draft(sales_invoice_name):
+    si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+    if si.docstatus == 0:
+        si.submit()
+        frappe.db.commit()
+    return {"status": "success"}

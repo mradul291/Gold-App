@@ -501,3 +501,47 @@ def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, co
             "message": str(e),
             "sales_invoice": sales_invoice_name
         }
+
+@frappe.whitelist()
+def remove_customer_advance_allocation(sales_invoice_name, remove_amount):
+    """
+    Reverse allocated advance from Sales Invoice by removing allocation entries
+    and reallocating remaining amount.
+    """
+    try:
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+
+        if si.docstatus != 0:
+            frappe.throw("Sales Invoice must be in Draft state")
+
+        remove_amount = flt(remove_amount)
+
+        # Total allocated before removal
+        current_alloc = sum(flt(a.allocated_amount) for a in si.advances)
+
+        new_total = current_alloc - remove_amount
+        if new_total < 0:
+            new_total = 0  # safety
+
+        # Clear all allocations
+        si.set("advances", [])
+
+        # Reallocate remaining amount (FIFO using your existing logic)
+        if new_total > 0:
+            allocate_customer_advance_to_invoice(sales_invoice_name, new_total)
+
+        si.save()
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": "Customer advance allocation removed",
+            "remaining_allocated": new_total
+        }
+
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            "status": "error",
+            "message": str(e)
+        }
