@@ -656,6 +656,7 @@ class WholesaleBagDirectPayment {
 						payments: JSON.stringify(paymentsPayload),
 						total_amount: totalAmount,
 						amount_paid: amountPaid,
+						customer_advance_balance: this.customerAdvanceBalance,
 					},
 				});
 			}

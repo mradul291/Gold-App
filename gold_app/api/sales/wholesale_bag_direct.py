@@ -134,7 +134,7 @@ def create_wholesale_bag_direct_sale(data):
         return {'status': 'error', 'message': str(e)}
 
 @frappe.whitelist()
-def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_paid):
+def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_paid, customer_advance_balance=None):
 
     import json
 
@@ -182,6 +182,9 @@ def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_
             "reference_no": p.get("reference_no"),
             "status": p.get("status", "Received"),
         })
+        
+    if customer_advance_balance is not None:
+        doc.customer_advance_balance = float(customer_advance_balance)
 
     doc.save(ignore_permissions=True)
     frappe.db.commit()

@@ -134,7 +134,7 @@ def create_wholesale_bag_direct_sale(data):
         return {'status': 'error', 'message': str(e)}
 
 @frappe.whitelist()
-def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_paid):
+def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_paid, customer_advance_balance=None):
 
     import json
 
@@ -182,6 +182,9 @@ def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_
             "reference_no": p.get("reference_no"),
             "status": p.get("status", "Received"),
         })
+        
+    if customer_advance_balance is not None:
+        doc.customer_advance_balance = float(customer_advance_balance)
 
     doc.save(ignore_permissions=True)
     frappe.db.commit()
@@ -438,10 +441,7 @@ def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, co
         
         if available_advance_total < allocate_amount:
             frappe.throw(f"Insufficient advance balance. Available: {available_advance_total}, Requested: {allocate_amount}")
-        
-        # Clear existing advances table
-        si.set("advances", [])
-        
+                
         # Allocate from available advances (first-come-first-served)
         remaining_to_allocate = allocate_amount
         allocated_advances = []
@@ -545,3 +545,11 @@ def remove_customer_advance_allocation(sales_invoice_name, remove_amount):
             "status": "error",
             "message": str(e)
         }
+
+@frappe.whitelist()
+def submit_sales_invoice_if_draft(sales_invoice_name):
+    si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+    if si.docstatus == 0:
+        si.submit()
+        frappe.db.commit()
+    return {"status": "success"}
