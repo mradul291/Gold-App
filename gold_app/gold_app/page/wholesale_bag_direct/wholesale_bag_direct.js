@@ -8,9 +8,24 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	});
 
 	let bagOverviewData = [];
+	const uiBagUsageMap = {};
+	let currentLogId = null;
+	let currentSalesInvoiceId = null;
+
+	// Add tabs HTML and containers for each tab
+	$(page.body).html(`
+  	<ul class="nav nav-tabs" style="margin-bottom: 1em;">
+  		<li class="nav-item"><a class="nav-link active" href="#" id="tab-sales-details">Sales Details</a></li>
+  		<li class="nav-item"><a class="nav-link" href="#" id="tab-payment-entry">Payment Entry</a></li>
+  	</ul>
+  	<div id="tab-container">
+  		<div id="sales-details-tab"></div>
+  		<div id="payment-entry-tab" style="display:none;"></div>
+  	</div>
+	`);
 
 	// -- Page Body Layout --
-	$(page.body).html(`
+	$("#sales-details-tab").html(`
     <!-- Status and Save Button -->
     <div class="wbd-meta-row" style="display: flex; align-items: center; justify-content: space-between;">
     	<span class="wbd-status-chip">Not Saved</span>
@@ -57,21 +72,10 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
           		<div id="customerSuggestions" class="dropdown-suggestions" style="display:none;"></div>
           	</div>
           </div>
-          <div>
-            <label>Payment Method <span class="wbd-required">*</span></label>
-            <select>
-              <option>Cash</option>
-            </select>
-          </div>
-        </div>
-        <!-- Row 3: ID Number (full width) -->
-        <div class="wbd-form-row">
-          <div>
+         <div>
             <label>ID Number</label>
             <input type="text" id="idNumberInput" placeholder="NRIC / Passport / Company Reg">
           </div>
-          <div></div>
-          <div></div>
         </div>
       </div>
 
@@ -142,6 +146,65 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
       </div>
     </div>`);
 
+	function getPaymentPageRefs() {
+		const totalSelling =
+			parseFloat(
+				$("#sales-details-tab .wbd-totals-card .wbd-totals-row")
+					.eq(2)
+					.find("span")
+					.eq(1)
+					.text()
+					.replace(/[^\d.]/g, "")
+			) || 0;
+
+		const customer_id = $("#sales-details-tab #idNumberInput").val() || "";
+
+		return {
+			log_id: currentLogId,
+			invoice_id: currentSalesInvoiceId,
+			total_selling_amount: totalSelling,
+			customer_id: customer_id,
+		};
+	}
+
+	const salesDetailsContainer = $("#sales-details-tab");
+	const paymentEntryTab = new WholesaleBagDirectPayment(
+		"#payment-entry-tab",
+		getPaymentPageRefs
+	);
+
+	$("#tab-sales-details").on("click", function (e) {
+		e.preventDefault();
+		$(this).addClass("active");
+		$("#tab-payment-entry").removeClass("active");
+		$("#sales-details-tab").show();
+		$("#payment-entry-tab").hide();
+	});
+
+	$("#tab-payment-entry").on("click", function (e) {
+		e.preventDefault();
+
+		const status = salesDetailsContainer.find(".wbd-status-chip").text();
+		const customer = salesDetailsContainer.find("#customerInput").val().trim();
+
+		// 1. Customer validation
+		if (!customer) {
+			frappe.msgprint("Please select a customer before going to Payment Entry.");
+			return;
+		}
+
+		// 2. If already saved → directly switch
+		if (status === "Saved") {
+			switchToPaymentTab();
+			return;
+		}
+
+		// 3. Auto-save → then switch
+		saveWholesaleDirectSale(true, () => {
+			switchToPaymentTab();
+		});
+	});
+
 	// Set current date and time on page load
 	const now = new Date();
 	const padZero = (n) => n.toString().padStart(2, "0");
@@ -152,23 +215,23 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	const currentTime = `${padZero(now.getHours())}:${padZero(now.getMinutes())}`;
 
 	// Set values in the date and time inputs
-	$("input[type='date']").val(currentDate);
-	$("input[type='time']").val(currentTime);
+	salesDetailsContainer.find("input[type='date']").val(currentDate);
+	salesDetailsContainer.find("input[type='time']").val(currentTime);
 
 	// Change Status to Not Saved on Any Update.
 	function markNotSaved() {
-		const $chip = $(".wbd-status-chip");
+		const $chip = salesDetailsContainer.find(".wbd-status-chip");
 		$chip.text("Not Saved").removeClass("saved").addClass("wbd-status-chip");
 	}
 	// Revert to Not Saved on:
 	// Any input/select change in form, any table input, or row add/remove
-	$(document).on(
+	salesDetailsContainer.on(
 		"input change",
 		".wbd-form-row input, .wbd-form-row select, .wbd-table input, .wbd-table select",
 		markNotSaved
 	);
-	$(".wbd-add-row-btn, .wbd-table").on("click", markNotSaved); // Handles add/remove row buttons
-	$("#customerSuggestions").on("click", ".suggestion-item", markNotSaved);
+	salesDetailsContainer.find(".wbd-add-row-btn, .wbd-table").on("click", markNotSaved); // Handles add/remove row buttons
+	salesDetailsContainer.on("click", "#customerSuggestions .suggestion-item", markNotSaved);
 
 	// Function to build dynamic bag card HTML
 	function renderBagCards(bags) {
@@ -201,7 +264,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	}
 
 	// Show loader in Bag Overview block
-	$("#bagCardsRow").html(`
+	salesDetailsContainer.find("#bagCardsRow").html(`
 	<div class="loader-overlay">
 	  <div class="loader"></div>
 	  <p>Loading bags, please wait...</p>
@@ -215,9 +278,11 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			if (r.message) {
 				bagOverviewData = r.message;
 				const bagCardsHtml = renderBagCards(bagOverviewData);
-				$("#bagCardsRow").html(bagCardsHtml);
+				salesDetailsContainer.find("#bagCardsRow").html(bagCardsHtml);
 				renderItemsTableOptions();
 				updateDocumentTotals();
+				recalculateUIBagUsage();
+				updateBagOverviewUI();
 			}
 		},
 	});
@@ -233,9 +298,9 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				},
 			});
 			if (r.message && r.message.id_number) {
-				document.getElementById("idNumberInput").value = r.message.id_number;
+				salesDetailsContainer.find("#idNumberInput").val(r.message.id_number || "");
 			} else {
-				document.getElementById("idNumberInput").value = "";
+				salesDetailsContainer.find("#idNumberInput").val("");
 			}
 		} catch (err) {
 			console.error("Failed to fetch ID number:", err);
@@ -261,8 +326,8 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	}
 	loadCustomers();
 
-	const $customerInput = $("#customerInput");
-	const $customerSuggestions = $("#customerSuggestions");
+	const $customerInput = salesDetailsContainer.find("#customerInput");
+	const $customerSuggestions = salesDetailsContainer.find("#customerSuggestions");
 	let selectedCustomerId = null;
 
 	// Typeahead: show suggestions on input
@@ -358,7 +423,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	}
 
 	function renderItemsTableOptions() {
-		const $rows = $(".wbd-table tbody tr");
+		const $rows = salesDetailsContainer.find(".wbd-table tbody tr");
 		$rows.each(function () {
 			const $tr = $(this);
 			const $bagSelect = $tr.find("select.wbd-src-bag");
@@ -385,7 +450,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		let profitPerGramSum = 0;
 		let rowCount = 0;
 
-		$(".wbd-table tbody tr").each(function () {
+		salesDetailsContainer.find(".wbd-table tbody tr").each(function () {
 			const $row = $(this);
 
 			// Fetch cell values (all as numbers)
@@ -411,7 +476,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		let profitMargin = totalSelling ? (totalProfit / totalSelling) * 100 : 0;
 
 		// Update the Totals Section
-		const $totals = $(".wbd-totals-card");
+		const $totals = salesDetailsContainer.find(".wbd-totals-card");
 		$totals.find(".wbd-totals-row").eq(0).find("span").eq(1).text(totalWeight.toFixed(2));
 		$totals
 			.find(".wbd-totals-row")
@@ -440,18 +505,182 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			.text(profitMargin.toFixed(2) + "%");
 	}
 
-	// Events
-	// When Bag changes, update purity options and reset weight input
-	$(".wbd-table").on("change", "select.wbd-src-bag", function () {
+	function recalculateUIBagUsage() {
+		Object.keys(uiBagUsageMap).forEach((k) => delete uiBagUsageMap[k]);
+		salesDetailsContainer.find(".wbd-table tbody tr").each(function () {
+			const bag = $(this).find("select.wbd-src-bag").val();
+			const purity = $(this).find("select.wbd-src-purity").val();
+			const weight = parseFloat($(this).find(".wbd-weight").val()) || 0;
+			if (bag && purity) {
+				const key = bag + "::" + purity;
+				uiBagUsageMap[key] = (uiBagUsageMap[key] || 0) + weight;
+			}
+		});
+	}
+
+	function updateBagOverviewUI() {
+		bagOverviewData.forEach((bag) => {
+			const $bagCard = salesDetailsContainer
+				.find(`#bagCardsRow .wbd-bag-card .wbd-bag-id:contains("${bag.bag_id}")`)
+				.closest(".wbd-bag-card");
+
+			if ($bagCard.length) {
+				let uiBagTotal = 0; // recomputed total for this bag
+
+				$bagCard.find(".wbd-bag-card-details .wbd-bag-purity-row").each(function () {
+					const $row = $(this);
+					const purity = $row.find(".wbd-bag-purity").text();
+					const key = bag.bag_id + "::" + purity;
+
+					const purityData = bag.purities.find((p) => p.purity === purity) || {};
+					const originalWeight = purityData.weight || 0;
+					const rate = purityData.rate || 0;
+
+					const usedWeight = uiBagUsageMap[key] || 0;
+					const shownWeight = Math.max(originalWeight - usedWeight, 0);
+
+					// update weight text
+					$row.find(".wbd-bag-weight").text(shownWeight.toFixed(2) + "g");
+
+					// accumulate total = shownWeight * rate
+					uiBagTotal += shownWeight * rate;
+				});
+
+				// update bag total text on card header (UI only)
+				$bagCard.find(".wbd-bag-total").text(
+					"RM " +
+						uiBagTotal.toLocaleString(undefined, {
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2,
+						})
+				);
+			}
+		});
+	}
+
+	function saveWholesaleDirectSale(autoSave = false, afterSave = null) {
+		// Validate customer
+		let customerName = salesDetailsContainer.find("#customerInput").val().trim();
+		if (!customerName) {
+			if (!autoSave) frappe.msgprint("Please select a customer before saving.");
+			return;
+		}
+
+		// Build Data Object (shared logic)
+		const data = {};
+
+		data.series =
+			salesDetailsContainer.find("select:contains('WBS-DDMMYY-')").val() || "WBS-DDMMYY-";
+		data.date = salesDetailsContainer.find("input[type='date']").val();
+		data.posting_time = salesDetailsContainer.find("input[type='time']").val();
+		data.customer_type = salesDetailsContainer.find("#customerTypeSelect").val();
+		data.customer = customerName;
+		data.payment_method = salesDetailsContainer.find(".wbd-form-row select").eq(2).val();
+		data.id_number = salesDetailsContainer.find("#idNumberInput").val();
+
+		const $totals = salesDetailsContainer.find(".wbd-totals-card .wbd-totals-row");
+		data.total_weight_sold = parseFloat($totals.eq(0).find("span").eq(1).text());
+		data.total_avco_cost = parseFloat(
+			$totals
+				.eq(1)
+				.find("span")
+				.eq(1)
+				.text()
+				.replace(/[^\d.]/g, "")
+		);
+		data.total_selling_amount = parseFloat(
+			$totals
+				.eq(2)
+				.find("span")
+				.eq(1)
+				.text()
+				.replace(/[^\d.]/g, "")
+		);
+		data.average_profit_per_g = parseFloat($totals.eq(3).find("span").eq(1).text());
+		data.total_profit = parseFloat(
+			$totals
+				.eq(4)
+				.find("span")
+				.eq(1)
+				.text()
+				.replace(/[^\d.]/g, "")
+		);
+		data.overall_profit_margin = $totals.eq(5).find("span").eq(1).text();
+
+		data.items = [];
+		salesDetailsContainer.find(".wbd-table tbody tr").each(function () {
+			const $tr = $(this);
+			data.items.push({
+				source_bag: $tr.find("select.wbd-src-bag").val() || "",
+				purity: $tr.find("select.wbd-src-purity").val() || "",
+				description: $tr.find("input[type='text']").eq(0).val() || "",
+				weight: parseFloat($tr.find(".wbd-weight").val()) || 0,
+				avco_rate: parseFloat($tr.find("input[type='number']").eq(1).val()) || 0,
+				sell_rate: parseFloat($tr.find("input[type='number']").eq(2).val()) || 0,
+				amount: parseFloat($tr.find("input[type='number']").eq(3).val()) || 0,
+				profit_per_g: parseFloat($tr.find("input[type='number']").eq(4).val()) || 0,
+				total_profit: parseFloat($tr.find("input[type='number']").eq(5).val()) || 0,
+			});
+		});
+
+		// Show saving state only for manual save
+		if (!autoSave) {
+			salesDetailsContainer.find(".wbd-save-btn").prop("disabled", true).text("Saving...");
+		}
+
+		frappe.call({
+			method: "gold_app.api.sales.wholesale_bag_direct.create_wholesale_bag_direct_sale",
+			type: "POST",
+			args: { data },
+			callback: function (r) {
+				if (r.message && r.message.status === "success") {
+					const $chip = salesDetailsContainer.find(".wbd-status-chip");
+					currentLogId = r.message.name;
+					$chip.text("Saved").removeClass().addClass("wbd-status-chip saved");
+					// Success alert for creating Wholesale Bag Direct Sale
+					frappe.show_alert({
+						message: "Sale Saved: " + r.message.name,
+						indicator: "green",
+					});
+
+					// Run callback if provided (used for auto-save)
+					if (afterSave) afterSave();
+				} else {
+					if (!autoSave) {
+						frappe.msgprint("Failed to save document.");
+					}
+				}
+
+				if (!autoSave) {
+					salesDetailsContainer
+						.find(".wbd-save-btn")
+						.prop("disabled", false)
+						.text("Save");
+				}
+			},
+		});
+	}
+
+	function switchToPaymentTab() {
+		$("#tab-payment-entry").addClass("active");
+		$("#tab-sales-details").removeClass("active");
+		$("#sales-details-tab").hide();
+		$("#payment-entry-tab").show();
+		paymentEntryTab.show();
+	}
+
+	salesDetailsContainer.on("change", ".wbd-table select.wbd-src-bag", function () {
 		const $tr = $(this).closest("tr");
 		const selectedBagId = $(this).val();
 		$tr.find("select.wbd-src-purity").html(getPurityOptionsHtml(selectedBagId));
 		$tr.find(".wbd-weight").val("0.00").attr("max", 0);
 		updateDocumentTotals();
+		recalculateUIBagUsage();
+		updateBagOverviewUI();
 	});
 
 	// When Purity changes, update max allowed weight, reset weight input, and set AVCO rate
-	$(".wbd-table").on("change", "select.wbd-src-purity", function () {
+	salesDetailsContainer.on("change", ".wbd-table select.wbd-src-purity", function () {
 		const $tr = $(this).closest("tr");
 		const bagId = $tr.find("select.wbd-src-bag").val();
 		const purityVal = $(this).val();
@@ -467,155 +696,93 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			.eq(1)
 			.val(purityData ? purityData.rate.toFixed(2) : "0.00");
 		updateDocumentTotals();
+		recalculateUIBagUsage();
+		updateBagOverviewUI();
 	});
 
 	// Validate weight input not to exceed max allowed
-	$(".wbd-table").on("input", ".wbd-weight", function () {
+	salesDetailsContainer.on("input", ".wbd-table .wbd-weight", function () {
 		const maxWeight = Number($(this).attr("max")) || 0;
 		let val = parseFloat($(this).val()) || 0;
 		if (val > maxWeight) {
 			$(this).val(maxWeight);
 		}
 		updateDocumentTotals();
+		recalculateUIBagUsage();
+		updateBagOverviewUI();
 	});
 
 	// Listen for any change in any number field in items table rows
-	$(".wbd-table").on("input", "input[type='number']", function () {
+	salesDetailsContainer.on("input", ".wbd-table input[type='number']", function () {
 		updateDocumentTotals();
+		recalculateUIBagUsage();
+		updateBagOverviewUI();
 	});
 
-	$(".wbd-table").on(
+	salesDetailsContainer.on(
 		"input",
-		"input[type='number'], select.wbd-src-bag, select.wbd-src-purity",
+		".wbd-table input[type='number'], .wbd-table select.wbd-src-bag, .wbd-table select.wbd-src-purity",
 		function () {
-			$(".wbd-table tbody tr").each(function () {
-				// Fetch fields for this row
-				const $row = $(this);
-				const weight = parseFloat($row.find(".wbd-weight").val()) || 0;
-				const avcoRate = parseFloat($row.find("input[type='number']").eq(1).val()) || 0;
-				const sellRate = parseFloat($row.find("input[type='number']").eq(2).val()) || 0;
+			const $tr = $(this).closest("tr"); // ✔ correct
 
-				// Auto-calculate Amount (MYR)
-				$row.find("input[type='number']")
-					.eq(3)
-					.val((weight * avcoRate).toFixed(2));
+			const weight = parseFloat($tr.find(".wbd-weight").val()) || 0;
+			const avcoRate = parseFloat($tr.find("input[type='number']").eq(1).val()) || 0;
+			const sellRate = parseFloat($tr.find("input[type='number']").eq(2).val()) || 0;
 
-				// Auto-calculate Profit/g (RM/g)
-				$row.find("input[type='number']")
-					.eq(4)
-					.val((sellRate - avcoRate).toFixed(2));
+			// Auto-calculate Amount (MYR)
+			$tr.find("input[type='number']")
+				.eq(3)
+				.val((weight * avcoRate).toFixed(2));
 
-				// Auto-calculate Total Profit (MYR)
-				$row.find("input[type='number']")
-					.eq(5)
-					.val(((sellRate - avcoRate) * weight).toFixed(2));
-			});
+			// Auto-calculate Profit/g (RM/g)
+			$tr.find("input[type='number']")
+				.eq(4)
+				.val((sellRate - avcoRate).toFixed(2));
 
-			// Always update document totals after row calculation
+			// Auto-calculate Total Profit (MYR)
+			$tr.find("input[type='number']")
+				.eq(5)
+				.val(((sellRate - avcoRate) * weight).toFixed(2));
+
+			// Update totals and bag UI
 			updateDocumentTotals();
+			recalculateUIBagUsage();
+			updateBagOverviewUI();
 		}
 	);
 
 	// Add Row button event
-	$(".wbd-add-row-btn").on("click", function () {
-		const $tbody = $(".wbd-table tbody");
+	salesDetailsContainer.find(".wbd-add-row-btn").on("click", function () {
+		const $tbody = salesDetailsContainer.find(".wbd-table tbody");
 		$tbody.append(buildTableRow($tbody.children().length + 1));
 		renderItemsTableOptions();
 		updateDocumentTotals();
+		recalculateUIBagUsage();
+		updateBagOverviewUI();
 	});
 
 	// Remove row event
-	$(".wbd-table").on("click", ".wbd-row-remove", function () {
+	salesDetailsContainer.on("click", ".wbd-table .wbd-row-remove", function () {
 		$(this).closest("tr").remove();
 		// Re-number remaining rows
-		$(".wbd-table tbody tr").each(function (index) {
+		salesDetailsContainer.find(".wbd-table tbody tr").each(function (index) {
 			$(this)
 				.find("td:nth-child(2)")
 				.text(index + 1);
 		});
 		renderItemsTableOptions();
 		updateDocumentTotals();
+		recalculateUIBagUsage();
+		updateBagOverviewUI();
 	});
 
 	// Save Button Event
-	$(".wbd-save-btn").on("click", function () {
-		// 1. Compose the data object matching API schema
-		const data = {};
-
-		// -- Header fields --
-		data.series = $("select:contains('WBS-DDMMYY-')").val() || "WBS-DDMMYY-";
-		data.date = $("input[type='date']").val();
-		data.posting_time = $("input[type='time']").val();
-		data.customer_type = $(".wbd-form-row select").eq(1).val() || "Individual";
-		data.customer = $("#customerInput").val();
-		data.payment_method = $(".wbd-form-row select").eq(2).val() || "Cash";
-		data.id_number = $("#idNumberInput").val();
-
-		// -- Document Totals --
-		const $totals = $(".wbd-totals-card .wbd-totals-row");
-		data.total_weight_sold = parseFloat($totals.eq(0).find("span").eq(1).text()) || 0;
-		data.total_avco_cost =
-			parseFloat(($totals.eq(1).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")) ||
-			0;
-		data.total_selling_amount =
-			parseFloat(($totals.eq(2).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")) ||
-			0;
-		data.average_profit_per_g = parseFloat($totals.eq(3).find("span").eq(1).text()) || 0;
-		data.total_profit =
-			parseFloat(($totals.eq(4).find("span").eq(1).text() || "0").replace(/[^\d.]/g, "")) ||
-			0;
-		data.overall_profit_margin = $totals.eq(5).find("span").eq(1).text();
-
-		// -- Items Table --
-		data.items = [];
-		$(".wbd-table tbody tr").each(function () {
-			const $tr = $(this);
-			const row = {
-				source_bag: $tr.find("select.wbd-src-bag").val() || "",
-				purity: $tr.find("select.wbd-src-purity").val() || "",
-				description: $tr.find("input[type='text']").eq(0).val() || "",
-				weight: parseFloat($tr.find(".wbd-weight").val()) || 0,
-				avco_rate: parseFloat($tr.find("input[type='number']").eq(1).val()) || 0,
-				sell_rate: parseFloat($tr.find("input[type='number']").eq(2).val()) || 0,
-				amount: parseFloat($tr.find("input[type='number']").eq(3).val()) || 0,
-				profit_per_g: parseFloat($tr.find("input[type='number']").eq(4).val()) || 0,
-				total_profit: parseFloat($tr.find("input[type='number']").eq(5).val()) || 0,
-			};
-			data.items.push(row);
-		});
-
-		// 2. Show loader or disable Save button for feedback
-		$(".wbd-save-btn").prop("disabled", true).text("Saving...");
-
-		// 3. Call API
-		frappe.call({
-			method: "gold_app.api.sales.wholesale_bag_direct.create_wholesale_bag_direct_sale",
-			type: "POST",
-			args: { data },
-			callback: function (r) {
-				// 4. On Success or Error
-				const $chip = $(".wbd-status-chip");
-				if (r.message && r.message.status === "success") {
-					$chip
-						.text("Saved")
-						.removeClass() // removes any previous classes/styles
-						.addClass("wbd-status-chip saved");
-				} else {
-					$chip.text("Not Saved").removeClass("saved").addClass("wbd-status-chip");
-					frappe.msgprint({
-						title: "Save Error",
-						message:
-							r.message && r.message.message ? r.message.message : "Unknown error.",
-						indicator: "red",
-					});
-				}
-				$(".wbd-save-btn").prop("disabled", false).text("Save");
-			},
-		});
+	salesDetailsContainer.find(".wbd-save-btn").on("click", function () {
+		saveWholesaleDirectSale(false, null);
 	});
 
 	// Sales Invoice Button Event
-	$(".wbd-invoice-btn").on("click", function () {
+	salesDetailsContainer.find(".wbd-invoice-btn").on("click", function () {
 		let customerId = null;
 		let inputName = $customerInput.val().trim();
 		let match = allCustomersRaw.find((c) => c.customer_name === inputName);
@@ -629,7 +796,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		let customer = selectedCustomerId;
 		let items_data = [];
 
-		$(".wbd-table tbody tr").each(function () {
+		salesDetailsContainer.find(".wbd-table tbody tr").each(function () {
 			const $tr = $(this);
 			const purity = $tr.find("select.wbd-src-purity").val() || "";
 			const item_code = purity ? `Unsorted-${purity}` : "";
@@ -647,7 +814,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			});
 		});
 
-		if ($(".wbd-status-chip").text() !== "Saved") {
+		if (salesDetailsContainer.find(".wbd-status-chip").text() !== "Saved") {
 			frappe.msgprint("Please save the document before creating a Sales Invoice.");
 			return;
 		}
@@ -656,7 +823,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			return;
 		}
 
-		$(".wbd-invoice-btn").prop("disabled", true).text("Creating...");
+		salesDetailsContainer.find(".wbd-invoice-btn").prop("disabled", true).text("Creating...");
 
 		frappe.call({
 			method: "gold_app.api.sales.wholesale_bag_direct.create_sales_invoice",
@@ -665,48 +832,20 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				items: JSON.stringify(items_data),
 			},
 			callback: function (r) {
-				$(".wbd-invoice-btn").prop("disabled", false).text("Create Invoice");
+				salesDetailsContainer
+					.find(".wbd-invoice-btn")
+					.prop("disabled", false)
+					.text("Create Invoice");
 				if (r.message && r.message.status === "success") {
 					const salesInvoice = r.message.sales_invoice;
+					currentSalesInvoiceId = salesInvoice;
 					frappe.show_alert({
 						message: "Sales Invoice Created: " + salesInvoice,
 						indicator: "green",
 					});
-
-					frappe.confirm(
-						"Do you want to make payment now?",
-						() => {
-							frappe.call({
-								method: "gold_app.api.sales.wholesale_bag_direct.create_payment_entry_for_invoice",
-								args: {
-									sales_invoice_name: salesInvoice,
-								},
-								callback: function (payment_res) {
-									if (
-										payment_res.message &&
-										payment_res.message.status === "success"
-									) {
-										frappe.show_alert({
-											message: payment_res.message.message,
-											indicator: "green",
-										});
-										setTimeout(() => {
-											location.reload();
-										}, 1500);
-									} else {
-										frappe.msgprint({
-											title: "Payment Error",
-											message: "Failed to create payment entry.",
-											indicator: "red",
-										});
-									}
-								},
-							});
-						},
-						() => {
-							frappe.msgprint("You can make payment later from the Sales Invoice.");
-						}
-					);
+					setTimeout(() => {
+						$("#tab-payment-entry").click();
+					}, 300);
 				} else {
 					frappe.msgprint({
 						message: "Failed to create Sales Invoice.",
@@ -719,9 +858,9 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	});
 
 	// Bag Overview Expand/Collapse
-	$(document).on("click", "#toggleBagOverview", function () {
+	salesDetailsContainer.on("click", "#toggleBagOverview", function () {
 		const $icon = $(this).find(".wbd-collapsible-icon");
-		const $cards = $("#bagCardsRow");
+		const $cards = salesDetailsContainer.find("#bagCardsRow");
 		if ($cards.is(":visible")) {
 			$cards.slideUp(190);
 			$icon.css("transform", "rotate(-90deg)");

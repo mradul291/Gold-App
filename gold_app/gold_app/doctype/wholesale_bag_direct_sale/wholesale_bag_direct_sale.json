@@ -26,7 +26,14 @@
   "column_break_gmle",
   "average_profit_per_g",
   "total_profit",
-  "overall_profit_margin"
+  "overall_profit_margin",
+  "payments_tab",
+  "total_amount",
+  "amount_paid",
+  "column_break_ddwk",
+  "balance_due",
+  "section_break_egeg",
+  "payments"
  ],
  "fields": [
   {
@@ -147,14 +154,52 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Draft\nInvoiced\nPaid",
+   "options": "Draft\nInvoiced\nPartially Paid\nPaid",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payments_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payments"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_paid",
+   "fieldtype": "Currency",
+   "label": "Amount Paid ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ddwk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "balance_due",
+   "fieldtype": "Currency",
+   "label": "Balance Due",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_egeg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "Wholesale Payment Line",
    "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-21 15:08:44.301719",
+ "modified": "2025-11-27 15:11:11.255745",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Bag Direct Sale",

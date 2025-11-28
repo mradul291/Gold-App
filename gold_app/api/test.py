@@ -1,75 +1,345 @@
-# ------------------------------------------Purchase Receipt--------------------------------------------------------
-
 import frappe
-from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
+from frappe import _
+from frappe.utils import flt
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+from frappe.utils import getdate, formatdate
 from erpnext.accounts.party import get_party_account
 from erpnext.controllers.accounts_controller import (
     get_advance_journal_entries,
     get_advance_payment_entries_for_regional,
 )
-from frappe.model.naming import make_autoname
-from frappe.utils import nowdate, formatdate
-from frappe.utils import flt, nowdate
 
-def autoname(doc, method):
-    # Custom format: PUR-DDMMYY-RUNNINGNUMBER
-    today = formatdate(nowdate(), "ddMMyy")
-    doc.name = make_autoname(f"PUR-{today}-.####")
+@frappe.whitelist()
+def get_all_bag_overview():
 
-# Updating Item on the Basis of Price Updated in PR
-def update_item_from_receipt(doc, method):
-    """
-    On submit of Purchase Receipt, update Item master
-    with purity and valuation_rate.
-    """
-    for row in doc.items:
-        if not row.item_code:
-            continue
+    bag_rows = frappe.db.sql("""
+        SELECT
+            bin.warehouse AS bag_id,
+            item.purity AS purity,
+            SUM(bin.actual_qty) AS weight,
+            AVG(bin.valuation_rate) AS rate,
+            SUM(bin.actual_qty * bin.valuation_rate) AS amount
+        FROM
+            `tabBin` AS bin
+        JOIN `tabItem` AS item 
+            ON bin.item_code = item.name
+        JOIN `tabWarehouse` AS wh
+            ON wh.name = bin.warehouse
+        WHERE
+            wh.parent_warehouse = 'Wholesale - AGSB'
+        GROUP BY 
+            bin.warehouse, item.purity
+        HAVING 
+            SUM(bin.actual_qty) > 0
+    """, as_dict=True)
 
-        # update item fields
-        frappe.db.set_value(
-            "Item", 
-            row.item_code, 
-            {
-                "purity": row.purity or None,
-                "valuation_rate": row.rate or 0
-            }
+    # Organize per bag
+    bags = {}
+    for row in bag_rows:
+        bag = bags.setdefault(row["bag_id"], {
+            "bag_id": row["bag_id"],
+            "bag_total": 0,
+            "purities": []
+        })
+        bag["purities"].append({
+            "purity": row["purity"],
+            "weight": round(row["weight"], 2),
+            "rate": round(row["rate"], 2)
+        })
+        bag["bag_total"] += float(row["amount"])
+
+    bag_list = []
+    for bag in bags.values():
+        bag["bag_total"] = round(bag["bag_total"], 2)
+        bag_list.append(bag)
+
+    return bag_list
+
+@frappe.whitelist(allow_guest=False)
+def create_wholesale_bag_direct_sale(data):
+    import json
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    try:
+        customer = data.get("customer")
+
+        # ----------------------------------------------------------
+        #  FIXED FILTER → 100% correct syntax for Frappe 15
+        #  Find existing open log (no invoice_ref)
+        # ----------------------------------------------------------
+        existing = frappe.get_all(
+            "Wholesale Bag Direct Sale",
+            filters={
+                "customer": customer,
+                "sales_invoice_ref": ["in", ["", None]]
+            },
+            fields=["name"],
+            order_by="creation desc",
+            limit_page_length=1
         )
 
+        if existing:
+            doc = frappe.get_doc("Wholesale Bag Direct Sale", existing[0].name)
+        else:
+            doc = frappe.new_doc("Wholesale Bag Direct Sale")
+
+        # ------------------------------
+        # Update Parent Fields
+        # ------------------------------
+        doc.naming_series = data.get('series')
+        doc.customer_type = data.get('customer_type')
+        doc.id_number = data.get('id_number')
+        doc.posting_date = data.get('date')
+        doc.customer = data.get('customer')
+        doc.posting_time = data.get('posting_time')
+        doc.payment_method = data.get('payment_method')
+        doc.status = "Draft"
+
+        # ------------------------------
+        # Totals
+        # ------------------------------
+        doc.total_weight_sold = data.get('total_weight_sold')
+        doc.total_avco_cost = data.get('total_avco_cost')
+        doc.total_selling_amount = data.get('total_selling_amount')
+        doc.average_profit_per_g = data.get('average_profit_per_g')
+        doc.total_profit = data.get('total_profit')
+        doc.overall_profit_margin = data.get('overall_profit_margin')
+
+        # ------------------------------
+        # Items
+        # ------------------------------
+        doc.set("items", [])
+        for item in data.get('items', []):
+            doc.append('items', {
+                'source_bag': item.get('source_bag'),
+                'purity': item.get('purity'),
+                'description': item.get('description'),
+                'weight': item.get('weight'),
+                'avco_rate': item.get('avco_rate'),
+                'sell_rate': item.get('sell_rate'),
+                'amount': item.get('amount'),
+                'profit_per_g': item.get('profit_per_g'),
+                'total_profit': item.get('total_profit')
+            })
+
+        doc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        return {'status': 'success', 'name': doc.name}
+
+    except Exception as e:
+        frappe.log_error(f"Error in create_wholesale_bag_direct_sale: {str(e)}")
+        frappe.db.rollback()
+        return {'status': 'error', 'message': str(e)}
+
+@frappe.whitelist()
+def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_paid):
+
+    import json
+
+    if isinstance(payments, str):
+        payments = json.loads(payments)
+
+    if not log_id:
+        frappe.throw("Wholesale Bag Direct Sale log_id is required.")
+
+    doc = frappe.get_doc("Wholesale Bag Direct Sale", log_id)
+
+    # Update parent summary fields
+    total_amount = float(total_amount or 0)
+    amount_paid = float(amount_paid or 0)
+    balance_due = max(total_amount - amount_paid, 0)
+
+    doc.total_amount = total_amount
+    doc.amount_paid = amount_paid
+    doc.balance_due = balance_due
+
+    # Set status based on payment completion
+    if amount_paid <= 0:
+        doc.status = "Invoiced"  # or keep your earlier value
+    elif balance_due > 0:
+        doc.status = "Partially Paid"
+    else:
+        doc.status = "Paid"
+
+    # Reset & rebuild Payments child table
+    doc.set("payments", [])
+    for p in payments:
+        raw_date = p.get("payment_date")
+        payment_date = None
+        if raw_date:
+            try:
+                day, month, year = raw_date.split("/")
+                payment_date = f"{year}-{month}-{day}"  # YYYY-MM-DD
+            except Exception:
+                payment_date = getdate(raw_date)
+
+        doc.append("payments", {
+            "payment_date": payment_date,
+            "payment_method": p.get("payment_method"),
+            "amount": p.get("amount"),
+            "reference_no": p.get("reference_no"),
+            "status": p.get("status", "Received"),
+        })
+
+    doc.save(ignore_permissions=True)
     frappe.db.commit()
 
-# Auto-generate Bank Reference
-def set_bank_reference_code(doc, method):
-    """Auto-generate or update Bank Reference Code for PR"""
-    if doc.payment_method == "Bank Transfer":
-        # Always regenerate
-        doc.bank_reference_no = f"BELI EMAS - RM{int(doc.grand_total or 0)}"
-    elif doc.payment_method == "Mix":
-        # Loop through child table rows
-        for row in doc.payment_split:
-            if row.mode_of_payment == "Bank Transfer":
-                if not row.reference_no:  # only set if empty
-                    row.reference_no = f"BELI EMAS - RM{int(row.amount or 0)}"
-                if not row.reference_date:
-                    row.reference_date = doc.posting_date
-    else:
-        doc.bank_reference_no = None
-
-# Fetch Supplier Advances in PR
+    return {
+        "status": "success",
+        "log_id": doc.name,
+        "total_amount": doc.total_amount,
+        "amount_paid": doc.amount_paid,
+        "balance_due": doc.balance_due,
+        "doc_status": doc.status,
+    }
+    
 @frappe.whitelist()
-def get_supplier_advances_for_pr(supplier, company=None):
+def create_sales_invoice(customer, items, company=None):
+    import json
 
     if not company:
         company = frappe.defaults.get_user_default("Company")
 
-    party_type = "Supplier"
-    party = supplier
-    amount_field = "debit_in_account_currency"
-    order_doctype = "Purchase Order"
-    order_list = []  # Purchase Receipt does not link orders here, keep empty
+    items_list = json.loads(items)
 
-    # Get party account list: advance accounts included
+    si_items = []
+    for i in items_list:
+        qty_val = flt(i.get("weight") or i.get("qty") or 1)
+        si_items.append({
+            "item_code": i.get("item_code"),
+            "qty": qty_val,
+            "weight_per_unit": qty_val,
+            "rate": flt(i.get("rate")),
+            "purity": i.get("purity", ""),
+            "warehouse": i.get("warehouse", "")
+        })
+
+    # ---------------------------
+    # Create Sales Invoice
+    # ---------------------------
+    si = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": customer,
+        "company": company,
+        "posting_date": frappe.utils.nowdate(),
+        "update_stock": 1,
+        "items": si_items
+    })
+
+    si.insert(ignore_permissions=True)
+    frappe.db.commit()
+
+    # ---------------------------
+    # UPDATE WHOLESALE BAG LOG
+    # ---------------------------
+    log_entry = frappe.get_all(
+        "Wholesale Bag Direct Sale",
+        filters=[
+            ["id_number", "=", customer],
+            ["sales_invoice_ref", "in", ("", None)]
+        ],
+        fields=["name"],
+        order_by="creation desc",
+        limit_page_length=1
+    )
+
+    if log_entry:
+        log_doc = frappe.get_doc("Wholesale Bag Direct Sale", log_entry[0].name)
+        log_doc.sales_invoice_ref = si.name
+        log_doc.status = "Invoiced"
+        try:
+            log_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+        except Exception as ex:
+            print(f"!!! FAILED to update Wholesale Bag Direct Sale doc: {ex} !!!\n")
+    else:
+        print("!!! No matching Wholesale Bag Direct Sale log found for update. !!!\n")
+
+    return {
+        "status": "success",
+        "sales_invoice": si.name,
+    }
+
+@frappe.whitelist()
+def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount):
+ 
+    try:
+        if not sales_invoice_name:
+            frappe.throw("Sales Invoice name is required.")
+
+        if not payment_mode:
+            frappe.throw("Mode of Payment is required.")
+
+        if not paid_amount or float(paid_amount) <= 0:
+            frappe.throw("Paid Amount must be greater than zero.")
+            
+        if payment_mode == "Bank Transfer":
+            payment_mode = "Bank Draft"
+            
+        paid_amount = float(paid_amount)
+        # Get Sales Invoice and ensure it's submitted
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+        # AUTO-SUBMIT DRAFT INVOICE if needed
+        if si.docstatus == 0:  # Draft
+            si.flags.ignore_permissions = True
+            si.submit()
+            frappe.db.commit()
+        
+        elif si.docstatus != 1:
+            frappe.throw("Sales Invoice must be Draft or Submitted")
+
+        # Get default Payment Entry for this invoice
+        pe = get_payment_entry("Sales Invoice", sales_invoice_name)
+
+        # Update payment details
+        pe.mode_of_payment = payment_mode
+        pe.paid_amount = float(paid_amount)
+        pe.received_amount = float(paid_amount)
+        pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+        pe.reference_date = frappe.utils.nowdate()
+
+        # Update references to reflect new paid amount
+        if pe.references and len(pe.references) > 0:
+            pe.references[0].allocated_amount = float(paid_amount)
+
+        # Save and submit the Payment Entry
+        pe.insert(ignore_permissions=True)
+        pe.submit()
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": "Payment Entry created successfully.",
+            "payment_entry": pe.name,
+            "sales_invoice": sales_invoice_name,
+            "paid_amount": paid_amount,
+        }
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
+        frappe.throw(f"Failed to create Payment Entry: {str(e)}")
+
+@frappe.whitelist()
+def get_customer_advance_balance(customer, company=None):
+    """
+    Return total advance balance for a Customer (sum of available advances).
+    Used only to show a single number on Wholesale Bag Direct Payment page.
+    """
+    if not customer:
+        return {"status": "error", "message": "Customer is required.", "advance_balance": 0}
+
+    if not company:
+        company = frappe.defaults.get_user_default("Company")
+
+    party_type = "Customer"
+    party = customer
+    amount_field = "credit_in_account_currency"  # for Customer advances
+    order_doctype = "Sales Order"
+    order_list = []  # not linking to specific SO here
+
+    # Get party account list including advance accounts
     party_accounts = get_party_account(
         party_type, party=party, company=company, include_advance=True
     )
@@ -78,186 +348,156 @@ def get_supplier_advances_for_pr(supplier, company=None):
     default_advance_account = None
 
     if party_accounts:
-        party_account.append(party_accounts[0])  # supplier payable account
+        party_account.append(party_accounts[0])
         if len(party_accounts) == 2:
             default_advance_account = party_accounts[1]
 
-    # Fetch Advances from Journal Entries
+    # Advances from Journal Entries
     journal_entries = get_advance_journal_entries(
-        party_type, party, party_account, amount_field,
-        order_doctype, order_list, include_unallocated=True
+        party_type,
+        party,
+        party_account,
+        amount_field,
+        order_doctype,
+        order_list,
+        include_unallocated=True,
     )
 
-    # Fetch Advances from Payment Entries
+    # Advances from Payment Entries
     payment_entries = get_advance_payment_entries_for_regional(
-        party_type, party, party_account,
-        order_doctype, order_list, default_advance_account,
-        include_unallocated=True
+        party_type,
+        party,
+        party_account,
+        order_doctype,
+        order_list,
+        default_advance_account,
+        include_unallocated=True,
     )
 
-    result = []
+    total_advance = 0
     for d in journal_entries + payment_entries:
-        row = {
-            "reference_type": d.reference_type,
-            "reference_name": d.reference_name,
-            "reference_row": d.reference_row,
-            "remarks": d.remarks,
-            "advance_amount": flt(d.amount),
-            "allocated_amount": 0,
-            "ref_exchange_rate": flt(d.exchange_rate),
-            "difference_posting_date": nowdate(),
-        }
+        total_advance += flt(d.amount)
 
-        if d.get("paid_from"):
-            row["account"] = d.paid_from
-        if d.get("paid_to"):
-            row["account"] = d.paid_to
+    return {
+        "status": "success",
+        "customer": customer,
+        "company": company,
+        "advance_balance": flt(total_advance),
+    }
 
-        result.append(row)
-
-    return result
-
-
-# Validations on PR for Payment Methods
-def validate_payment_split(doc, method):
-    if doc.payment_method != "Mix":
-        return
-
-    if not doc.payment_split:
-        frappe.throw("Payment Split table is required for Mix payment method")
-
-    split_total = sum(flt(row.amount or 0) for row in doc.payment_split)
-
-    if split_total != flt(doc.grand_total):
-        frappe.throw(
-            f"Total of Payment Split ({split_total}) must equal Purchase Receipt Grand Total ({doc.grand_total})."
-        )
-
-# Push Advances from PR to PI
-def _push_advances_into_purchase_invoice(doc, pi):
-    """Copy allocated advances from Purchase Receipt into Purchase Invoice advances table."""
-    pi.set("advances", [])
-
-    for adv in doc.supplier_advances:
-        if flt(adv.allocated_amount) > 0:
-
-            pi.append("advances", {
-                "reference_type": adv.reference_type,
-                "reference_name": adv.reference_name,
-                "reference_row": adv.reference_row,
-                "remarks": adv.remarks,
-                "advance_amount": flt(adv.advance_amount),
-                "allocated_amount": flt(adv.allocated_amount),
-                "ref_exchange_rate": flt(adv.ref_exchange_rate),
-                "difference_posting_date": adv.difference_posting_date,
-            })
-
-    pi.save()
-
-# 2. Invoice & Payment Creation
 @frappe.whitelist()
-def create_invoice_and_payment(doc, method):
-    doc = frappe.get_doc("Purchase Receipt", doc.name)
-
-    # ---- Step 1: Create Purchase Invoice ----
-    pi = make_purchase_invoice(doc.name)
-    pi.supplier_invoice_date = doc.posting_date
-    pi.custom_payment_mode = doc.payment_method
-    
-    pi.allocate_advances_automatically = 0
-    
-    pi.flags.ignore_permissions = True
-    pi.insert()
-    
-    # Apply customer advance manually to PI references
-    _push_advances_into_purchase_invoice(doc, pi)
-
-    pi.submit()
-
-
-    doc.db_set("purchase_invoice_ref", pi.name)
-
-    # ---- Step 2: Handle Payments ----
-    if doc.payment_method == "Cash":
-        _create_payment_entry(doc, pi, mode="Cash")
-
-    elif doc.payment_method == "Bank Transfer":
-        if not doc.bank_reference_no:
-            frappe.throw("Bank Reference No is required for Bank Transfer")
-
-        _create_payment_entry(
-            doc, pi, mode="Bank Draft",
-            reference_no=doc.bank_reference_no,
-            reference_date=doc.posting_date
+def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, company=None):
+    """
+    Allocate customer advance amount to DRAFT Sales Invoice
+    """
+    try:
+        if not sales_invoice_name:
+            frappe.throw("Sales Invoice name is required")
+        
+        allocate_amount = flt(allocate_amount)
+        if allocate_amount <= 0:
+            frappe.throw("Allocation amount must be greater than zero")
+        
+        if not company:
+            company = frappe.defaults.get_user_default("Company")
+        
+        # Get Sales Invoice - MUST BE DRAFT
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+        if si.docstatus != 0:
+            frappe.throw("Sales Invoice must be in Draft state (not submitted)")
+        
+        customer = si.customer
+        party_type = "Customer"
+        party = customer
+        amount_field = "credit_in_account_currency"
+        order_doctype = "Sales Order"
+        order_list = []
+        
+        # Get party accounts (receivable + advance accounts)
+        party_accounts = get_party_account(
+            party_type, party=customer, company=company, include_advance=True
         )
-
-    elif doc.payment_method == "Mix":
-        for row in doc.payment_split:
-            if row.mode_of_payment == "Cash":
-                _create_payment_entry(doc, pi, mode="Cash", amount=row.amount)
-
-            elif row.mode_of_payment == "Bank Transfer":
-                # Ensure reference is set (auto from before_save hook)
-                if not row.reference_no:
-                    frappe.throw("Reference No is required for Bank Transfer in split row")
-
-                _create_payment_entry(
-                    doc, pi, mode="Bank Draft",
-                    amount=row.amount,
-                    reference_no=row.reference_no,
-                    reference_date=row.reference_date or doc.posting_date
-                )
-
-    frappe.db.commit()
-
-# 3. Helper: Payment Entry
-def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, reference_date=None):
-    """Helper to create Payment Entry"""
-
-    pe = get_payment_entry("Purchase Invoice", pi.name)
-    pe.mode_of_payment = mode
-
-    # If specific amount is passed (Mix), override; else use default from get_payment_entry
-    if amount is not None:
-        if float(amount) == 0.0:
-            return  # do not create zero-amount PE
-
-        pe.paid_amount = amount
-        pe.received_amount = amount
-
-        # Update allocation in references child table
-        for ref in pe.references:
-            if ref.reference_name == pi.name:
-                ref.allocated_amount = amount
-
-    # Handle Cash account linking
-    if mode == "Cash":
-        cash_account = frappe.db.get_value(
-            "Mode of Payment Account",
-            {"parent": "Cash", "company": pe.company},
-            "default_account"
+        
+        party_account = [party_accounts[0]] if party_accounts else []
+        default_advance_account = party_accounts[1] if len(party_accounts) == 2 else None
+        
+        # Fetch available customer advances
+        journal_entries = get_advance_journal_entries(
+            party_type, party, party_account, amount_field,
+            order_doctype, order_list, include_unallocated=True
         )
-        if cash_account:
-            pe.paid_from = cash_account
-        else:
-            frappe.throw("No Cash account found for company {0}".format(pe.company))
+        
+        payment_entries = get_advance_payment_entries_for_regional(
+            party_type, party, party_account,
+            order_doctype, order_list, default_advance_account,
+            include_unallocated=True
+        )
+        
+        all_advances = journal_entries + payment_entries
+        available_advance_total = sum(flt(d.amount) for d in all_advances)
+        
+        if available_advance_total < allocate_amount:
+            frappe.throw(f"Insufficient advance balance. Available: {available_advance_total}, Requested: {allocate_amount}")
+        
+        # Clear existing advances table
+        si.set("advances", [])
+        
+        # Allocate from available advances (first-come-first-served)
+        remaining_to_allocate = allocate_amount
+        allocated_advances = []
+        
+        for advance in all_advances:
+            if remaining_to_allocate <= 0:
+                break
+                
+            advance_amount = flt(advance.amount)
+            alloc_amount = min(advance_amount, remaining_to_allocate)
+            
+            si.append("advances", {
+                "reference_type": advance.reference_type,
+                "reference_name": advance.reference_name,
+                "reference_row": advance.get("reference_row"),
+                "remarks": advance.remarks,
+                "advance_amount": advance_amount,
+                "allocated_amount": alloc_amount,
+                "ref_exchange_rate": flt(advance.get("exchange_rate", 1)),
+                "difference_posting_date": frappe.utils.nowdate(),
+            })
+            
+            allocated_advances.append({
+                "reference_type": advance.reference_type,
+                "reference_name": advance.reference_name,
+                "allocated": alloc_amount
+            })
+            
+            remaining_to_allocate -= alloc_amount
+        
+        # Save updated DRAFT invoice
+        si.flags.ignore_permissions = True
+        try:
+            si.save()
+        except frappe.ValidationError as e:
+            # Handle submission errors, maybe rollback or report back
+            frappe.db.rollback()
+            frappe.throw(f"Invoice submission failed: {str(e)}")
 
-    # Handle Bank Reference
-    if mode == "Bank Draft":
-        pe.reference_no = reference_no
-        pe.reference_date = reference_date
+        frappe.db.commit()
 
-    pe.flags.ignore_permissions = True
-    pe.insert()
-    pe.submit()
-
-    # Store last Payment Entry reference(s) on Purchase Receipt
-    existing_refs = []
-    if doc.payment_entry_ref:
-        existing_refs = doc.payment_entry_ref.split(",")
-
-    if pe.name not in existing_refs:  # avoid duplicates
-        existing_refs.append(pe.name)
-
-    doc.db_set("payment_entry_ref", ",".join(existing_refs))
-
+        return {
+            "status": "success",
+            "message": f"Allocated RM {allocate_amount} from customer advances to DRAFT invoice {sales_invoice_name}",
+            "sales_invoice": sales_invoice_name,
+            "allocated_amount": allocate_amount,
+            "outstanding_amount": si.outstanding_amount,
+            "allocated_advances": allocated_advances,
+            "total_advance_used": sum(item.allocated_amount for item in si.advances)
+        }
+        
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "allocate_customer_advance_to_invoice")
+        frappe.db.rollback()
+        return {
+            "status": "error",
+            "message": str(e),
+            "sales_invoice": sales_invoice_name
+        }

@@ -2,7 +2,12 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
-
+from frappe.utils import getdate, formatdate
+from erpnext.accounts.party import get_party_account
+from erpnext.controllers.accounts_controller import (
+    get_advance_journal_entries,
+    get_advance_payment_entries_for_regional,
+)
 
 @frappe.whitelist()
 def get_all_bag_overview():
@@ -129,6 +134,68 @@ def create_wholesale_bag_direct_sale(data):
         return {'status': 'error', 'message': str(e)}
 
 @frappe.whitelist()
+def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_paid):
+
+    import json
+
+    if isinstance(payments, str):
+        payments = json.loads(payments)
+
+    if not log_id:
+        frappe.throw("Wholesale Bag Direct Sale log_id is required.")
+
+    doc = frappe.get_doc("Wholesale Bag Direct Sale", log_id)
+
+    # Update parent summary fields
+    total_amount = float(total_amount or 0)
+    amount_paid = float(amount_paid or 0)
+    balance_due = max(total_amount - amount_paid, 0)
+
+    doc.total_amount = total_amount
+    doc.amount_paid = amount_paid
+    doc.balance_due = balance_due
+
+    # Set status based on payment completion
+    if amount_paid <= 0:
+        doc.status = "Invoiced"  # or keep your earlier value
+    elif balance_due > 0:
+        doc.status = "Partially Paid"
+    else:
+        doc.status = "Paid"
+
+    # Reset & rebuild Payments child table
+    doc.set("payments", [])
+    for p in payments:
+        raw_date = p.get("payment_date")
+        payment_date = None
+        if raw_date:
+            try:
+                day, month, year = raw_date.split("/")
+                payment_date = f"{year}-{month}-{day}"  # YYYY-MM-DD
+            except Exception:
+                payment_date = getdate(raw_date)
+
+        doc.append("payments", {
+            "payment_date": payment_date,
+            "payment_method": p.get("payment_method"),
+            "amount": p.get("amount"),
+            "reference_no": p.get("reference_no"),
+            "status": p.get("status", "Received"),
+        })
+
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "log_id": doc.name,
+        "total_amount": doc.total_amount,
+        "amount_paid": doc.amount_paid,
+        "balance_due": doc.balance_due,
+        "doc_status": doc.status,
+    }
+    
+@frappe.whitelist()
 def create_sales_invoice(customer, items, company=None):
     import json
 
@@ -158,12 +225,10 @@ def create_sales_invoice(customer, items, company=None):
         "company": company,
         "posting_date": frappe.utils.nowdate(),
         "update_stock": 1,
-        "allocate_advances_automatically": 1,
         "items": si_items
     })
 
     si.insert(ignore_permissions=True)
-    si.submit()
     frappe.db.commit()
 
     # ---------------------------
@@ -197,43 +262,286 @@ def create_sales_invoice(customer, items, company=None):
         "sales_invoice": si.name,
     }
 
-
 @frappe.whitelist()
-def create_payment_entry_for_invoice(sales_invoice_name):
+def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount):
+ 
     try:
         if not sales_invoice_name:
             frappe.throw("Sales Invoice name is required.")
 
+        if not payment_mode:
+            frappe.throw("Mode of Payment is required.")
+
+        if not paid_amount or float(paid_amount) <= 0:
+            frappe.throw("Paid Amount must be greater than zero.")
+            
+        if payment_mode == "Bank Transfer":
+            payment_mode = "Bank Draft"
+            
+        paid_amount = float(paid_amount)
+        # Get Sales Invoice and ensure it's submitted
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+        # AUTO-SUBMIT DRAFT INVOICE if needed
+        if si.docstatus == 0:  # Draft
+            si.flags.ignore_permissions = True
+            si.submit()
+            frappe.db.commit()
+        
+        elif si.docstatus != 1:
+            frappe.throw("Sales Invoice must be Draft or Submitted")
+
+        # Get default Payment Entry for this invoice
         pe = get_payment_entry("Sales Invoice", sales_invoice_name)
 
-        pe.mode_of_payment = "Cash"
-
+        # Update payment details
+        pe.mode_of_payment = payment_mode
+        pe.paid_amount = float(paid_amount)
+        pe.received_amount = float(paid_amount)
         pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
         pe.reference_date = frappe.utils.nowdate()
+
+        # Update references to reflect new paid amount
+        if pe.references and len(pe.references) > 0:
+            pe.references[0].allocated_amount = float(paid_amount)
 
         # Save and submit the Payment Entry
         pe.insert(ignore_permissions=True)
         pe.submit()
         frappe.db.commit()
-        
-        # --- Update Wholesale Bag Direct Sale status to Paid ---
-        log_docs = frappe.get_all(
-            "Wholesale Bag Direct Sale",
-            filters={"sales_invoice_ref": sales_invoice_name},
-            fields=["name"]
-        )
-        if log_docs:
-            log_doc = frappe.get_doc("Wholesale Bag Direct Sale", log_docs[0].name)
-            log_doc.status = "Paid"
-            log_doc.save(ignore_permissions=True)
-            frappe.db.commit()
 
         return {
             "status": "success",
             "message": "Payment Entry created successfully.",
             "payment_entry": pe.name,
             "sales_invoice": sales_invoice_name,
+            "paid_amount": paid_amount,
         }
+
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
+
+@frappe.whitelist()
+def get_customer_advance_balance(customer, company=None):
+    """
+    Return total advance balance for a Customer (sum of available advances).
+    Used only to show a single number on Wholesale Bag Direct Payment page.
+    """
+    if not customer:
+        return {"status": "error", "message": "Customer is required.", "advance_balance": 0}
+
+    if not company:
+        company = frappe.defaults.get_user_default("Company")
+
+    party_type = "Customer"
+    party = customer
+    amount_field = "credit_in_account_currency"  # for Customer advances
+    order_doctype = "Sales Order"
+    order_list = []  # not linking to specific SO here
+
+    # Get party account list including advance accounts
+    party_accounts = get_party_account(
+        party_type, party=party, company=company, include_advance=True
+    )
+
+    party_account = []
+    default_advance_account = None
+
+    if party_accounts:
+        party_account.append(party_accounts[0])
+        if len(party_accounts) == 2:
+            default_advance_account = party_accounts[1]
+
+    # Advances from Journal Entries
+    journal_entries = get_advance_journal_entries(
+        party_type,
+        party,
+        party_account,
+        amount_field,
+        order_doctype,
+        order_list,
+        include_unallocated=True,
+    )
+
+    # Advances from Payment Entries
+    payment_entries = get_advance_payment_entries_for_regional(
+        party_type,
+        party,
+        party_account,
+        order_doctype,
+        order_list,
+        default_advance_account,
+        include_unallocated=True,
+    )
+
+    total_advance = 0
+    for d in journal_entries + payment_entries:
+        total_advance += flt(d.amount)
+
+    return {
+        "status": "success",
+        "customer": customer,
+        "company": company,
+        "advance_balance": flt(total_advance),
+    }
+
+@frappe.whitelist()
+def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, company=None):
+    """
+    Allocate customer advance amount to DRAFT Sales Invoice
+    """
+    try:
+        if not sales_invoice_name:
+            frappe.throw("Sales Invoice name is required")
+        
+        allocate_amount = flt(allocate_amount)
+        if allocate_amount <= 0:
+            frappe.throw("Allocation amount must be greater than zero")
+        
+        if not company:
+            company = frappe.defaults.get_user_default("Company")
+        
+        # Get Sales Invoice - MUST BE DRAFT
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+        if si.docstatus != 0:
+            frappe.throw("Sales Invoice must be in Draft state (not submitted)")
+        
+        customer = si.customer
+        party_type = "Customer"
+        party = customer
+        amount_field = "credit_in_account_currency"
+        order_doctype = "Sales Order"
+        order_list = []
+        
+        # Get party accounts (receivable + advance accounts)
+        party_accounts = get_party_account(
+            party_type, party=customer, company=company, include_advance=True
+        )
+        
+        party_account = [party_accounts[0]] if party_accounts else []
+        default_advance_account = party_accounts[1] if len(party_accounts) == 2 else None
+        
+        # Fetch available customer advances
+        journal_entries = get_advance_journal_entries(
+            party_type, party, party_account, amount_field,
+            order_doctype, order_list, include_unallocated=True
+        )
+        
+        payment_entries = get_advance_payment_entries_for_regional(
+            party_type, party, party_account,
+            order_doctype, order_list, default_advance_account,
+            include_unallocated=True
+        )
+        
+        all_advances = journal_entries + payment_entries
+        available_advance_total = sum(flt(d.amount) for d in all_advances)
+        
+        if available_advance_total < allocate_amount:
+            frappe.throw(f"Insufficient advance balance. Available: {available_advance_total}, Requested: {allocate_amount}")
+        
+        # Clear existing advances table
+        si.set("advances", [])
+        
+        # Allocate from available advances (first-come-first-served)
+        remaining_to_allocate = allocate_amount
+        allocated_advances = []
+        
+        for advance in all_advances:
+            if remaining_to_allocate <= 0:
+                break
+                
+            advance_amount = flt(advance.amount)
+            alloc_amount = min(advance_amount, remaining_to_allocate)
+            
+            si.append("advances", {
+                "reference_type": advance.reference_type,
+                "reference_name": advance.reference_name,
+                "reference_row": advance.get("reference_row"),
+                "remarks": advance.remarks,
+                "advance_amount": advance_amount,
+                "allocated_amount": alloc_amount,
+                "ref_exchange_rate": flt(advance.get("exchange_rate", 1)),
+                "difference_posting_date": frappe.utils.nowdate(),
+            })
+            
+            allocated_advances.append({
+                "reference_type": advance.reference_type,
+                "reference_name": advance.reference_name,
+                "allocated": alloc_amount
+            })
+            
+            remaining_to_allocate -= alloc_amount
+        
+        # Save updated DRAFT invoice
+        si.flags.ignore_permissions = True
+        try:
+            si.save()
+        except frappe.ValidationError as e:
+            # Handle submission errors, maybe rollback or report back
+            frappe.db.rollback()
+            frappe.throw(f"Invoice submission failed: {str(e)}")
+
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Allocated RM {allocate_amount} from customer advances to DRAFT invoice {sales_invoice_name}",
+            "sales_invoice": sales_invoice_name,
+            "allocated_amount": allocate_amount,
+            "outstanding_amount": si.outstanding_amount,
+            "allocated_advances": allocated_advances,
+            "total_advance_used": sum(item.allocated_amount for item in si.advances)
+        }
+        
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "allocate_customer_advance_to_invoice")
+        frappe.db.rollback()
+        return {
+            "status": "error",
+            "message": str(e),
+            "sales_invoice": sales_invoice_name
+        }
+
+@frappe.whitelist()
+def remove_customer_advance_allocation(sales_invoice_name, remove_amount):
+    """
+    Reverse allocated advance from Sales Invoice by removing allocation entries
+    and reallocating remaining amount.
+    """
+    try:
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+
+        if si.docstatus != 0:
+            frappe.throw("Sales Invoice must be in Draft state")
+
+        remove_amount = flt(remove_amount)
+
+        # Total allocated before removal
+        current_alloc = sum(flt(a.allocated_amount) for a in si.advances)
+
+        new_total = current_alloc - remove_amount
+        if new_total < 0:
+            new_total = 0  # safety
+
+        # Clear all allocations
+        si.set("advances", [])
+
+        # Reallocate remaining amount (FIFO using your existing logic)
+        if new_total > 0:
+            allocate_customer_advance_to_invoice(sales_invoice_name, new_total)
+
+        si.save()
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": "Customer advance allocation removed",
+            "remaining_allocated": new_total
+        }
+
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            "status": "error",
+            "message": str(e)
+        }

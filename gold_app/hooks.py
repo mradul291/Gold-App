@@ -35,7 +35,9 @@ app_include_js = [
     "/assets/gold_app/js/step3_tab_receipt_reconciliation.js",
     "/assets/gold_app/js/step3_tab_payment_entry.js",
     "/assets/gold_app/js/step3_receipt_and_reconciliation.js",
-    "/assets/gold_app/js/wholesale_sale.js"
+    "/assets/gold_app/js/wholesale_sale.js",
+    "assets/gold_app/js/wbd_payment_entry.js",
+
 ]
 
 doc_events = {

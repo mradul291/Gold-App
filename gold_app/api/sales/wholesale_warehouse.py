@@ -125,23 +125,6 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
 
 # Fetching Entire Wholesale Transaction Doctype data
-# @frappe.whitelist()
-# def get_wholesale_transaction_by_bag(wholesale_bag):
- 
-#     if not wholesale_bag:
-#         frappe.throw(_("Parameter 'wholesale_bag' is required"))
-
-#     docs = frappe.get_all('Wholesale Transaction', filters={'wholesale_bag': wholesale_bag}, fields=['name'])
-
-#     if not docs:
-#         return {'status': 'error', 'message': f'No Wholesale Transaction found for bag: {wholesale_bag}'}
-
-#     docname = docs[0].name
-#     doc = frappe.get_doc('Wholesale Transaction', docname)
-#     doc_dict = doc.as_dict()
-
-#     return {'status': 'success', 'data': doc_dict}
-
 @frappe.whitelist()
 def get_wholesale_transaction_by_bag(wholesale_bag, buyer=None):
     """
