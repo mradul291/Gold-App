@@ -643,19 +643,25 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 					if (res && res.message) {
 						const newCustomer = res.message;
 
-						// 1) push into in-memory customer list used by typeahead
+						// 1) Push customer into suggestions list (using system fields)
 						allCustomersRaw.unshift({
-							name: newCustomer.name,
+							name: newCustomer.name, // doc.name
 							customer_name: newCustomer.customer_name,
-							customer_group:
-								newCustomer.customer_group || values.customer_group || "Wholesale",
+							id_number: newCustomer.id_number || "", // auto-generated ID NUMBER
+							customer_group: newCustomer.customer_group || "Wholesale",
 						});
 
-						// 2) auto-select in UI
+						// 2) Auto-select new customer in UI
 						selectedCustomerId = newCustomer.name;
 						$customerInput
 							.val(newCustomer.customer_name)
 							.data("customer-id", newCustomer.name);
+
+						// 3) Fill ID Number field using the auto-generated field
+						$("#idNumberInput").val(newCustomer.id_number || "");
+
+						// 4) Update global reference
+						window.WBDRefs.customer_id = newCustomer.name;
 
 						frappe.show_alert({ message: "Customer added successfully." });
 					} else {
