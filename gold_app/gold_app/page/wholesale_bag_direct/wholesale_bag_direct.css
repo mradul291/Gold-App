@@ -76,6 +76,25 @@
 .wbd-invoice-btn:hover {
   background: #13293d;
 }
+.wbd-print-btn {
+  background: #273144;
+  color: #fff;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 20px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(50,80,120,0.07);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  min-width: 80px;
+  justify-content: center;
+}
+.wbd-print-btn:hover {
+  background: #13293d;
+}
 
 /* ===== Form Controls ===== */
 
@@ -195,6 +214,32 @@
   color: #888;
   font-size: 13px;
   font-style: italic;
+}
+.wbd-add-customer-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-58%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.wbd-add-customer-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.wbd-add-customer-btn svg path {
+    stroke: #4b5563;
 }
 
 

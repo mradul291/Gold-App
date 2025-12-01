@@ -553,3 +553,18 @@ def submit_sales_invoice_if_draft(sales_invoice_name):
         si.submit()
         frappe.db.commit()
     return {"status": "success"}
+
+@frappe.whitelist()
+def get_resume_payment_data(log_id):
+    doc = frappe.get_doc("Wholesale Bag Direct Sale", log_id)
+
+    return {
+        "log_id": doc.name,
+        "customer": doc.customer,
+        "customer_id": doc.id_number,
+        "invoice_id": doc.sales_invoice_ref,
+        "total_selling_amount": doc.total_selling_amount,
+        "customer_advance_balance": doc.customer_advance_balance,
+        "payments": doc.payments,
+        "items": [row.as_dict() for row in doc.items],
+    }

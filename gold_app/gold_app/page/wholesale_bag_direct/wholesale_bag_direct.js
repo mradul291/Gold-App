@@ -7,6 +7,19 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	if (!window.WBDRefs) {
+		window.WBDRefs = {
+			customer_id: "",
+			customer: "",
+			invoice_id: "",
+			log_id: "",
+			total_selling_amount: 0,
+		};
+	}
+
+	const urlParams = new URLSearchParams(window.location.search);
+	const RESUME_LOG_ID = urlParams.get("log_id");
+
 	let bagOverviewData = [];
 	const uiBagUsageMap = {};
 	let currentLogId = null;
@@ -32,6 +45,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
     	<div>
     		<button class="wbd-save-btn">Save</button>
     		<button class="wbd-invoice-btn" style="margin-left: 10px;">Create Invoice</button>
+			<button class="wbd-print-btn" style="margin-left: 10px;">Print</button>
     	</div>
     </div>
 
@@ -146,7 +160,176 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
       </div>
     </div>`);
 
+	function loadResumeData(log_id) {
+		frappe.call({
+			method: "gold_app.api.sales.wholesale_bag_direct.get_resume_payment_data",
+			args: { log_id },
+			callback: (r) => {
+				if (!r.message) {
+					frappe.msgprint("Failed to load resume payment data.");
+					return;
+				}
+
+				const d = r.message;
+
+				// ---------------------------
+				// 1. Update GLOBAL REFS
+				// ---------------------------
+				window.WBDRefs.log_id = d.log_id;
+				window.WBDRefs.invoice_id = d.invoice_id;
+				window.WBDRefs.customer_id = d.customer_id;
+				window.WBDRefs.total_selling_amount = d.total_selling_amount;
+
+				// ---------------------------
+				// 2. Restore CUSTOMER fields
+				// ---------------------------
+				$("#customerInput").val(d.customer || "");
+				$("#idNumberInput").val(d.customer_id || "");
+
+				// ---------------------------
+				// 3. Restore DATE & TIME
+				// ---------------------------
+				if (d.date) $("#sales-details-tab input[type='date']").val(d.date);
+				if (d.posting_time) $("#sales-details-tab input[type='time']").val(d.posting_time);
+
+				// ---------------------------
+				// 4. Restore CUSTOMER TYPE
+				// ---------------------------
+				if (d.customer_type) {
+					$("#customerTypeSelect").val(d.customer_type);
+				}
+
+				// ---------------------------
+				// 5. Restore ITEMS TABLE
+				// ---------------------------
+				const $tbody = $("#sales-details-tab .wbd-table tbody");
+				$tbody.empty(); // clear existing empty row
+
+				(d.items || []).forEach((item, idx) => {
+					const rowHtml = buildTableRow(idx + 1);
+					$tbody.append(rowHtml);
+
+					const $tr = $tbody.find("tr").last();
+
+					// Apply stored data to row
+					$tr.find("select.wbd-src-bag").val(item.source_bag);
+					$tr.find("select.wbd-src-purity").html(getPurityOptionsHtml(item.source_bag));
+					$tr.find("select.wbd-src-purity").val(item.purity);
+					$tr.find("input[type='text']")
+						.eq(0)
+						.val(item.description || "");
+
+					$tr.find(".wbd-weight").val(item.weight || 0);
+
+					const nums = $tr.find("input[type='number']");
+					nums.eq(1).val(item.avco_rate || 0);
+					nums.eq(2).val(item.sell_rate || 0);
+					nums.eq(3).val(item.amount || 0);
+					nums.eq(4).val(item.profit_per_g || 0);
+					nums.eq(5).val(item.total_profit || 0);
+				});
+
+				// Recalculate UI after loading rows
+				updateDocumentTotals();
+				recalculateUIBagUsage();
+				updateBagOverviewUI();
+
+				// ---------------------------
+				// 6. Set TOTALS from log
+				// ---------------------------
+				const $totals = $("#sales-details-tab .wbd-totals-card");
+
+				if (d.total_weight_sold !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(0)
+						.find("span")
+						.eq(1)
+						.text(d.total_weight_sold);
+
+				if (d.total_avco_cost !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(1)
+						.find("span")
+						.eq(1)
+						.text("RM " + d.total_avco_cost.toFixed(2));
+
+				if (d.total_selling_amount !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(2)
+						.find("span")
+						.eq(1)
+						.text("RM " + d.total_selling_amount.toFixed(2));
+
+				if (d.average_profit_per_g !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(3)
+						.find("span")
+						.eq(1)
+						.text(d.average_profit_per_g.toFixed(2));
+
+				if (d.total_profit !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(4)
+						.find("span")
+						.eq(1)
+						.text("RM " + d.total_profit.toFixed(2));
+
+				if (d.overall_profit_margin !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(5)
+						.find("span")
+						.eq(1)
+						.text(d.overall_profit_margin);
+
+				// ---------------------------
+				// 7. Status Chip → SAVED
+				// ---------------------------
+				$(".wbd-status-chip").text("Saved").addClass("saved");
+
+				// ---------------------------
+				// 8. Restore Payment Entry Data
+				// ---------------------------
+				paymentEntryTab.customerAdvanceBalance = d.customer_advance_balance;
+
+				paymentEntryTab.payments = (d.payments || []).map((row) => ({
+					date: frappe.datetime.str_to_user(row.payment_date),
+					method: row.payment_method,
+					amount: row.amount,
+					reference: row.reference_no,
+					status: row.status,
+				}));
+
+				paymentEntryTab.updateSummary();
+				paymentEntryTab.renderPaymentHistory();
+
+				// ---------------------------
+				// 9. Switch to Payment Tab
+				// ---------------------------
+				setTimeout(() => {
+					switchToPaymentTab();
+				}, 400);
+			},
+		});
+	}
+
 	function getPaymentPageRefs() {
+		// PRIORITY 1 — Resume Mode (WBDRefs)
+		if (RESUME_LOG_ID) {
+			return {
+				log_id: window.WBDRefs.log_id, // resume log id
+				invoice_id: window.WBDRefs.invoice_id, // resume invoice id
+				total_selling_amount: window.WBDRefs.total_selling_amount,
+				customer_id: window.WBDRefs.customer_id, // customer id from log
+			};
+		}
+
+		// PRIORITY 2 — Normal Mode (Existing Logic)
 		const totalSelling =
 			parseFloat(
 				$("#sales-details-tab .wbd-totals-card .wbd-totals-row")
@@ -172,6 +355,10 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		"#payment-entry-tab",
 		getPaymentPageRefs
 	);
+
+	if (RESUME_LOG_ID) {
+		loadResumeData(RESUME_LOG_ID);
+	}
 
 	$("#tab-sales-details").on("click", function (e) {
 		e.preventDefault();
@@ -329,6 +516,236 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 	const $customerInput = salesDetailsContainer.find("#customerInput");
 	const $customerSuggestions = salesDetailsContainer.find("#customerSuggestions");
 	let selectedCustomerId = null;
+
+	// Add "Create Customer" (+) button next to Customer input
+
+	(function addCreateCustomerButton() {
+		const $wrapper = salesDetailsContainer.find(".customer-input-wrapper");
+		// create button (small circle)
+		const $btn = $(`
+    <button type="button" id="add-customer-btn" class="wbd-add-customer-btn" title="Add Customer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M12 5v14M5 12h14" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </button>
+`);
+
+		// ensure wrapper is positioned relative
+		$wrapper.css("position", "relative");
+		$wrapper.append($btn);
+
+		// keep input padding so text doesn't go under button
+		$wrapper.find("input#customerInput").css("padding-right", "36px");
+	})();
+
+	salesDetailsContainer.find("#add-customer-btn").on("click", () => {
+		const dialog = new frappe.ui.Dialog({
+			title: "Add New Customer",
+			fields: [
+				{ label: "Customer Name", fieldname: "customer_name", fieldtype: "Data", reqd: 1 },
+				{
+					label: "Customer Group",
+					fieldname: "customer_group",
+					fieldtype: "Select",
+					options: ["Wholesale", "Retail", "Individual"],
+					default: "Wholesale",
+					reqd: 1,
+				},
+				{
+					label: "Nationality",
+					fieldname: "customer_nationality",
+					fieldtype: "Select",
+					options: ["Malaysian", "Others"],
+					default: "Malaysian",
+					reqd: 1,
+				},
+				{ label: "Malaysian ID", fieldname: "malaysian_id", fieldtype: "Data" },
+				{ label: "Other ID Type", fieldname: "other_id_type", fieldtype: "Data" },
+				{ label: "Other ID Number", fieldname: "other_id_number", fieldtype: "Data" },
+				{ label: "Mobile Number", fieldname: "mobile_number", fieldtype: "Data", reqd: 1 },
+				{
+					label: "Mobile Number NA",
+					fieldname: "mobile_number_na",
+					fieldtype: "Check",
+					default: 0,
+				},
+			],
+			primary_action_label: "Save Customer",
+			primary_action: async (values) => {
+				// ---------- VALIDATION ----------
+				// Malaysian ID validation/format
+				if (values.customer_nationality === "Malaysian") {
+					let digits = (values.malaysian_id || "").replace(/\D/g, "");
+					if (digits && digits.length !== 12) {
+						frappe.msgprint("Malaysian ID must be exactly 12 digits.");
+						return;
+					}
+					if (digits) {
+						values.malaysian_id = `${digits.slice(0, 6)}-${digits.slice(
+							6,
+							8
+						)}-${digits.slice(8)}`;
+					}
+				}
+
+				// Others → other_id_number required
+				if (values.customer_nationality === "Others") {
+					if (!values.other_id_number) {
+						frappe.msgprint("Nationality ID is required for non-Malaysians.");
+						return;
+					}
+				}
+
+				// Mobile validation
+				if (!values.mobile_number_na) {
+					let digits = (values.mobile_number || "").replace(/\D/g, "");
+					if (!digits || (digits.length !== 10 && digits.length !== 11)) {
+						frappe.msgprint(
+							"Mobile number must be 10 or 11 digits, or mark 'Mobile Number NA'."
+						);
+						return;
+					}
+					// format mobile
+					values.mobile_number =
+						digits.length === 10
+							? `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6)}`
+							: `${digits.slice(0, 3)}-${digits.slice(3, 7)} ${digits.slice(7)}`;
+				}
+
+				// Ensure name present
+				if (!values.customer_name) {
+					frappe.msgprint("Customer name is required.");
+					return;
+				}
+
+				dialog.hide();
+
+				// ---------- BACKEND INSERT: create Customer doc ----------
+				try {
+					const res = await frappe.call({
+						method: "frappe.client.insert",
+						args: {
+							doc: {
+								doctype: "Customer",
+								customer_name: values.customer_name,
+								customer_group: values.customer_group || "Wholesale",
+								mobile_number: values.mobile_number || "",
+								mobile_number_na: values.mobile_number_na || 0,
+								// you can store other fields as custom fields if available
+								customer_nationality: values.customer_nationality || "",
+								malaysian_id: values.malaysian_id || "",
+								other_id_type: values.other_id_type || "",
+								other_id_number: values.other_id_number || "",
+							},
+						},
+					});
+
+					if (res && res.message) {
+						const newCustomer = res.message;
+
+						// 1) push into in-memory customer list used by typeahead
+						allCustomersRaw.unshift({
+							name: newCustomer.name,
+							customer_name: newCustomer.customer_name,
+							customer_group:
+								newCustomer.customer_group || values.customer_group || "Wholesale",
+						});
+
+						// 2) auto-select in UI
+						selectedCustomerId = newCustomer.name;
+						$customerInput
+							.val(newCustomer.customer_name)
+							.data("customer-id", newCustomer.name);
+
+						frappe.show_alert({ message: "Customer added successfully." });
+					} else {
+						frappe.msgprint("Failed to create Customer.");
+					}
+				} catch (err) {
+					console.error(err);
+					frappe.msgprint("Error while creating customer: " + (err.message || err));
+				}
+			},
+		});
+
+		// Set required on load
+		dialog.set_df_property("mobile_number", "reqd", 1);
+
+		// nationality toggle logic (show/hide fields)
+		function toggleNationality() {
+			const nationality = dialog.get_value("customer_nationality");
+			if (nationality === "Malaysian") {
+				dialog.set_df_property("malaysian_id", "reqd", 1);
+				dialog.get_field("malaysian_id").$wrapper.show();
+
+				dialog.set_df_property("other_id_type", "reqd", 0);
+				dialog.get_field("other_id_type").$wrapper.hide();
+				dialog.set_df_property("other_id_number", "reqd", 0);
+				dialog.get_field("other_id_number").$wrapper.hide();
+			} else {
+				dialog.set_df_property("malaysian_id", "reqd", 0);
+				dialog.get_field("malaysian_id").$wrapper.hide();
+
+				dialog.get_field("other_id_type").$wrapper.show();
+				dialog.get_field("other_id_number").$wrapper.show();
+				dialog.set_df_property("other_id_type", "reqd", 1);
+				dialog.set_df_property("other_id_number", "reqd", 1);
+			}
+		}
+
+		dialog.fields_dict.customer_nationality.$input.on("change", toggleNationality);
+		setTimeout(() => toggleNationality(), 150);
+
+		// auto-format Malaysian ID on blur
+		const mid_field = dialog.get_field("malaysian_id");
+		if (mid_field && mid_field.$input) {
+			mid_field.$input.on("blur", () => {
+				let val = mid_field.$input.val() || "";
+				let digits = val.replace(/\D/g, "");
+				if (!digits) return;
+				if (digits.length !== 12) {
+					frappe.msgprint("Malaysian ID must be exactly 12 digits.");
+					return;
+				}
+				dialog.set_value(
+					"malaysian_id",
+					`${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+				);
+			});
+		}
+
+		// mobile NA toggle
+		const mobile_na_field = dialog.get_field("mobile_number_na");
+		if (mobile_na_field && mobile_na_field.$input) {
+			mobile_na_field.$input.on("change", () => {
+				const is_na = dialog.get_value("mobile_number_na");
+				dialog.set_df_property("mobile_number", "reqd", is_na ? 0 : 1);
+				if (is_na) dialog.set_value("mobile_number", "");
+			});
+		}
+
+		// mobile auto-format on blur
+		const mobile_field = dialog.get_field("mobile_number");
+		if (mobile_field && mobile_field.$input) {
+			mobile_field.$input.on("blur", () => {
+				if (dialog.get_value("mobile_number_na")) return;
+				let val = mobile_field.$input.val() || "";
+				let digits = val.replace(/\D/g, "");
+				if (!digits) return;
+				if (digits.length !== 10 && digits.length !== 11) {
+					frappe.msgprint("Mobile number must be 10 or 11 digits.");
+					return;
+				}
+				let formatted =
+					digits.length === 10
+						? `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6)}`
+						: `${digits.slice(0, 3)}-${digits.slice(3, 7)} ${digits.slice(7)}`;
+				dialog.set_value("mobile_number", formatted);
+			});
+		}
+
+		dialog.show();
+	});
 
 	// Typeahead: show suggestions on input
 	$customerInput.on("input", function () {
@@ -855,6 +1272,21 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				}
 			},
 		});
+	});
+
+	// Print Button Event
+	salesDetailsContainer.find(".wbd-print-btn").on("click", function () {
+		const invoiceId = currentSalesInvoiceId || window.WBDRefs.invoice_id;
+
+		if (!invoiceId) {
+			frappe.msgprint("Please create the Sales Invoice before printing.");
+			return;
+		}
+
+		const encodedDocName = encodeURIComponent(invoiceId);
+		const url = `/app/print/Sales%20Invoice/${encodedDocName}`;
+
+		window.open(url, "_blank");
 	});
 
 	// Bag Overview Expand/Collapse

@@ -674,7 +674,7 @@ class WholesaleBagDirectPayment {
 			});
 			// Reload entire page after a short delay
 			setTimeout(() => {
-				location.reload();
+				window.location.href = "/app/wholesale-bag-direct";
 			}, 1000);
 		} catch (error) {
 			frappe.msgprint({
