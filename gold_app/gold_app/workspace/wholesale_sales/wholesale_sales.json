@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"O7p3idsLCs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Wholesale Sales Management</span>\",\"col\":12}},{\"id\":\"XPmuLBgRxZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Wholesale Sale\",\"col\":3}},{\"id\":\"BGIj8XzI1B\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Wholesale Bag Direct Sale\",\"col\":3}}]",
+ "content": "[{\"id\":\"O7p3idsLCs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Wholesale Sales Management</span>\",\"col\":12}},{\"id\":\"kBmGFZRe9M\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Wholesale Sales\",\"col\":4}},{\"id\":\"EvmVQhJSgz\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Wholesale Bag Direct Sale\",\"col\":4}},{\"id\":\"D4VRiOd6Y3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"XPmuLBgRxZ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Wholesale Sale\",\"col\":3}},{\"id\":\"BGIj8XzI1B\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Wholesale Bag Direct Sale\",\"col\":3}},{\"id\":\"FkMUmzHBxs\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"XRN8wvOcy6\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"Wholesale Sale\",\"col\":4}},{\"id\":\"0qkHAln4Oo\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"Wholesale Bag Direct Sale\",\"col\":4}}]",
  "creation": "2025-10-14 18:18:34.341343",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,15 +13,35 @@
  "is_hidden": 0,
  "label": "Wholesale Sales",
  "links": [],
- "modified": "2025-11-18 17:44:41.982532",
+ "modified": "2025-12-02 14:08:41.496008",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Sales",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Total Wholesale Sales",
+   "number_card_name": "Total Wholesale Sales"
+  },
+  {
+   "label": "Total Wholesale Bag Direct Sale",
+   "number_card_name": "Total Wholesale Bag Direct Sale"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
- "quick_lists": [],
+ "quick_lists": [
+  {
+   "document_type": "Wholesale Transaction",
+   "label": "Wholesale Sale",
+   "quick_list_filter": "[]"
+  },
+  {
+   "document_type": "Wholesale Bag Direct Sale",
+   "label": "Wholesale Bag Direct Sale",
+   "quick_list_filter": "[]"
+  }
+ ],
  "roles": [
   {
    "role": "System Manager"
