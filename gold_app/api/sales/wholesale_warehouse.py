@@ -78,8 +78,6 @@ def create_sales_invoice(customer, items, company=None, total_amount=0, discount
         "sales_invoice": si.name,
     }
 
-
-
 # Create Payment Entry for the Sales Invoice
 @frappe.whitelist()
 def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount):

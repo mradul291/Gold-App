@@ -112,6 +112,7 @@ class Step3TabReceiptReconciliation {
 					filters: {
 						wholesale_bag: this.props.selected_bag,
 						buyer: this.props.customer,
+						status: ["!=", "Completed"],
 					},
 					fields: ["name"],
 					limit: 1,
@@ -1774,6 +1775,7 @@ class Step3TabReceiptReconciliation {
 				filters: {
 					wholesale_bag: this.props.selected_bag,
 					buyer: this.props.customer,
+					status: ["!=", "Completed"],
 				},
 				fields: ["name"],
 				limit: 1,

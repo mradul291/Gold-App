@@ -242,6 +242,7 @@ class Step2BuyerDetails {
 					filters: {
 						wholesale_bag: self.selected_bag_data.warehouse_name,
 						buyer: buyer,
+						status: ["!=", "Completed"],
 					},
 					fields: ["name"],
 					limit: 1,
