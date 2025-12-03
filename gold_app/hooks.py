@@ -24,7 +24,11 @@ doctype_js = {
 app_include_css = [
     "/assets/gold_app/css/step1_select_bag.css",
     "/assets/gold_app/css/step2_buyer_details.css",
-    "/assets/gold_app/css/step3_receipt_and_reconciliation.css"
+    "/assets/gold_app/css/step3_receipt_and_reconciliation.css",
+    "/assets/gold_app/css/bag_summary.css",
+    "/assets/gold_app/css/melting_assay.css",
+    "/assets/gold_app/css/buyer_sale.css",
+    "/assets/gold_app/css/metrics.css",
 ]
 
 app_include_js = [
@@ -36,8 +40,11 @@ app_include_js = [
     "/assets/gold_app/js/step3_tab_payment_entry.js",
     "/assets/gold_app/js/step3_receipt_and_reconciliation.js",
     "/assets/gold_app/js/wholesale_sale.js",
-    "assets/gold_app/js/wbd_payment_entry.js",
-
+    "/assets/gold_app/js/wbd_payment_entry.js",
+    "/assets/gold_app/js/bag_summary.js",
+    "/assets/gold_app/js/melting_assay.js",
+    "/assets/gold_app/js/buyer_sale.js",
+    "/assets/gold_app/js/metrics.js",
 ]
 
 doc_events = {

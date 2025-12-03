@@ -99,9 +99,6 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
           <span class="wbd-collapsible-btn" id="toggleBagOverview">
             <span class="wbd-collapsible-icon">&#9660;</span> Bag Overview
           </span>
-          <label class="wbd-showbags-label">
-            <input type="checkbox" checked /> Show all available bags
-          </label>
         </div>
         <div class="wbd-bag-cards-row" id="bagCardsRow"></div>
       </div>
@@ -147,11 +144,16 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
       </div>
 
       <!-- ===== Document Totals Section ===== -->
-      <div class="wbd-totals-block">
-        <span class="wbd-totals-title">Document Totals</span>
-        <div class="wbd-totals-card">
-          <div class="wbd-totals-row"><span>Total Weight Sold (g)</span><span>50.00</span></div>
-          <div class="wbd-totals-row"><span>Total AVCO Cost (MYR)</span><span>RM 14,275.00</span></div>
+      <div class="wbd-totals-block">	
+	<span class="wbd-totals-title">Document Totals</span>
+	<div class="wbd-totals-card">
+		<div class="wbd-totals-row">
+			<span>Total Discount (MYR)</span>
+			<span class="wbd-totals-value">
+				<input type="number" id="wbd-total-discount" value="0.00" min="0" class="wbd-discount-input">
+			</span>
+		</div>
+		<div class="wbd-totals-row"><span>Total Weight Sold (g)</span><span>50.00</span></div>   <div class="wbd-totals-row"><span>Total AVCO Cost (MYR)</span><span>RM 14,275.00</span></div>
           <div class="wbd-totals-row wbd-totals-dark"><span>Total Selling Amount (MYR)</span><span>RM 14,750.00</span></div>
           <div class="wbd-totals-row"><span>Average Profit/g (RM/g)</span><span>9.50</span></div>
           <div class="wbd-totals-row wbd-totals-green"><span>Total Profit (MYR)</span><span>RM 475.00</span></div>
@@ -239,50 +241,61 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				// ---------------------------
 				const $totals = $("#sales-details-tab .wbd-totals-card");
 
+				// 0 = Discount (handled separately)
+				if (d.total_discount !== undefined) {
+					$("#wbd-total-discount").val(d.total_discount);
+				}
+
+				// 1 = Total Weight Sold
 				if (d.total_weight_sold !== undefined)
 					$totals
 						.find(".wbd-totals-row")
-						.eq(0)
+						.eq(1)
 						.find("span")
 						.eq(1)
 						.text(d.total_weight_sold);
 
+				// 2 = Total AVCO Cost
 				if (d.total_avco_cost !== undefined)
-					$totals
-						.find(".wbd-totals-row")
-						.eq(1)
-						.find("span")
-						.eq(1)
-						.text("RM " + d.total_avco_cost.toFixed(2));
-
-				if (d.total_selling_amount !== undefined)
 					$totals
 						.find(".wbd-totals-row")
 						.eq(2)
 						.find("span")
 						.eq(1)
-						.text("RM " + d.total_selling_amount.toFixed(2));
+						.text("RM " + d.total_avco_cost.toFixed(2));
 
-				if (d.average_profit_per_g !== undefined)
+				// 3 = Total Selling Amount
+				if (d.total_selling_amount !== undefined)
 					$totals
 						.find(".wbd-totals-row")
 						.eq(3)
 						.find("span")
 						.eq(1)
-						.text(d.average_profit_per_g.toFixed(2));
+						.text("RM " + d.total_selling_amount.toFixed(2));
 
-				if (d.total_profit !== undefined)
+				// 4 = Average Profit/g
+				if (d.average_profit_per_g !== undefined)
 					$totals
 						.find(".wbd-totals-row")
 						.eq(4)
 						.find("span")
 						.eq(1)
-						.text("RM " + d.total_profit.toFixed(2));
+						.text(d.average_profit_per_g.toFixed(2));
 
-				if (d.overall_profit_margin !== undefined)
+				// 5 = Total Profit
+				if (d.total_profit !== undefined)
 					$totals
 						.find(".wbd-totals-row")
 						.eq(5)
+						.find("span")
+						.eq(1)
+						.text("RM " + d.total_profit.toFixed(2));
+
+				// 6 = Profit Margin
+				if (d.overall_profit_margin !== undefined)
+					$totals
+						.find(".wbd-totals-row")
+						.eq(6)
 						.find("span")
 						.eq(1)
 						.text(d.overall_profit_margin);
@@ -333,7 +346,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		const totalSelling =
 			parseFloat(
 				$("#sales-details-tab .wbd-totals-card .wbd-totals-row")
-					.eq(2)
+					.eq(3)
 					.find("span")
 					.eq(1)
 					.text()
@@ -900,32 +913,102 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 
 		// Update the Totals Section
 		const $totals = salesDetailsContainer.find(".wbd-totals-card");
-		$totals.find(".wbd-totals-row").eq(0).find("span").eq(1).text(totalWeight.toFixed(2));
+
+		// Row 0 = Total Discount (IGNORE in updateDocumentTotals)
+
 		$totals
 			.find(".wbd-totals-row")
+			.eq(1) // Total Weight Sold
+			.find("span")
 			.eq(1)
+			.text(totalWeight.toFixed(2));
+
+		$totals
+			.find(".wbd-totals-row")
+			.eq(2) // Total AVCO Cost
 			.find("span")
 			.eq(1)
 			.text("RM " + totalAvcoCost.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+
 		$totals
 			.find(".wbd-totals-row")
-			.eq(2)
+			.eq(3) // Total Selling Amount
 			.find("span")
 			.eq(1)
 			.text("RM " + totalSelling.toLocaleString(undefined, { minimumFractionDigits: 2 }));
-		$totals.find(".wbd-totals-row").eq(3).find("span").eq(1).text(avgProfitPerGram.toFixed(2));
+
 		$totals
 			.find(".wbd-totals-row")
-			.eq(4)
+			.eq(4) // Avg Profit/g
+			.find("span")
+			.eq(1)
+			.text(avgProfitPerGram.toFixed(2));
+
+		$totals
+			.find(".wbd-totals-row")
+			.eq(5) // Total Profit
 			.find("span")
 			.eq(1)
 			.text("RM " + totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+
 		$totals
 			.find(".wbd-totals-row")
-			.eq(5)
+			.eq(6) // Overall Profit Margin
 			.find("span")
 			.eq(1)
 			.text(profitMargin.toFixed(2) + "%");
+	}
+
+	function applyDiscountEffect() {
+		const discount = parseFloat($("#wbd-total-discount").val()) || 0;
+
+		const $totals = $("#sales-details-tab .wbd-totals-card .wbd-totals-row");
+
+		// ORIGINAL selling amount (row 3) — extracted from UI
+		const originalSelling =
+			parseFloat(
+				$totals
+					.eq(3)
+					.find("span")
+					.eq(1)
+					.text()
+					.replace(/[^\d.]/g, "")
+			) || 0;
+
+		// Adjusted Selling = originalSelling – discount
+		const adjustedSelling = Math.max(originalSelling - discount, 0);
+
+		// Update UI
+		$totals
+			.eq(3)
+			.find("span")
+			.eq(1)
+			.text("RM " + adjustedSelling.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+
+		// Recalculate Profit & Margin using adjusted selling
+		const totalProfit =
+			adjustedSelling -
+			(parseFloat(
+				$totals
+					.eq(2)
+					.find("span")
+					.eq(1)
+					.text()
+					.replace(/[^\d.]/g, "")
+			) || 0);
+
+		$totals
+			.eq(5)
+			.find("span")
+			.eq(1)
+			.text("RM " + totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+
+		const margin = adjustedSelling ? (totalProfit / adjustedSelling) * 100 : 0;
+		$totals
+			.eq(6)
+			.find("span")
+			.eq(1)
+			.text(margin.toFixed(2) + "%");
 	}
 
 	function recalculateUIBagUsage() {
@@ -1002,16 +1085,9 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		data.id_number = salesDetailsContainer.find("#idNumberInput").val();
 
 		const $totals = salesDetailsContainer.find(".wbd-totals-card .wbd-totals-row");
-		data.total_weight_sold = parseFloat($totals.eq(0).find("span").eq(1).text());
+		data.total_discount = parseFloat($("#wbd-total-discount").val()) || 0;
+		data.total_weight_sold = parseFloat($totals.eq(1).find("span").eq(1).text());
 		data.total_avco_cost = parseFloat(
-			$totals
-				.eq(1)
-				.find("span")
-				.eq(1)
-				.text()
-				.replace(/[^\d.]/g, "")
-		);
-		data.total_selling_amount = parseFloat(
 			$totals
 				.eq(2)
 				.find("span")
@@ -1019,16 +1095,24 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				.text()
 				.replace(/[^\d.]/g, "")
 		);
-		data.average_profit_per_g = parseFloat($totals.eq(3).find("span").eq(1).text());
-		data.total_profit = parseFloat(
+		data.total_selling_amount = parseFloat(
 			$totals
-				.eq(4)
+				.eq(3)
 				.find("span")
 				.eq(1)
 				.text()
 				.replace(/[^\d.]/g, "")
 		);
-		data.overall_profit_margin = $totals.eq(5).find("span").eq(1).text();
+		data.average_profit_per_g = parseFloat($totals.eq(4).find("span").eq(1).text());
+		data.total_profit = parseFloat(
+			$totals
+				.eq(5)
+				.find("span")
+				.eq(1)
+				.text()
+				.replace(/[^\d.]/g, "")
+		);
+		data.overall_profit_margin = $totals.eq(6).find("span").eq(1).text();
 
 		data.items = [];
 		salesDetailsContainer.find(".wbd-table tbody tr").each(function () {
@@ -1253,6 +1337,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			args: {
 				customer: customer,
 				items: JSON.stringify(items_data),
+				discount_amount: parseFloat($("#wbd-total-discount").val()) || 0,
 			},
 			callback: function (r) {
 				salesDetailsContainer
@@ -1306,5 +1391,16 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			$cards.slideDown(190);
 			$icon.css("transform", "rotate(0deg)");
 		}
+	});
+
+	// Calculate Selling Amount after Discount
+	salesDetailsContainer.on("input", "#wbd-total-discount", function () {
+		updateDocumentTotals(); // recalc original totals
+		applyDiscountEffect(); // apply discount afterwards
+		markNotSaved();
+	});
+	salesDetailsContainer.on("blur", "#wbd-total-discount", function () {
+		let val = parseFloat($(this).val()) || 0;
+		$(this).val(val.toFixed(2));
 	});
 };

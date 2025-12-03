@@ -25,6 +25,7 @@
   "payments_tab",
   "total_payment_amount",
   "amount_paid",
+  "total_discount",
   "column_break_uemo",
   "balance_due",
   "status",
@@ -180,12 +181,19 @@
    "fieldname": "sales_invoice_ref",
    "fieldtype": "Data",
    "label": "Sales Invoice Ref"
+  },
+  {
+   "default": "0.00",
+   "fieldname": "total_discount",
+   "fieldtype": "Currency",
+   "label": "Total Discount (MYR)",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-14 20:17:30.854718",
+ "modified": "2025-12-03 15:51:08.426211",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Transaction",

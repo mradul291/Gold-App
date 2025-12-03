@@ -1,0 +1,153 @@
+/* Section headers (BUYER INFORMATION, SALE DETAILS) */
+.bs-section-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 6px;
+}
+
+.bs-section-header-spacing {
+    margin-top: 26px;
+}
+
+/* Card containers */
+.bs-section-card {
+    margin-top: 12px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background-color: #fbfdff;
+    padding: 14px 18px 14px;
+}
+
+/* Layout: two columns and single column */
+.bs-two-col {
+    display: flex;
+    gap: 40px;
+}
+
+.bs-one-col {
+    margin-top: 10px;
+}
+
+.bs-col {
+    flex: 1 1 0;
+}
+
+/* Fields */
+.bs-field {
+    margin-bottom: 14px;
+}
+
+.bs-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+/* Inputs */
+.bs-input {
+    width: 100%;
+    border-radius: 3px;
+    border: 1px solid #d1d5db;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #111827;
+    background-color: #ffffff;
+}
+
+.bs-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Select field (buyer) */
+.bs-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-position: right 10px center;
+    background-repeat: no-repeat;
+}
+
+/* Readonly grey inputs (Contact, Final XAU) */
+.bs-input-readonly {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+/* Payment table card */
+.bs-payment-table {
+    margin-top: 10px;
+}
+
+.bs-pay-table {
+    width: 100%;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+
+.bs-pay-table thead th {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    padding: 6px 10px;
+}
+
+.bs-pay-table tbody td {
+    border-top: 1px solid #e5e7eb;
+    padding: 6px 10px;
+    color: #111827;
+}
+
+/* Add Payment button */
+.bs-add-payment-btn {
+    margin-top: 10px;
+    font-size: 12px;
+    padding: 6px 14px;
+}
+
+/* Summary bar (Total Paid / Balance Due) */
+.bs-summary-bar {
+    margin-top: 10px;
+    padding: 10px 18px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bs-summary-label {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.bs-summary-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Footer Back button */
+.bs-footer-bar {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.wbm-back-btn {
+    font-size: 12px;
+    color: #374151;
+    border-radius: 4px;
+    padding: 6px 18px;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+}
+
+.wbm-back-btn:hover {
+    background-color: #e5e7eb;
+}

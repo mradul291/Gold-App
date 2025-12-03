@@ -1,0 +1,222 @@
+/* gold_app/public/css/wholesale_bag_melt.css */
+
+/* Page background and wrapper */
+/* Base blue used for XAU, link, button, hover border */
+:root {
+    --wbdm-blue: #1d72f3;
+    --wbdm-blue-light: #e0edff;
+}
+
+.wbdm-page {
+    padding: 24px 28px 32px;
+    background-color: #f5f7fb;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1f2933;
+}
+
+.wbdm-inner {
+    max-width: 1160px;
+    margin: 0 auto;
+}
+
+/* Top page title bar */
+
+.wbdm-header-row {
+    margin-bottom: 18px;
+}
+
+.wbdm-page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+/* Grid layout: 4 cards per row, next row for BAG‑005 */
+
+.wbdm-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-gap: 24px 24px;
+}
+
+/* Card styling */
+
+.wbdm-card {
+    background-color: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+    padding: 18px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease,
+        transform 0.12s ease;
+}
+
+.wbdm-card:hover {
+    border-color: var(--wbdm-blue);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
+    transform: translateY(-2px);
+}
+
+.wbdm-bag-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2933;
+    margin-bottom: 10px;
+}
+
+/* Rows inside card */
+
+.wbdm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: #4b5563;
+}
+
+.wbdm-row span {
+    color: #6b7280;
+}
+
+.wbdm-row strong {
+    color: #111827;
+    font-weight: 600;
+}
+
+.wbdm-blue {
+    color: var(--wbdm-blue);
+    font-weight: 600;
+}
+
+/* “View Items” small link text */
+
+.wbdm-view-items {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--wbdm-blue);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Select Bag button */
+.wbdm-select-btn {
+    margin-top: 14px;
+    width: 100%;
+    border-radius: 8px;
+    border: none;
+    background-color: #1d72f3;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+}
+
+.wbdm-select-btn:hover {
+    background-color: #165bbf;
+}
+
+/***************************** Header Styling ***********************/
+/* Root shell */
+.wbm-page-shell {
+    background-color: #eef2f7;
+    min-height: 100vh;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1f2933;
+}
+
+.wbm-top-bar {
+    background-color: #28384b; 
+    padding-top: 10px;
+    padding-bottom: 0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.4);
+}
+
+.wbm-top-bar-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 4px 18px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wbm-top-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 2px;
+}
+
+.wbm-top-sub {
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.wbm-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wbm-status-pill {
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid #9ca3af;
+    text-transform: uppercase;
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.wbm-save-btn {
+    padding: 4px 14px;             
+    font-size: 11px;              
+    font-weight: 600;
+    border-radius: 16px;           
+    border: 1px solid #16a34a;      
+    text-transform: uppercase;    
+    background-color: #22c55e;    
+    color: #ffffff;
+}
+.wbm-save-btn:hover {
+    background-color: #16a34a;
+}
+
+.wbm-tabs-inner {
+    display: flex;
+    width: 100%;
+    background-color: #f3f4f6;   /* same as screenshot band */
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wbm-tab-item {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.wbm-tab-item.wbm-tab-active {
+    background-color: #ffffff;
+    color: #111827;
+    border-bottom-color: #3b82f6;  /* blue underline */
+}
+
+.wbm-page-body {
+    background-color: #eef2f7;
+    padding: 24px 0 32px;
+}

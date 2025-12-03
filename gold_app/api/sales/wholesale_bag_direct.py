@@ -101,6 +101,7 @@ def create_wholesale_bag_direct_sale(data):
         # ------------------------------
         doc.total_weight_sold = data.get('total_weight_sold')
         doc.total_avco_cost = data.get('total_avco_cost')
+        doc.total_discount = data.get('total_discount')
         doc.total_selling_amount = data.get('total_selling_amount')
         doc.average_profit_per_g = data.get('average_profit_per_g')
         doc.total_profit = data.get('total_profit')
@@ -199,7 +200,7 @@ def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_
     }
     
 @frappe.whitelist()
-def create_sales_invoice(customer, items, company=None):
+def create_sales_invoice(customer, items, discount_amount=0, company=None):
     import json
 
     if not company:
@@ -226,6 +227,7 @@ def create_sales_invoice(customer, items, company=None):
         "doctype": "Sales Invoice",
         "customer": customer,
         "company": company,
+        "discount_amount": flt(discount_amount),
         "posting_date": frappe.utils.nowdate(),
         "update_stock": 1,
         "items": si_items
@@ -252,6 +254,7 @@ def create_sales_invoice(customer, items, company=None):
         log_doc = frappe.get_doc("Wholesale Bag Direct Sale", log_entry[0].name)
         log_doc.sales_invoice_ref = si.name
         log_doc.status = "Invoiced"
+        log_doc.total_discount = discount_amount
         try:
             log_doc.save(ignore_permissions=True)
             frappe.db.commit()

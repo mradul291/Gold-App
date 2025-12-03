@@ -38,7 +38,7 @@ def get_warehouse_stock(warehouse_name=None):
 
 # Create Sales Invoice for Stock Reduction
 @frappe.whitelist()
-def create_sales_invoice(customer, items, company=None):
+def create_sales_invoice(customer, items, company=None, total_amount=0, discount_amount=0):
     if not company:
         company = frappe.defaults.get_user_default("Company")
 
@@ -64,7 +64,9 @@ def create_sales_invoice(customer, items, company=None):
         "posting_date": frappe.utils.nowdate(),
         "update_stock": 1,
         "allocate_advances_automatically": 1,
-        "items": si_items
+        "items": si_items,
+        "total": flt(total_amount),
+        "discount_amount": flt(discount_amount)
     })
 
     si.insert(ignore_permissions=True)
@@ -75,6 +77,8 @@ def create_sales_invoice(customer, items, company=None):
         "status": "success",
         "sales_invoice": si.name,
     }
+
+
 
 # Create Payment Entry for the Sales Invoice
 @frappe.whitelist()

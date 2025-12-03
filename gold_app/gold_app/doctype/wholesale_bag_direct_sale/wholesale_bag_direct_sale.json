@@ -20,6 +20,7 @@
   "section_break_qqno",
   "items",
   "section_break_rmjm",
+  "total_discount",
   "total_weight_sold",
   "total_avco_cost",
   "total_selling_amount",
@@ -201,12 +202,18 @@
    "fieldtype": "Currency",
    "label": "Customer Advance Balance",
    "read_only": 1
+  },
+  {
+   "fieldname": "total_discount",
+   "fieldtype": "Currency",
+   "label": "Total Discount (MYR)",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-28 17:45:57.420156",
+ "modified": "2025-12-03 15:07:20.541192",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Bag Direct Sale",

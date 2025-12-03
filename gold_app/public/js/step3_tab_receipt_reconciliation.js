@@ -36,6 +36,16 @@ class Step3TabReceiptReconciliation {
 			this.bindUploadReceipt();
 			this.renderAdjustmentsSection();
 			this.attachNavHandlers();
+			this.container
+				.find("#wt-total-discount")
+				.off("blur")
+				.on("blur", (e) => {
+					let val = parseFloat($(e.currentTarget).val()) || 0;
+					$(e.currentTarget).val(val.toFixed(2));
+					this.total_discount = val;
+					this.updateReconciliationSummary();
+					this.updateFinalTotalAmount(); // NEW
+				});
 			this.hideLoader();
 		});
 	}
@@ -122,6 +132,13 @@ class Step3TabReceiptReconciliation {
 
 			this.existing_txn = txnDoc.message;
 
+			// --- NEW: load saved total_discount into UI ---
+			const existingDiscount = parseFloat(this.existing_txn.total_discount) || 0;
+			this.container.find("#wt-total-discount").val(existingDiscount.toFixed(2));
+
+			// Optional local cache
+			this.total_discount = existingDiscount;
+
 			// ⭐ Load receipt_lines into UI only if saved earlier
 			if (this.existing_txn.receipt_lines && this.existing_txn.receipt_lines.length > 0) {
 				this.bagSummary = this.existing_txn.receipt_lines.map((r) => ({
@@ -183,7 +200,55 @@ class Step3TabReceiptReconciliation {
             <button class="add-adjustment-btn btn-adjustment">+ Add Adjustment</button>
             <button class="save-adjustments-btn btn-save-green">Save All Adjustments</button>
         </div>
+        <!-- ===== Add Total Discount field (insert here, after Section 3: Adjustments) ===== -->
         <hr>
+
+        <div style="
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    margin-bottom:12px;
+">
+
+        	<!-- LEFT SIDE: DISCOUNT -->
+        	<div>
+        		<label style="font-weight:600; display:block; margin-bottom:4px;">
+        			Total Discount (MYR)
+        		</label>
+        		<input id="wt-total-discount" type="number" min="0" step="0.01" value="0.00" style="
+                    width:160px;
+                    padding:6px;
+                    border-radius:4px;
+                    border:1px solid #dcdcdc;
+               ">
+        	</div>
+
+        	<!-- RIGHT SIDE: TOTAL AMOUNT -->
+        	<div style="text-align:right;">
+        		<label style="font-weight:600; display:block; margin-bottom:4px;">
+        			Total Amount (MYR)
+        		</label>
+
+        		<!-- Read-only label style -->
+        		<div id="wt-total-amount" style="
+                min-width:180px;
+                padding:6px 10px;
+                font-size:15px;
+                font-weight:600;
+                border:1px solid #e0e0e0;
+                border-radius:4px;
+                background:#fafafa;
+                text-align:right;
+                color:#333;
+             ">
+        			0.00
+        		</div>
+        	</div>
+
+        </div>
+
+        <hr>
+
         <div class="recon-action-buttons">
             <button class="back-to-sale-btn btn-back">← Back to Sale Details</button>
             <button class="save-continue-btn btn-save-green">Save & Continue to Payments →</button>
@@ -633,6 +698,18 @@ class Step3TabReceiptReconciliation {
 			.off("click")
 			.on("click", async () => {
 				try {
+					// Save final total amount into Wholesale Transaction
+					await frappe.call({
+						method: "frappe.client.set_value",
+						args: {
+							doctype: "Wholesale Transaction",
+							name: this.existing_txn.name,
+							fieldname: {
+								total_payment_amount: finalAmount,
+							},
+						},
+					});
+
 					await this.callCreateSalesAndDeliveryAPI();
 					frappe.show_alert({
 						message: "Sales and Delivery created successfully",
@@ -748,6 +825,7 @@ class Step3TabReceiptReconciliation {
 			container
 				.find(".receipt-table .footer-total .total-amount")
 				.text(`RM ${totalAmount.toFixed(2)}`);
+			this.updateFinalTotalAmount();
 			this.updateReconciliationSummary();
 		});
 
@@ -1438,18 +1516,39 @@ class Step3TabReceiptReconciliation {
 		}
 
 		const warehouse = this.props.selected_bag + " - AGSB";
-		const items = this.salesDetailData.map((line) => ({
-			item_code: `Unsorted-${line.purity || ""}`,
-			purity: line.purity || "",
-			weight: parseFloat(line.weight) || 0,
-			rate: parseFloat(line.rate) || 0,
-			warehouse: warehouse,
-		}));
+		// Build items but prefer rate from Section 1 (this.bagSummary) matching purity
+		const items = this.salesDetailData.map((line) => {
+			const purityKey = (line.purity || "").toString().trim();
+
+			// Try to find matching receipt row in Section 1 (bagSummary)
+			const receiptRow =
+				(this.bagSummary &&
+					this.bagSummary.find(
+						(r) => (r.purity || "").toString().trim() === purityKey
+					)) ||
+				null;
+
+			// Use receipt rate if present, otherwise fall back to line.rate
+			const rateFromReceipt = receiptRow ? parseFloat(receiptRow.rate) || 0 : 0;
+			const rate = rateFromReceipt > 0 ? rateFromReceipt : parseFloat(line.rate) || 0;
+
+			// weight comes from salesDetailData (same as before)
+			const weight = parseFloat(line.weight) || 0;
+
+			return {
+				item_code: `Unsorted-${purityKey}`,
+				purity: purityKey,
+				weight: weight,
+				rate: rate,
+				warehouse: warehouse,
+			};
+		});
 
 		const payload = {
 			customer: this.props.customer,
 			items: JSON.stringify(items),
 			company: this.props.company || null,
+			discount_amount: parseFloat(this.container.find("#wt-total-discount").val() || 0),
 		};
 
 		console.log("Calling create_sales_invoice API with payload:", payload);
@@ -1814,6 +1913,31 @@ class Step3TabReceiptReconciliation {
 						updatedData.total_profit_per_g = formattedTotalProfitPerG;
 						updatedData.total_actual_weight = parseFloat(totalActualWeight.toFixed(3));
 
+						// Add this to updatedData before assign:
+						updatedData.total_discount = parseFloat(
+							this.container.find("#wt-total-discount").val() || 0
+						);
+
+						// Add this to updatedData before assign:
+						updatedData.total_discount = parseFloat(
+							this.container.find("#wt-total-discount").val() || 0
+						);
+
+						// ================================================
+						// NEW: Final Total Amount (Receipt Total - Discount)
+						// ================================================
+						let receiptTotal = 0;
+						this.bagSummary.forEach((line) => {
+							receiptTotal += parseFloat(line.amount) || 0;
+						});
+
+						let discount = updatedData.total_discount;
+						let finalAmount = receiptTotal - discount;
+						if (finalAmount < 0) finalAmount = 0;
+
+						// ⭐ Save Correct Final Total into Wholesale Transaction
+						updatedData.total_payment_amount = finalAmount;
+
 						// ----------------------------------------------------
 						// Save back into doc (your original logic)
 						// ----------------------------------------------------
@@ -1937,5 +2061,18 @@ class Step3TabReceiptReconciliation {
 
 		// Return signed numeric value (negative for losses, positive for stones)
 		return type === "Weight Adjustment - Stones" ? impact : -impact;
+	}
+
+	updateFinalTotalAmount() {
+		let discount = parseFloat(this.container.find("#wt-total-discount").val()) || 0;
+
+		// Section 1 total amount
+		let totalReceipt = 0;
+		this.bagSummary.forEach((r) => {
+			totalReceipt += parseFloat(r.amount) || 0;
+		});
+
+		const finalAmount = totalReceipt - discount;
+		this.container.find("#wt-total-amount").text(finalAmount.toFixed(2));
 	}
 }

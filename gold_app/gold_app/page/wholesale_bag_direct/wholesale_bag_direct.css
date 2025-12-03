@@ -593,6 +593,16 @@
 .wbd-totals-green span {
   color: #fff !important;
 }
+.wbd-discount-input {
+    width: 95px;
+    padding: 6px 8px;
+    height: 28px;                 /* match other rows’ font alignment */
+    text-align: center;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
 .loader-overlay {
 position: relative;
 display: flex;

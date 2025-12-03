@@ -1,0 +1,247 @@
+/* Wrapper under existing header/tabs */
+.mtx-wrapper {
+    max-width: 1180px;
+    margin: 0 auto;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1f2933;
+}
+
+/* Section headers */
+.mtx-section-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+}
+
+.mtx-section-header-spacing {
+    margin-top: 24px;
+}
+
+/* Generic cards */
+.mtx-card {
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background-color: #ffffff;
+}
+
+.mtx-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 8px 12px 4px;
+    text-transform: uppercase;
+}
+
+.mtx-card-body {
+    padding: 4px 12px 10px;
+    font-size: 11px;
+}
+
+/* Top row layout */
+.mtx-top-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 12px;
+    margin-top: 4px;
+}
+
+.mtx-half {
+    flex: 1 1 0;
+}
+
+/* Rows inside analysis cards */
+.mtx-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.mtx-row span:first-child {
+    color: #6b7280;
+}
+
+.mtx-value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.mtx-row-loss .mtx-value,
+.mtx-loss-red {
+    color: #b91c1c;
+}
+
+.mtx-variance-green {
+    color: #16a34a;
+}
+
+.mtx-status-better {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+/* Net XAU Effect card */
+.mtx-net-card {
+    margin-top: 8px;
+    background-color: #fff7e6;
+    border-color: #facc15;
+}
+
+.mtx-net-body {
+    padding-top: 6px;
+    padding-bottom: 8px;
+}
+
+.mtx-net-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+    font-size: 11px;
+}
+
+.mtx-net-label {
+    color: #6b7280;
+}
+
+.mtx-net-value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.mtx-net-row-change .mtx-net-value {
+    color: #b91c1c;
+}
+
+/* Analysis line */
+.mtx-analysis-row {
+    margin-top: 6px;
+    border-top: 1px solid #facc15;
+    padding-top: 4px;
+    font-size: 11px;
+}
+
+.mtx-analysis-label {
+    font-weight: 600;
+    color: #6b7280;
+    margin-right: 4px;
+}
+
+.mtx-analysis-text {
+    color: #4b5563;
+}
+
+/* Cost & Margin card */
+.mtx-cost-card {
+    margin-top: 10px;
+}
+
+.mtx-cost-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+    font-size: 11px;
+}
+
+.mtx-cost-label {
+    color: #6b7280;
+}
+
+.mtx-cost-value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.mtx-cost-row-strong .mtx-cost-value {
+    color: #111827;
+}
+
+/* Hedge input row */
+.mtx-cost-row-input {
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+.mtx-cost-input-wrap {
+    width: 70%;
+}
+
+.mtx-input {
+    width: 100%;
+    border-radius: 3px;
+    border: 1px solid #d1d5db;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #111827;
+    background-color: #ffffff;
+}
+
+.mtx-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Margin results block on right, green values */
+.mtx-margin-results {
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.mtx-margin-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 2px;
+}
+
+.mtx-margin-row span:first-child {
+    color: #6b7280;
+}
+
+.mtx-margin-value {
+    font-weight: 600;
+    color: #16a34a;
+}
+
+.mtx-note {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #9ca3af;
+}
+
+/* Summary Insights card */
+.mtx-summary-card {
+    margin-top: 10px;
+    border-radius: 4px;
+    border: 1px solid #dbeafe;
+    background-color: #eff6ff;
+    padding: 10px 16px 12px;
+    font-size: 11px;
+}
+
+.mtx-summary-list {
+    margin: 0 0 8px 0;
+    padding-left: 18px;
+    color: #374151;
+}
+
+.mtx-summary-list li {
+    margin-bottom: 2px;
+}
+
+.mtx-summary-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.mtx-summary-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+}
+.mtx-footer-bar {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+}
