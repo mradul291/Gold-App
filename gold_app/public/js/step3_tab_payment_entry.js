@@ -100,9 +100,53 @@ class Step3TabPaymentEntry {
                     <input id="pay-ref" type="text" placeholder="e.g. TXN-1234" />
                 </div>
             </div>
+<div style="
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 10px;
+	padding: 0 12px;
+">
 
-            <div class="form-actions">
-                <button id="add-payment" class="btn green">+ Add Payment</button>
+	<!-- LEFT SIDE: Checkbox + Label -->
+	<div style="display: flex; align-items: center; gap: 6px;">
+		<input 
+			type="checkbox" 
+			id="manual-date-toggle" 
+			style="width: 16px; height: 16px; cursor: pointer;"
+		/>
+		<label for="manual-date-toggle" style="margin: 0; font-size: 14px; cursor: pointer;">
+			Enter Date Manually
+		</label>
+	</div>
+
+	<!-- RIGHT SIDE: Date Field -->
+	<div 
+		id="manual-date-wrapper" 
+		style="display: none; display: flex; align-items: center; gap: 6px;"
+	>
+		<label for="manual-date" style="margin: 0; font-size: 14px;">Payment Date</label>
+
+		<input 
+			id="manual-date" 
+			type="date"
+			style="
+				width: 160px;
+				padding: 6px 8px;
+				border: 1px solid #ced4da;
+				border-radius: 6px;
+				font-size: 14px;
+			"
+		/>
+	</div>
+
+</div>
+
+
+</div>
+
+  <div class="form-actions">
+  	<button id="add-payment" class="btn green">+ Add Payment</button>
                 <button id="advance-payment" class="btn blue">Advance Payment</button>
                 <button id="full-payment" class="btn blue right">Mark Fully Paid</button>
             </div>
@@ -188,13 +232,33 @@ class Step3TabPaymentEntry {
 		this.container.find("#advance-payment").on("click", () => this.showAdvanceDialog());
 		this.container.find("#full-payment").on("click", () => this.markFullyPaid());
 		this.container.find("#submit-payments").on("click", () => this.submitPayments());
+		// Manual date toggle
+		this.container.find("#manual-date-toggle").on("change", () => {
+			const isChecked = this.container.find("#manual-date-toggle").is(":checked");
+			if (isChecked) {
+				this.container.find("#manual-date-wrapper").show();
+			} else {
+				this.container.find("#manual-date-wrapper").hide();
+				this.container.find("#manual-date").val("");
+			}
+		});
 	}
 
 	// ======================================================
 	// ADD NORMAL PAYMENT
 	// ======================================================
 	async addPayment() {
-		const date = frappe.datetime.now_date();
+		let date;
+
+		const manualOn = this.container.find("#manual-date-toggle").is(":checked");
+		const manualDate = this.container.find("#manual-date").val();
+
+		if (manualOn && manualDate) {
+			date = manualDate; // use user's date
+		} else {
+			date = frappe.datetime.now_date(); // default system date
+		}
+
 		const method = this.container.find("#pay-method").val();
 
 		// Get raw value

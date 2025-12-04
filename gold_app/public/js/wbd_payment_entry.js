@@ -46,21 +46,30 @@ class WholesaleBagDirectPayment {
                   </select>
               </div>
               <div>
-                  <label for="pay-amount">Amount to Pay</label>
-                  <input id="pay-amount" type="number" min="0" step="0.01" placeholder="Enter amount" />
-              </div>
-              <div style="grid-column: 1 / span 2;">
-                  <label for="pay-ref">Reference No. (optional)</label>
-                  <input id="pay-ref" type="text" placeholder="e.g. TXN-1234" />
-              </div>
-          </div>
-
-          <div class="form-actions">
-              <button id="add-payment" class="btn green">+ Add Payment</button>
-              <button id="advance-payment" class="btn blue">Use Advance</button>
-              <button id="full-payment" class="btn blue" style="float: right;">Mark Fully Paid</button>
-          </div>
+      	<label for="pay-amount">Amount to Pay</label>
+      	<input id="pay-amount" type="number" min="0" step="0.01" placeholder="Enter amount" />
       </div>
+      <div style="grid-column: 1 / span 2;">
+      	<label for="pay-ref">Reference No. (optional)</label>
+      	<input id="pay-ref" type="text" placeholder="e.g. TXN-1234" />
+     	</div>
+     	<div style="display: flex; align-items: center; margin-left: 8px; margin-top: 6px; margin-bottom: 6px;">
+     		<input type="checkbox" id="manual-date-toggle" style="margin-right: 6px;" />
+     		<label for="manual-date-toggle" style="margin: 0; padding: 0;">Enter Date Manually</label>
+     	</div>
+
+     	<div id="manual-date-wrapper" style="display:none; margin-left: 8px; margin-top: 8px;">
+     		<label for="manual-date" style="margin-bottom: 4px;">Payment Date</label>
+     		<input id="manual-date" type="date" />
+     	</div>
+
+     	</div>
+     	<div class="form-actions">
+       		<button id="add-payment" class="btn green">+ Add Payment</button>
+       		<button id="advance-payment" class="btn blue">Use Advance</button>
+       		<button id="full-payment" class="btn blue" style="float: right;">Mark Fully Paid</button>
+       	</div>
+       	</div>
 
       <!-- Payment History -->
       <div class="history-box full-width">
@@ -132,6 +141,15 @@ class WholesaleBagDirectPayment {
 		// Real-time Customer Advance balance preview
 		$(this.containerSelector).on("input", "#pay-amount", () => {
 			this.updateAdvancePreview();
+		});
+
+		$(this.containerSelector).on("change", "#manual-date-toggle", function () {
+			if ($(this).is(":checked")) {
+				$("#manual-date-wrapper").show();
+			} else {
+				$("#manual-date-wrapper").hide();
+				$("#manual-date").val(""); // clear manual date
+			}
 		});
 	}
 
@@ -271,12 +289,26 @@ class WholesaleBagDirectPayment {
 		}
 
 		// Add to payments array
-		const now = new Date();
-		const dateStr = now.toLocaleDateString("en-GB", {
-			day: "2-digit",
-			month: "2-digit",
-			year: "numeric",
-		});
+		let dateStr;
+
+		const manualDate = $(this.containerSelector).find("#manual-date").val();
+		const manualDateEnabled = $(this.containerSelector)
+			.find("#manual-date-toggle")
+			.is(":checked");
+
+		if (manualDateEnabled && manualDate) {
+			// Convert YYYY-MM-DD → DD/MM/YYYY
+			const [y, m, d] = manualDate.split("-");
+			dateStr = `${d}/${m}/${y}`;
+		} else {
+			// Default behaviour (existing)
+			const now = new Date();
+			dateStr = now.toLocaleDateString("en-GB", {
+				day: "2-digit",
+				month: "2-digit",
+				year: "numeric",
+			});
+		}
 
 		this.payments.push({
 			date: dateStr,

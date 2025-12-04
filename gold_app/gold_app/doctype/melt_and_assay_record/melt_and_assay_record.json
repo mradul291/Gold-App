@@ -1,0 +1,599 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:MELT-{YYYY}-{###}",
+ "creation": "2025-12-04 15:10:50.814848",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "bag_summary_tab",
+  "sb_bag_summary",
+  "record_id",
+  "source_bag",
+  "total_weight_g",
+  "column_break_lhtu",
+  "record_date",
+  "pure_gold_xau_g",
+  "average_purity",
+  "column_break_ohgy",
+  "selected_bag",
+  "total_cost_basis",
+  "cost_per_gram",
+  "section_break_kuwx",
+  "bag_items",
+  "melting_assay_tab",
+  "sb_melting",
+  "pre_melt_weight",
+  "weight_loss_g",
+  "melting_cost_rm",
+  "column_break_zyyl",
+  "post_melt_weight",
+  "weight_loss_pct",
+  "melting_date",
+  "sb_assay",
+  "est_purity_from_bag",
+  "purity_variance",
+  "assay_cost_rm",
+  "column_break_kiyr",
+  "actual_purity",
+  "actual_xau_g",
+  "assay_date",
+  "sb_refining",
+  "refine_to_9999",
+  "target_purity",
+  "refining_cost_rm",
+  "column_break_tjwi",
+  "post_refining_weight",
+  "refining_date",
+  "buyer_sale_tab",
+  "sb_buyer",
+  "buyer",
+  "column_break_wypp",
+  "buyer_contact",
+  "sb_sale_details",
+  "final_weight_g",
+  "final_xau_g",
+  "gross_sale_value_rm",
+  "column_break_lkvw",
+  "final_purity",
+  "locked_rate_rm_per_xau",
+  "sb_payments",
+  "payment_term",
+  "payments",
+  "total_paid_rm",
+  "balance_due_rm",
+  "metrics_tab",
+  "section_break_pyll",
+  "weight_loss_analysis_column",
+  "metrics_pre_melt_weight_g",
+  "metrics_post_melt_weight_g",
+  "metrics_loss_g",
+  "metrics_loss_pct",
+  "purity_variance_analysis_column",
+  "metrics_est_purity",
+  "metrics_actual_purity",
+  "metrics_variance",
+  "metrics_status",
+  "sb_metrics_xau",
+  "xau_before_est",
+  "xau_after_actual",
+  "analysis_text",
+  "column_break_cxxc",
+  "net_xau_change_g",
+  "net_xau_change_pct",
+  "sb_metrics_cost",
+  "original_cost_rm",
+  "melting_cost_metrics_rm",
+  "assay_cost_metrics_rm",
+  "refining_cost_metrics_rm",
+  "total_cost_basis_rm",
+  "gross_sale_value_metrics_rm",
+  "hedge_pl_rm",
+  "column_break_hbjs",
+  "gross_margin_rm",
+  "net_profit_rm",
+  "gross_margin_pct",
+  "net_profit_pct",
+  "gross_margin_per_g",
+  "net_profit_per_g",
+  "sb_insights",
+  "insight_1",
+  "insight_2",
+  "insight_3"
+ ],
+ "fields": [
+  {
+   "fieldname": "bag_summary_tab",
+   "fieldtype": "Tab Break",
+   "label": "Bag Summary"
+  },
+  {
+   "fieldname": "sb_bag_summary",
+   "fieldtype": "Section Break",
+   "label": "BAG SUMMARY"
+  },
+  {
+   "fieldname": "source_bag",
+   "fieldtype": "Data",
+   "label": "Source Bag"
+  },
+  {
+   "fieldname": "total_weight_g",
+   "fieldtype": "Float",
+   "label": "Total Weight (g)"
+  },
+  {
+   "fieldname": "pure_gold_xau_g",
+   "fieldtype": "Float",
+   "label": "Pure Gold (XAU)"
+  },
+  {
+   "fieldname": "average_purity",
+   "fieldtype": "Float",
+   "label": "Average Purity"
+  },
+  {
+   "fieldname": "total_cost_basis",
+   "fieldtype": "Currency",
+   "label": "Total Cost Basis"
+  },
+  {
+   "fieldname": "cost_per_gram",
+   "fieldtype": "Currency",
+   "label": "Cost per Gram"
+  },
+  {
+   "fieldname": "record_id",
+   "fieldtype": "Data",
+   "label": "Record ID"
+  },
+  {
+   "fieldname": "record_date",
+   "fieldtype": "Date",
+   "label": "Record Date"
+  },
+  {
+   "fieldname": "bag_items",
+   "fieldtype": "Table",
+   "label": "Bag Items",
+   "options": "Melt And Assay Bag Item"
+  },
+  {
+   "fieldname": "melting_assay_tab",
+   "fieldtype": "Tab Break",
+   "label": "Melting & Assay"
+  },
+  {
+   "fieldname": "sb_melting",
+   "fieldtype": "Section Break",
+   "label": "MELTING DETAILS"
+  },
+  {
+   "fieldname": "pre_melt_weight",
+   "fieldtype": "Float",
+   "label": "Pre-Melt Weight (g)"
+  },
+  {
+   "fieldname": "weight_loss_g",
+   "fieldtype": "Float",
+   "label": "Weight Loss (g)"
+  },
+  {
+   "fieldname": "melting_cost_rm",
+   "fieldtype": "Currency",
+   "label": "Melting Cost (RM)"
+  },
+  {
+   "fieldname": "post_melt_weight",
+   "fieldtype": "Float",
+   "label": "Post-Melt Weight (g)"
+  },
+  {
+   "fieldname": "weight_loss_pct",
+   "fieldtype": "Float",
+   "label": "Weight Loss (%)"
+  },
+  {
+   "fieldname": "melting_date",
+   "fieldtype": "Date",
+   "label": "Melting Date"
+  },
+  {
+   "fieldname": "sb_assay",
+   "fieldtype": "Section Break",
+   "label": "ASSAY DETAILS"
+  },
+  {
+   "fieldname": "est_purity_from_bag",
+   "fieldtype": "Float",
+   "label": "Estimated Purity (from bag)"
+  },
+  {
+   "fieldname": "purity_variance",
+   "fieldtype": "Float",
+   "label": "Purity Variance (\u00b1 difference)"
+  },
+  {
+   "fieldname": "assay_cost_rm",
+   "fieldtype": "Currency",
+   "label": "Assay Cost (RM)"
+  },
+  {
+   "fieldname": "actual_purity",
+   "fieldtype": "Float",
+   "label": "Actual Purity (from Assay)"
+  },
+  {
+   "fieldname": "actual_xau_g",
+   "fieldtype": "Float",
+   "label": "Actual XAU (g)"
+  },
+  {
+   "fieldname": "assay_date",
+   "fieldtype": "Date",
+   "label": "Assay Date"
+  },
+  {
+   "fieldname": "sb_refining",
+   "fieldtype": "Section Break",
+   "label": "REFINING (Optional)"
+  },
+  {
+   "default": "0",
+   "fieldname": "refine_to_9999",
+   "fieldtype": "Check",
+   "label": "Refine to 999.9 Purity"
+  },
+  {
+   "fieldname": "target_purity",
+   "fieldtype": "Float",
+   "label": "Target Purity"
+  },
+  {
+   "fieldname": "refining_cost_rm",
+   "fieldtype": "Currency",
+   "label": "Refining Cost (RM)"
+  },
+  {
+   "fieldname": "post_refining_weight",
+   "fieldtype": "Float",
+   "label": "Post-Refining Weight (g)"
+  },
+  {
+   "fieldname": "refining_date",
+   "fieldtype": "Date",
+   "label": "Refining Date"
+  },
+  {
+   "fieldname": "buyer_sale_tab",
+   "fieldtype": "Tab Break",
+   "label": "Buyer & Sale"
+  },
+  {
+   "fieldname": "sb_buyer",
+   "fieldtype": "Section Break",
+   "label": "BUYER INFORMATION"
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Link",
+   "label": "Buyer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "buyer_contact",
+   "fieldtype": "Data",
+   "label": "Contact"
+  },
+  {
+   "fieldname": "sb_sale_details",
+   "fieldtype": "Section Break",
+   "label": "SALE DETAILS"
+  },
+  {
+   "fieldname": "final_weight_g",
+   "fieldtype": "Float",
+   "label": "Final Weight (g)"
+  },
+  {
+   "fieldname": "final_purity",
+   "fieldtype": "Float",
+   "label": "Final Purity"
+  },
+  {
+   "fieldname": "final_xau_g",
+   "fieldtype": "Float",
+   "label": "Final XAU (g)"
+  },
+  {
+   "fieldname": "locked_rate_rm_per_xau",
+   "fieldtype": "Currency",
+   "label": "Locked Rate (RM/g XAU)"
+  },
+  {
+   "fieldname": "gross_sale_value_rm",
+   "fieldtype": "Currency",
+   "label": "Gross Sale Value (RM)"
+  },
+  {
+   "fieldname": "payment_term",
+   "fieldtype": "Select",
+   "label": "Payment Term",
+   "options": "Net 30 Days\nNet 15 Days\nImmediate\nNet 60Days"
+  },
+  {
+   "fieldname": "sb_payments",
+   "fieldtype": "Section Break",
+   "label": "PAYMENT DETAILS"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "Melt And Assay Payment Entry"
+  },
+  {
+   "fieldname": "total_paid_rm",
+   "fieldtype": "Currency",
+   "label": "Total Paid (RM)"
+  },
+  {
+   "fieldname": "balance_due_rm",
+   "fieldtype": "Currency",
+   "label": "Balance Due (RM)"
+  },
+  {
+   "fieldname": "metrics_tab",
+   "fieldtype": "Tab Break",
+   "label": "Metrics"
+  },
+  {
+   "fieldname": "metrics_pre_melt_weight_g",
+   "fieldtype": "Float",
+   "label": "Pre-Melt Weight (g)"
+  },
+  {
+   "fieldname": "metrics_post_melt_weight_g",
+   "fieldtype": "Float",
+   "label": "Post-Melt Weight (g)"
+  },
+  {
+   "fieldname": "metrics_loss_g",
+   "fieldtype": "Float",
+   "label": "Loss (g)"
+  },
+  {
+   "fieldname": "metrics_loss_pct",
+   "fieldtype": "Float",
+   "label": "Loss (%)"
+  },
+  {
+   "fieldname": "metrics_est_purity",
+   "fieldtype": "Float",
+   "label": "Estimated Purity"
+  },
+  {
+   "fieldname": "metrics_actual_purity",
+   "fieldtype": "Float",
+   "label": "Actual Purity"
+  },
+  {
+   "fieldname": "metrics_variance",
+   "fieldtype": "Float",
+   "label": "Variance"
+  },
+  {
+   "fieldname": "metrics_status",
+   "fieldtype": "Data",
+   "label": "Status"
+  },
+  {
+   "fieldname": "sb_metrics_xau",
+   "fieldtype": "Section Break",
+   "label": "NET XAU EFFECT"
+  },
+  {
+   "fieldname": "xau_before_est",
+   "fieldtype": "Float",
+   "label": "XAU Before (Estimated)"
+  },
+  {
+   "fieldname": "xau_after_actual",
+   "fieldtype": "Float",
+   "label": "XAU After (Actual)"
+  },
+  {
+   "fieldname": "net_xau_change_g",
+   "fieldtype": "Float",
+   "label": "Net XAU Change (g)"
+  },
+  {
+   "fieldname": "net_xau_change_pct",
+   "fieldtype": "Float",
+   "label": "Net XAU Change (%)"
+  },
+  {
+   "fieldname": "analysis_text",
+   "fieldtype": "Small Text",
+   "label": "Analysis"
+  },
+  {
+   "fieldname": "sb_metrics_cost",
+   "fieldtype": "Section Break",
+   "label": "COST & MARGIN ANALYSIS"
+  },
+  {
+   "fieldname": "original_cost_rm",
+   "fieldtype": "Currency",
+   "label": "Original Cost (from bag)"
+  },
+  {
+   "fieldname": "melting_cost_metrics_rm",
+   "fieldtype": "Currency",
+   "label": "Melting Cost"
+  },
+  {
+   "fieldname": "assay_cost_metrics_rm",
+   "fieldtype": "Currency",
+   "label": "Assay Cost"
+  },
+  {
+   "fieldname": "refining_cost_metrics_rm",
+   "fieldtype": "Currency",
+   "label": "Refining Cost"
+  },
+  {
+   "fieldname": "total_cost_basis_rm",
+   "fieldtype": "Currency",
+   "label": "Total Cost Basis"
+  },
+  {
+   "fieldname": "gross_sale_value_metrics_rm",
+   "fieldtype": "Currency",
+   "label": "Gross Sale Value"
+  },
+  {
+   "fieldname": "hedge_pl_rm",
+   "fieldtype": "Currency",
+   "label": "Hedge P/L (optional)"
+  },
+  {
+   "fieldname": "gross_margin_rm",
+   "fieldtype": "Currency",
+   "label": "Gross Margin"
+  },
+  {
+   "fieldname": "net_profit_rm",
+   "fieldtype": "Currency",
+   "label": "Net Profit (with hedge)"
+  },
+  {
+   "fieldname": "gross_margin_pct",
+   "fieldtype": "Float",
+   "label": "Gross Margin %"
+  },
+  {
+   "fieldname": "net_profit_pct",
+   "fieldtype": "Float",
+   "label": "Net Profit %"
+  },
+  {
+   "fieldname": "gross_margin_per_g",
+   "fieldtype": "Currency",
+   "label": "Gross Margin per Gram"
+  },
+  {
+   "fieldname": "net_profit_per_g",
+   "fieldtype": "Currency",
+   "label": "Net Profit per Gram"
+  },
+  {
+   "fieldname": "sb_insights",
+   "fieldtype": "Section Break",
+   "label": "SUMMARY INSIGHTS"
+  },
+  {
+   "fieldname": "insight_1",
+   "fieldtype": "Small Text",
+   "label": "Insight 1"
+  },
+  {
+   "fieldname": "insight_2",
+   "fieldtype": "Small Text",
+   "label": "Insight 2"
+  },
+  {
+   "fieldname": "insight_3",
+   "fieldtype": "Small Text",
+   "label": "Insight 3"
+  },
+  {
+   "fieldname": "column_break_zyyl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_kiyr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_tjwi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_wypp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_lkvw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_lhtu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ohgy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "selected_bag",
+   "fieldtype": "Data",
+   "label": "Selected Bag"
+  },
+  {
+   "fieldname": "section_break_kuwx",
+   "fieldtype": "Section Break",
+   "label": "ITEMS IN BAG"
+  },
+  {
+   "fieldname": "section_break_pyll",
+   "fieldtype": "Section Break",
+   "label": "PERFORMANCE METRICS"
+  },
+  {
+   "fieldname": "weight_loss_analysis_column",
+   "fieldtype": "Column Break",
+   "label": "Weight Loss Analysis"
+  },
+  {
+   "fieldname": "purity_variance_analysis_column",
+   "fieldtype": "Column Break",
+   "label": "Purity Variance Analysis"
+  },
+  {
+   "fieldname": "column_break_cxxc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_hbjs",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-04 16:19:59.997044",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Melt And Assay Record",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

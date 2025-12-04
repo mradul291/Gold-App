@@ -1,0 +1,54 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-04 15:07:58.583326",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "payment_date",
+  "payment_type",
+  "amount_rm",
+  "reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Payment Date"
+  },
+  {
+   "fieldname": "payment_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Payment Type"
+  },
+  {
+   "fieldname": "amount_rm",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount (RM)"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reference"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-12-04 15:38:42.103819",
+ "modified_by": "Administrator",
+ "module": "Gold App",
+ "name": "Melt And Assay Payment Entry",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -24,51 +24,24 @@ frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
 
 	frappe.require("/assets/gold_app/css/wholesale_bag_melt.css");
 
-	// Static Bag List (as per screenshot)
-	WBMState.bag_list = [
-		{
-			bag_id: "BAG-001",
-			total_weight: 740,
-			xau_g: 668.37,
-			avg_purity: 903.5,
-			total_cost: 45200.0,
-			cost_per_gram: 61.08,
-		},
-		{
-			bag_id: "BAG-002",
-			total_weight: 1250,
-			xau_g: 1100.5,
-			avg_purity: 880.4,
-			total_cost: 74500.0,
-			cost_per_gram: 59.6,
-		},
-		{
-			bag_id: "BAG-003",
-			total_weight: 450,
-			xau_g: 380.2,
-			avg_purity: 844.9,
-			total_cost: 25800.0,
-			cost_per_gram: 57.33,
-		},
-		{
-			bag_id: "BAG-004",
-			total_weight: 920,
-			xau_g: 850.4,
-			avg_purity: 924.3,
-			total_cost: 57500.0,
-			cost_per_gram: 62.5,
-		},
-		{
-			bag_id: "BAG-005",
-			total_weight: 2100,
-			xau_g: 1950.8,
-			avg_purity: 929.0,
-			total_cost: 132000.0,
-			cost_per_gram: 62.86,
-		},
-	];
+	frappe.call({
+		method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
+		callback: function (r) {
+			if (r.message) {
+				WBMState.bag_list = r.message;
+				renderBagGrid(WBMState.bag_list);
 
-	renderBagGrid(WBMState.bag_list);
+				WBMState.onBackToBags = function () {
+					$("#wbdm-root").html(`
+                        <div class="wbdm-inner">
+                            <div id="wbdm-bag-list" class="wbdm-grid"></div>
+                        </div>
+                    `);
+					renderBagGrid(WBMState.bag_list);
+				};
+			}
+		},
+	});
 };
 
 // ==============================================
@@ -133,57 +106,40 @@ function renderBagGrid(bags) {
 
 			WBMState.selected_bag = bagId;
 
-			// Static for now — will later bind with backend
-			WBMState.bag_summary = {
-				source_bag: bagId,
-				total_weight_g: 740,
-				pure_gold_xau_g: 668.37,
-				average_purity: 903.5,
-				total_cost_basis: 45200,
-				cost_per_gram: 61.08,
-				record_id: "MELT-2024-001",
-				record_date: "10 Nov 2024",
-			};
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_bag_melt.get_bag_details",
+				args: { bag_id: bagId },
+				callback: function (r) {
+					if (!r.message) return;
 
-			WBMState.bag_items = [
-				{
-					purity: "999.9",
-					weight_g: 100,
-					xau_g: 99.99,
-					cost_rm: 6500.0,
-					cost_per_g_rm: 65.0,
-				},
-				{
-					purity: "999",
-					weight_g: 50,
-					xau_g: 49.95,
-					cost_rm: 3200.0,
-					cost_per_g_rm: 64.0,
-				},
-				{
-					purity: "916",
-					weight_g: 500,
-					xau_g: 458.0,
-					cost_rm: 29000.0,
-					cost_per_g_rm: 58.0,
-				},
-				{
-					purity: "835",
-					weight_g: 58,
-					xau_g: 48.43,
-					cost_rm: 3100.0,
-					cost_per_g_rm: 53.45,
-				},
-				{
-					purity: "375",
-					weight_g: 32,
-					xau_g: 12.0,
-					cost_rm: 3400.0,
-					cost_per_g_rm: 106.25,
-				},
-			];
+					WBMState.bag_summary = r.message.summary;
+					WBMState.bag_items = r.message.items;
 
-			showBagSummaryUI();
+					showBagSummaryUI();
+				},
+			});
+		});
+
+	$(".wbdm-view-items")
+		.off("click")
+		.on("click", function () {
+			const card = $(this).closest(".wbdm-card");
+			const bagId = card.find(".wbdm-select-btn").data("bag");
+
+			WBMState.selected_bag = bagId;
+
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_bag_melt.get_bag_details",
+				args: { bag_id: bagId },
+				callback: function (r) {
+					if (!r.message) return;
+
+					WBMState.bag_summary = r.message.summary;
+					WBMState.bag_items = r.message.items;
+
+					showBagSummaryUI();
+				},
+			});
 		});
 }
 
