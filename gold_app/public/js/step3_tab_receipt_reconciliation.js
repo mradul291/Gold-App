@@ -23,6 +23,8 @@ class Step3TabReceiptReconciliation {
 		this.bagSummary = [];
 		this.uploadedReceiptUrl = "";
 		this.availablePurities = [];
+		this.adjustmentsSaved = false;
+		this.finalAmount = 0;
 
 		this.showLoader();
 
@@ -566,7 +568,7 @@ class Step3TabReceiptReconciliation {
 					});
 					return;
 				}
-
+				this.adjustmentsSaved = true;
 				this.onClickSaveAdjustments();
 
 				frappe.show_alert({
@@ -706,7 +708,7 @@ class Step3TabReceiptReconciliation {
 							doctype: "Wholesale Transaction",
 							name: this.existing_txn.name,
 							fieldname: {
-								total_payment_amount: finalAmount,
+								total_payment_amount: this.finalAmount,
 							},
 						},
 					});
@@ -900,6 +902,15 @@ class Step3TabReceiptReconciliation {
 			.find(".save-continue-btn")
 			.off("click")
 			.on("click", async () => {
+				if (!this.adjustmentsSaved) {
+					frappe.msgprint({
+						title: "Save Adjustments First",
+						message:
+							"Please click 'Save All Adjustments' before continuing to payments.",
+						indicator: "orange",
+					});
+					return;
+				}
 				const adjustments = this.adjustments || [];
 
 				const hasPurityBlend = adjustments.some(
@@ -2075,6 +2086,7 @@ class Step3TabReceiptReconciliation {
 		});
 
 		const finalAmount = totalReceipt - discount;
+		this.finalAmount = finalAmount < 0 ? 0 : finalAmount;
 		this.container.find("#wt-total-amount").text(finalAmount.toFixed(2));
 	}
 }
