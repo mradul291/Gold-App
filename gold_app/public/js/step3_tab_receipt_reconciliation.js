@@ -142,6 +142,15 @@ class Step3TabReceiptReconciliation {
 			// Optional local cache
 			this.total_discount = existingDiscount;
 
+			// ⭐ Load saved final total amount (total_payment_amount)
+			const savedTotalAmount = parseFloat(this.existing_txn.total_payment_amount) || 0;
+
+			// Store it internally for correct flow
+			this.finalAmount = savedTotalAmount;
+
+			// Update UI box if present
+			this.container.find("#wt-total-amount").text(savedTotalAmount.toFixed(2));
+
 			// ⭐ Load receipt_lines into UI only if saved earlier
 			if (this.existing_txn.receipt_lines && this.existing_txn.receipt_lines.length > 0) {
 				this.bagSummary = this.existing_txn.receipt_lines.map((r) => ({
@@ -262,6 +271,8 @@ class Step3TabReceiptReconciliation {
 		this.renderReceiptSection();
 		this.renderReconciliationSection();
 		this.renderAdjustmentsSection();
+		this.container.find("#wt-total-discount").val((this.total_discount || 0).toFixed(2));
+		this.container.find("#wt-total-amount").text((this.finalAmount || 0).toFixed(2));
 	}
 
 	renderReceiptSection() {
@@ -902,6 +913,7 @@ class Step3TabReceiptReconciliation {
 			.find(".save-continue-btn")
 			.off("click")
 			.on("click", async () => {
+				// 1️⃣ BLOCK IF ADJUSTMENTS WERE NEVER SAVED
 				if (!this.adjustmentsSaved) {
 					frappe.msgprint({
 						title: "Save Adjustments First",
@@ -911,6 +923,7 @@ class Step3TabReceiptReconciliation {
 					});
 					return;
 				}
+
 				const adjustments = this.adjustments || [];
 
 				const hasPurityBlend = adjustments.some(
@@ -918,6 +931,7 @@ class Step3TabReceiptReconciliation {
 				);
 				const hasItemReturn = adjustments.some((adj) => adj.type === "Item Return");
 
+				// 2️⃣ BLOCK IF RECONCILIATION IS NOT COMPLETE (ALL Δ = 0)
 				if (!this.isFullyReconciled() && !hasPurityBlend) {
 					frappe.msgprint({
 						title: "Reconciliation Incomplete",
@@ -929,6 +943,7 @@ class Step3TabReceiptReconciliation {
 				}
 
 				try {
+					// 3️⃣ PROCESS STOCK ENTRIES IF REQUIRED
 					if (hasPurityBlend) {
 						await this.callCreateMaterialReceiptAPI();
 					}
@@ -936,12 +951,11 @@ class Step3TabReceiptReconciliation {
 						await this.callCreateItemReturnStockEntryAPI();
 					}
 
+					// 4️⃣ CREATE SALES & DELIVERY
 					await this.callCreateSalesAndDeliveryAPI();
 
 					frappe.show_alert({
-						message: hasPurityBlend
-							? "Sales created successfully."
-							: "Sales created successfully.",
+						message: "Sales created successfully.",
 						indicator: "green",
 					});
 
