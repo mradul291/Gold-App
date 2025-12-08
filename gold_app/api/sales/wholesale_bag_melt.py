@@ -148,3 +148,129 @@ def get_bag_details(bag_id):
         "summary": summary,
         "items": items
     }
+
+# import frappe
+# from frappe.utils import flt
+
+# @frappe.whitelist()
+# def save_melt_assay_record(data):
+#     """
+#     Saves Melt & Assay Record.
+#     - Creates a new record if not exists for bag
+#     - Updates same record on subsequent saves
+#     - Accepts PARTIAL DATA (only fields sent will update)
+#     """
+
+#     if isinstance(data, str):
+#         data = frappe.parse_json(data)
+
+#     bag_id = data.get("source_bag")
+#     if not bag_id:
+#         frappe.throw("source_bag is required.")
+
+#     # 1️⃣ FIND EXISTING DOCUMENT FOR THIS BAG
+#     existing = frappe.db.get_value(
+#         "Melt And Assay Record",
+#         {"source_bag": bag_id},
+#         "name"
+#     )
+
+#     if existing:
+#         doc = frappe.get_doc("Melt And Assay Record", existing)
+#         is_new = False
+#     else:
+#         doc = frappe.new_doc("Melt And Assay Record")
+#         doc.source_bag = bag_id
+#         is_new = True
+
+#     # ============================================================
+#     # 2️⃣ UPDATE MAIN FIELDS (only if provided)
+#     # ============================================================
+
+#     simple_fields = [
+#         # Bag Summary
+#         "total_weight_g", "pure_gold_xau_g", "average_purity",
+#         "total_cost_basis", "cost_per_gram", "record_id", "record_date",
+
+#         # Melting
+#         "pre_melt_weight", "post_melt_weight", "weight_loss_g",
+#         "weight_loss_pct", "melting_cost_rm", "melting_date",
+
+#         # Assay
+#         "est_purity_from_bag", "actual_purity", "purity_variance",
+#         "actual_xau_g", "assay_cost_rm", "assay_date",
+
+#         # Refining
+#         "refine_to_9999", "target_purity", "post_refining_weight",
+#         "refining_cost_rm", "refining_date",
+
+#         # Buyer Info
+#         "buyer", "buyer_contact",
+
+#         # Sale Details
+#         "final_weight_g", "final_purity", "final_xau_g",
+#         "locked_rate_rm_per_xau", "gross_sale_value_rm", "payment_term",
+
+#         # Payments Summary
+#         "total_paid_rm", "balance_due_rm",
+
+#         # Metrics
+#         "metrics_pre_melt_weight_g", "metrics_post_melt_weight_g",
+#         "metrics_loss_g", "metrics_loss_pct", "metrics_est_purity",
+#         "metrics_actual_purity", "metrics_variance", "metrics_status",
+
+#         "xau_before_est", "xau_after_actual", "net_xau_change_g",
+#         "net_xau_change_pct", "analysis_text",
+
+#         "original_cost_rm", "total_cost_basis_rm", "gross_sale_value_rm",
+#         "hedge_pl_rm", "gross_margin_rm", "net_profit_rm",
+#         "gross_margin_pct", "net_profit_pct", "gross_margin_per_g",
+#         "net_profit_per_g",
+
+#         "insight_1", "insight_2", "insight_3",
+#     ]
+
+#     for field in simple_fields:
+#         if field in data:
+#             doc.set(field, data.get(field))
+
+#     # ============================================================
+#     # 3️⃣ UPDATE CHILD TABLE — Bag Items
+#     # ============================================================
+#     if "bag_items" in data:
+#         doc.set("bag_items", [])
+#         for row in data["bag_items"]:
+#             doc.append("bag_items", {
+#                 "purity": row.get("purity"),
+#                 "weight_g": row.get("weight_g"),
+#                 "xau_g": row.get("xau_g"),
+#                 "cost_rm": row.get("cost_rm"),
+#                 "cost_per_g_rm": row.get("cost_per_g_rm")
+#             })
+
+#     # ============================================================
+#     # 4️⃣ UPDATE CHILD TABLE — Payments
+#     # ============================================================
+#     if "payments" in data:
+#         doc.set("payments", [])
+#         for p in data["payments"]:
+#             doc.append("payments", {
+#                 "payment_date": p.get("payment_date"),
+#                 "payment_type": p.get("payment_type"),
+#                 "amount_rm": p.get("amount_rm"),
+#                 "reference": p.get("reference")
+#             })
+
+#     # ============================================================
+#     # 5️⃣ SAVE DOCUMENT
+#     # ============================================================
+#     doc.save(ignore_permissions=True)
+
+#     frappe.db.commit()
+
+#     return {
+#         "status": "success",
+#         "docname": doc.name,
+#         "is_new": is_new,
+#         "message": "Record saved successfully"
+#     }

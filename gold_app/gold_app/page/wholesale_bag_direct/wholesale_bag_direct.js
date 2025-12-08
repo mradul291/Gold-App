@@ -188,6 +188,20 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				$("#customerInput").val(d.customer || "");
 				$("#idNumberInput").val(d.customer_id || "");
 
+				// -----------------------------------------------------
+				// FIX: Restore selected customer for Sales Invoice flow
+				// -----------------------------------------------------
+				selectedCustomerId = d.customer_id;
+
+				if (!allCustomersRaw.find((c) => c.name === d.customer_id)) {
+					allCustomersRaw.unshift({
+						name: d.customer_id,
+						customer_name: d.customer,
+						id_number: d.customer_id,
+						customer_group: d.customer_type || "Wholesale",
+					});
+				}
+
 				// ---------------------------
 				// 3. Restore DATE & TIME
 				// ---------------------------
@@ -222,6 +236,26 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 						.val(item.description || "");
 
 					$tr.find(".wbd-weight").val(item.weight || 0);
+
+					// FIX: Recalculate dependent fields exactly like normal flow
+					const weight = parseFloat(item.weight) || 0;
+					const avco = parseFloat(item.avco_rate) || 0;
+					const sell = parseFloat(item.sell_rate) || 0;
+
+					// amount = weight * avco
+					$tr.find("input[type='number']")
+						.eq(3)
+						.val((weight * avco).toFixed(2));
+
+					// profit per gram = sell - avco
+					$tr.find("input[type='number']")
+						.eq(4)
+						.val((sell - avco).toFixed(2));
+
+					// total profit
+					$tr.find("input[type='number']")
+						.eq(5)
+						.val(((sell - avco) * weight).toFixed(2));
 
 					const nums = $tr.find("input[type='number']");
 					nums.eq(1).val(item.avco_rate || 0);
@@ -369,10 +403,6 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		getPaymentPageRefs
 	);
 
-	if (RESUME_LOG_ID) {
-		loadResumeData(RESUME_LOG_ID);
-	}
-
 	$("#tab-sales-details").on("click", function (e) {
 		e.preventDefault();
 		$(this).addClass("active");
@@ -483,6 +513,10 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				updateDocumentTotals();
 				recalculateUIBagUsage();
 				updateBagOverviewUI();
+
+				if (RESUME_LOG_ID) {
+					loadResumeData(RESUME_LOG_ID);
+				}
 			}
 		},
 	});
@@ -1149,6 +1183,8 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 						message: "Sale Saved: " + r.message.name,
 						indicator: "green",
 					});
+					// UX Hint: Ask user to create invoice before payment
+					frappe.msgprint("Please create the invoice before making payments.");
 
 					// Run callback if provided (used for auto-save)
 					if (afterSave) afterSave();
@@ -1346,11 +1382,33 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 					.text("Create Invoice");
 				if (r.message && r.message.status === "success") {
 					const salesInvoice = r.message.sales_invoice;
+
+					// Save invoice in current session
 					currentSalesInvoiceId = salesInvoice;
+
+					// IMPORTANT – update global references for Payment Entry
+					window.WBDRefs.invoice_id = salesInvoice;
+
+					window.WBDRefs.total_selling_amount =
+						parseFloat(
+							$("#sales-details-tab .wbd-totals-card .wbd-totals-row")
+								.eq(3)
+								.find("span")
+								.eq(1)
+								.text()
+								.replace(/[^\d.]/g, "")
+						) || 0;
+
+					// Force Payment Tab to use fresh totals
+					paymentEntryTab.total = window.WBDRefs.total_selling_amount;
+					paymentEntryTab.paid = 0;
+					paymentEntryTab.updateSummary();
+
 					frappe.show_alert({
 						message: "Sales Invoice Created: " + salesInvoice,
 						indicator: "green",
 					});
+
 					setTimeout(() => {
 						$("#tab-payment-entry").click();
 					}, 300);
