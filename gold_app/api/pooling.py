@@ -188,6 +188,7 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
     to Bag 1 - Wholesale - AGSB via Material Transfer Stock Entry.
     """
     data = json.loads(purity_data)
+    posting_date = frappe.form_dict.get("posting_date")  # None or 'YYYY-MM-DD'
 
     if not pool_name:
         frappe.throw(_("Pool name is required"))
@@ -217,7 +218,8 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
                     se = frappe.new_doc("Stock Entry")
                     se.stock_entry_type = "Material Transfer"
                     se.company = company
-                    se.posting_date = nowdate()
+                    se.set_posting_time = 1
+                    se.posting_date = posting_date or nowdate()
                     se.posting_time = nowtime()
 
                     se.append("items", {
@@ -331,7 +333,8 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         se = frappe.new_doc("Stock Entry")
         se.stock_entry_type = "Break Item"
         se.company = company
-        se.posting_date = nowdate()
+        se.set_posting_time = 1
+        se.posting_date = posting_date or nowdate()
         se.posting_time = nowtime()
         se.source_item = source_item_code
         se.source_item_warehouse = source_warehouse
@@ -410,7 +413,8 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
             se_transfer = frappe.new_doc("Stock Entry")
             se_transfer.stock_entry_type = "Material Transfer"
             se_transfer.company = company
-            se_transfer.posting_date = nowdate()
+            se_transfer.set_posting_time = 1
+            se_transfer.posting_date = posting_date or nowdate()
             se_transfer.posting_time = nowtime()
             se_transfer.append("items", {
                 "item_code": source_item,

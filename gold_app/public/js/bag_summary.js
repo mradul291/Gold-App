@@ -1,123 +1,125 @@
-// public/js/bag_summary.js
-
 window.WBMComponents = window.WBMComponents || {};
 
 window.WBMComponents.bag_summary = function ($mount, state) {
-	const summary = state.bag_summary;
-	const items = state.bag_items || [];
+	// static demo data to match reference UI
+	const rows = [
+		{
+			purity: "9999",
+			weight: "100.00 g",
+			avco: "RM 90.00",
+			cost: "RM 9,000.00",
+			xau: "999.90 g",
+			xau_avco: "RM 9.00",
+		},
+		{
+			purity: "916",
+			weight: "100.00 g",
+			avco: "RM 80.00",
+			cost: "RM 8,000.00",
+			xau: "91.60 g",
+			xau_avco: "RM 87.34",
+		},
+		{
+			purity: "750",
+			weight: "100.00 g",
+			avco: "RM 65.00",
+			cost: "RM 6,500.00",
+			xau: "75.00 g",
+			xau_avco: "RM 86.67",
+		},
+	];
 
-	const formatNumber = (val, decimals) => {
-		if (val === null || val === undefined || val === "") return "";
-		const n = typeof val === "number" ? val : parseFloat(String(val));
-		return n.toLocaleString("en-MY", {
-			minimumFractionDigits: decimals,
-			maximumFractionDigits: decimals,
-		});
-	};
-
-	const formatRM = (val) => {
-		if (val === null || val === undefined || val === "") return "";
-		const n = typeof val === "number" ? val : parseFloat(String(val));
-		return (
-			"RM" +
-			n.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			})
-		);
-	};
-
-	// INNER UI ONLY — NO HEADER, NO TABS, NO PAGE SHELL
 	const html = `
-        <div>
+        <div class="wbm-bag-summary-root">
+            <!-- Bag contents table -->
+            <div class="wbm-section-header">Bag Contents</div>
 
-            <!-- Section title -->
-            <div class="wbm-section-title">BAG SUMMARY - ${summary.source_bag}</div>
-
-            <!-- Summary chips -->
-            <div class="wbm-summary-strip">
-
-                <div class="wbm-summary-chip">
-                    <div class="wbm-chip-label">Source Bag</div>
-                    <div class="wbm-chip-value wbm-chip-link">${summary.source_bag}</div>
+            <div class="wbm-bag-card">
+                <div class="wbm-table-header-row">
+                    <div class="wbm-col wbm-col-purity">PURITY</div>
+                    <div class="wbm-col wbm-col-weight text-right">WEIGHT</div>
+                    <div class="wbm-col wbm-col-avco text-right">AVCO</div>
+                    <div class="wbm-col wbm-col-cost text-right">COST</div>
+                    <div class="wbm-col wbm-col-xau text-right">XAU</div>
+                    <div class="wbm-col wbm-col-xauavco text-right">XAU AVCO</div>
                 </div>
 
-                <div class="wbm-summary-chip">
-                    <div class="wbm-chip-label">Total Weight</div>
-                    <div class="wbm-chip-value">${formatNumber(summary.total_weight_g, 0)}g</div>
-                </div>
+                ${rows
+					.map(
+						(r) => `
+                    <div class="wbm-table-data-row">
+                        <div class="wbm-col wbm-col-purity">
+                            <span class="wbm-pill">${r.purity}</span>
+                        </div>
+                        <div class="wbm-col wbm-col-weight text-right">${r.weight}</div>
+                        <div class="wbm-col wbm-col-avco text-right">${r.avco}</div>
+                        <div class="wbm-col wbm-col-cost text-right">${r.cost}</div>
+                        <div class="wbm-col wbm-col-xau text-right">${r.xau}</div>
+                        <div class="wbm-col wbm-col-xauavco text-right">${r.xau_avco}</div>
+                    </div>
+                `
+					)
+					.join("")}
 
-                <div class="wbm-summary-chip">
-                    <div class="wbm-chip-label">Pure Gold (XAU)</div>
-                    <div class="wbm-chip-value">${formatNumber(summary.pure_gold_xau_g, 2)}g</div>
+                <div class="wbm-table-total-row">
+                    <div class="wbm-col wbm-col-purity wbm-total-label">TOTAL</div>
+                    <div class="wbm-col wbm-col-weight text-right wbm-total-strong">300.00 g</div>
+                    <div class="wbm-col wbm-col-avco text-right">—</div>
+                    <div class="wbm-col wbm-col-cost text-right wbm-total-blue">RM 23,500.00</div>
+                    <div class="wbm-col wbm-col-xau text-right wbm-total-strong">1166.50 g</div>
+                    <div class="wbm-col wbm-col-xauavco text-right wbm-total-strong">RM 20.15</div>
                 </div>
-
-                <div class="wbm-summary-chip">
-                    <div class="wbm-chip-label">Average Purity</div>
-                    <div class="wbm-chip-value">${formatNumber(summary.average_purity, 1)}</div>
-                </div>
-
-                <div class="wbm-summary-chip">
-                    <div class="wbm-chip-label">Total Cost Basis</div>
-                    <div class="wbm-chip-value">${formatRM(summary.total_cost_basis)}</div>
-                </div>
-
-                <div class="wbm-summary-chip">
-                    <div class="wbm-chip-label">Cost per Gram</div>
-                    <div class="wbm-chip-value">RM${formatNumber(summary.cost_per_gram, 2)}</div>
-                </div>
-
             </div>
 
-            <!-- Items in bag -->
-            <div class="wbm-subsection-title">ITEMS IN BAG</div>
+            <!-- Summary cards -->
+            <div class="wbm-summary-wrapper">
+                <div class="wbm-summary-header">Summary</div>
 
-            <div class="wbm-table-wrapper">
-                <table class="table wbm-items-table">
-                    <thead>
-                        <tr>
-                            <th>PURITY</th>
-                            <th class="text-right">WEIGHT (G)</th>
-                            <th class="text-right">XAU (G)</th>
-                            <th class="text-right">COST (RM)</th>
-                            <th class="text-right">COST/G (RM)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${items
-							.map(
-								(row) => `
-                            <tr>
-                                <td>${row.purity}</td>
-                                <td class="text-right">${formatNumber(row.weight_g, 0)}</td>
-                                <td class="text-right">${formatNumber(row.xau_g, 2)}</td>
-                                <td class="text-right">${formatRM(row.cost_rm)}</td>
-                                <td class="text-right">${formatNumber(row.cost_per_g_rm, 2)}</td>
-                            </tr>
-                        `
-							)
-							.join("")}
-                    </tbody>
-                </table>
+                <div class="wbm-summary-grid">
+                    <div class="wbm-summary-card">
+                        <div class="wbm-summary-label">Total Weight</div>
+                        <div class="wbm-summary-main">300.00</div>
+                        <div class="wbm-summary-sub">grams</div>
+                    </div>
+
+                    <div class="wbm-summary-card">
+                        <div class="wbm-summary-label">Avg Purity</div>
+                        <div class="wbm-summary-main">388.83</div>
+                        <div class="wbm-summary-sub">percent</div>
+                    </div>
+
+                    <div class="wbm-summary-card">
+                        <div class="wbm-summary-label">Total XAU</div>
+                        <div class="wbm-summary-main">1166.50</div>
+                        <div class="wbm-summary-sub">grams</div>
+                    </div>
+
+                    <div class="wbm-summary-card">
+                        <div class="wbm-summary-label">Total Cost</div>
+                        <div class="wbm-summary-main">23,500</div>
+                        <div class="wbm-summary-sub">ringgit</div>
+                    </div>
+
+                    <div class="wbm-summary-card">
+                        <div class="wbm-summary-label">XAU AVCO</div>
+                        <div class="wbm-summary-main">20.15</div>
+                        <div class="wbm-summary-sub">per gram</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Bottom footer -->
             <div class="wbm-main-footer">
                 <button class="btn btn-default wbm-back-btn">← Back to Bags</button>
             </div>
-
         </div>
     `;
 
-	// Mount UI
 	$mount.html(html);
 
-	// Back button handler
 	$mount.find(".wbm-back-btn").on("click", function () {
 		if (state.onBackToBags) state.onBackToBags();
 	});
 
-	// Save button handler (SAVE is in the global header)
 	$(".wbm-save-btn")
 		.off("click")
 		.on("click", function () {

@@ -1575,6 +1575,7 @@ class Step3TabReceiptReconciliation {
 			items: JSON.stringify(items),
 			company: this.props.company || null,
 			discount_amount: parseFloat(this.container.find("#wt-total-discount").val() || 0),
+			posting_date: this.props.sale_date,
 		};
 
 		console.log("Calling create_sales_invoice API with payload:", payload);

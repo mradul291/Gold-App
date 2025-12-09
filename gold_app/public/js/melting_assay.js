@@ -1,218 +1,164 @@
-// public/js/melting_assay.js
-
 window.WBMComponents = window.WBMComponents || {};
 
 window.WBMComponents.melting_assay = function ($mount, state) {
-	const data = state.melting_assay || {
-		pre_melt_weight: 740,
-		post_melt_weight: "",
-		weight_loss_g: "",
-		weight_loss_pct: "",
-		melting_cost_rm: "",
-		melting_date: "",
-		est_purity_from_bag: state.bag_summary?.average_purity || 903.5,
-		purity_variance: "",
-		actual_purity: "",
-		actual_xau_g: "",
-		assay_cost_rm: "",
-		assay_date: "",
-		refine_to_9999: false,
-		target_purity: 999.9,
-		post_refining_weight: "",
-		refining_cost_rm: "",
-		refining_date: "",
-	};
-
-	const formatNumber = (val, decimals) => {
-		if (val === null || val === undefined || val === "") return "";
-		const n = typeof val === "number" ? val : parseFloat(String(val));
-		return n.toLocaleString("en-MY", {
-			minimumFractionDigits: decimals,
-			maximumFractionDigits: decimals,
-		});
-	};
-
 	const html = `
-        <div>
+        <div class="wbm-melt-root">
+            <!-- Melting Details -->
+            <div class="wbm-section-title">Melting Details</div>
 
-            <!-- MELTING DETAILS -->
-            <div class="ma-section-header">
-                <span>MELTING DETAILS</span>
-            </div>
-
-            <div class="ma-section-card">
-                <div class="ma-two-col">
-
-                    <!-- Left column -->
-                    <div class="ma-col">
-                        <div class="ma-field">
-                            <label>Pre-Melt Weight (g)</label>
-                            <input type="text" class="ma-input" value="${formatNumber(
-								data.pre_melt_weight,
-								2
-							)}" readonly>
-                        </div>
-
-                        <div class="ma-field">
-                            <label>Weight Loss (g)</label>
-                            <input type="text" class="ma-input ma-input-readonly" placeholder="Auto-calculated" readonly>
-                        </div>
-
-                        <div class="ma-field">
-                            <label>Melting Cost (RM)</label>
-                            <input type="text" class="ma-input" placeholder="Enter melting cost">
+            <div class="wbm-card wbm-melt-card">
+                <div class="wbm-melt-row wbm-melt-row--two">
+                    <div class="wbm-field-block">
+                        <div class="wbm-field-label">Weight Before Melting</div>
+                        <div class="wbm-input-wrapper">
+                            <input type="text" class="wbm-input" value="300" />
+                            <span class="wbm-input-suffix">grams</span>
                         </div>
                     </div>
 
-                    <!-- Right column -->
-                    <div class="ma-col">
-                        <div class="ma-field">
-                            <label>Post-Melt Weight (g)</label>
-                            <input type="text" class="ma-input" placeholder="Enter post-melt weight">
+                    <div class="wbm-field-block">
+                        <div class="wbm-field-label">Weight After Melting</div>
+                        <div class="wbm-input-wrapper">
+                            <input type="text" class="wbm-input" value="295" />
+                            <span class="wbm-input-suffix">grams</span>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="ma-field">
-                            <label>Weight Loss (%)</label>
-                            <input type="text" class="ma-input ma-input-readonly" placeholder="Auto-calculated" readonly>
-                        </div>
-
-                        <div class="ma-field ma-field-inline">
-                            <div class="ma-field-full">
-                                <label>Melting Date</label>
-                                <input type="text" class="ma-input" placeholder="mm/dd/yyyy">
-                            </div>
-                            <div class="ma-date-icon">
-                                <i class="fa fa-calendar"></i>
-                            </div>
+                <div class="wbm-melt-row">
+                    <div class="wbm-field-block wbm-field-block--wide">
+                        <div class="wbm-field-label">Melting Cost</div>
+                        <div class="wbm-input-wrapper">
+                            <input type="text" class="wbm-input" value="150" />
+                            <span class="wbm-input-suffix">RM</span>
                         </div>
                     </div>
 
+                    <div class="wbm-payment-group">
+                        <label class="wbm-radio-label">
+                            <input type="radio" name="melt_payment_mode" checked />
+                            <span class="wbm-radio-display"></span>
+                            <span class="wbm-radio-text">Cash</span>
+                        </label>
+                        <label class="wbm-radio-label">
+                            <input type="radio" name="melt_payment_mode" />
+                            <span class="wbm-radio-display"></span>
+                            <span class="wbm-radio-text">Transfer</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="wbm-loss-strip">
+                    <div class="wbm-loss-item">
+                        <div class="wbm-loss-label">Weight Loss</div>
+                        <div class="wbm-loss-main wbm-loss-main--red">5.00 g</div>
+                    </div>
+                    <div class="wbm-loss-item">
+                        <div class="wbm-loss-label">XAU Loss</div>
+                        <div class="wbm-loss-main">19.44 g</div>
+                    </div>
+                    <div class="wbm-loss-item">
+                        <div class="wbm-loss-label">Loss Percentage</div>
+                        <div class="wbm-loss-main wbm-loss-main--red">1.67%</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- ASSAY DETAILS -->
-            <div class="ma-section-header ma-section-header-spacing">
-                <span>ASSAY DETAILS</span>
-            </div>
+            <!-- Assay Results -->
+            <div class="wbm-section-title wbm-assay-title">Assay Results</div>
 
-            <div class="ma-section-card">
-                <div class="ma-two-col">
-
-                    <!-- Left column -->
-                    <div class="ma-col">
-                        <div class="ma-field">
-                            <label>Estimated Purity (from bag)</label>
-                            <input type="text" class="ma-input" value="${formatNumber(
-								data.est_purity_from_bag,
-								1
-							)}" readonly>
-                        </div>
-
-                        <div class="ma-field">
-                            <label>Purity Variance (± difference)</label>
-                            <input type="text" class="ma-input ma-input-readonly" placeholder="Auto-calculated" readonly>
-                        </div>
-
-                        <div class="ma-field">
-                            <label>Assay Cost (RM)</label>
-                            <input type="text" class="ma-input" placeholder="Enter assay cost">
+            <div class="wbm-card wbm-assay-card">
+                <!-- row 1 -->
+                <div class="wbm-assay-row">
+                    <div class="wbm-assay-field">
+                        <div class="wbm-assay-label">Current Avg Purity</div>
+                        <div class="wbm-assay-box wbm-assay-box--neutral">
+                            <span class="wbm-assay-value">388.83%</span>
                         </div>
                     </div>
 
-                    <!-- Right column -->
-                    <div class="ma-col">
-                        <div class="ma-field">
-                            <label>Actual Purity (from Assay)</label>
-                            <input type="text" class="ma-input" placeholder="Enter actual purity">
+                    <div class="wbm-assay-field">
+                        <div class="wbm-assay-label wbm-assay-label--right">
+                            Assay Purity
+                            <span class="wbm-assay-label-suffix">%</span>
                         </div>
-
-                        <div class="ma-field">
-                            <label>Actual XAU (g)</label>
-                            <input type="text" class="ma-input ma-input-readonly" placeholder="Auto-calculated" readonly>
-                        </div>
-
-                        <div class="ma-field ma-field-inline">
-                            <div class="ma-field-full">
-                                <label>Assay Date</label>
-                                <input type="text" class="ma-input" placeholder="mm/dd/yyyy">
-                            </div>
-                            <div class="ma-date-icon">
-                                <i class="fa fa-calendar"></i>
-                            </div>
+                        <div class="wbm-input-wrapper wbm-assay-input-wrapper">
+                            <input type="text" class="wbm-input wbm-input--right" value="92.5" />
                         </div>
                     </div>
-
                 </div>
-            </div>
 
-            <!-- REFINING (Optional) -->
-            <div class="ma-section-header ma-section-header-spacing">
-                <span>REFINING (Optional)</span>
-            </div>
-
-            <div class="ma-refine-toggle">
-                <label class="ma-checkbox-label">
-                    <input type="checkbox" class="ma-checkbox">
-                    <span>Refine to 999.9 Purity</span>
-                </label>
-            </div>
-
-            <div class="ma-section-card">
-                <div class="ma-two-col">
-
-                    <!-- Left column -->
-                    <div class="ma-col">
-                        <div class="ma-field">
-                            <label>Target Purity</label>
-                            <input type="text" class="ma-input" value="${formatNumber(
-								data.target_purity,
-								1
-							)}">
-                        </div>
-
-                        <div class="ma-field">
-                            <label>Refining Cost (RM)</label>
-                            <input type="text" class="ma-input" placeholder="Enter refining cost">
+                <!-- row 2 -->
+                <div class="wbm-assay-row">
+                    <div class="wbm-assay-field">
+                        <div class="wbm-assay-label">Purity Variance</div>
+                        <div class="wbm-assay-box wbm-assay-box--danger">
+                            <span class="wbm-assay-value wbm-assay-value--danger">-296.33%</span>
                         </div>
                     </div>
 
-                    <!-- Right column -->
-                    <div class="ma-col">
-                        <div class="ma-field">
-                            <label>Post-Refining Weight (g)</label>
-                            <input type="text" class="ma-input" placeholder="If weight changes">
-                        </div>
-
-                        <div class="ma-field ma-field-inline">
-                            <div class="ma-field-full">
-                                <label>Refining Date</label>
-                                <input type="text" class="ma-input" placeholder="mm/dd/yyyy">
-                            </div>
-                            <div class="ma-date-icon">
-                                <i class="fa fa-calendar"></i>
-                            </div>
+                    <div class="wbm-assay-field">
+                        <div class="wbm-assay-label">XAU Weight Variance</div>
+                        <div class="wbm-assay-box wbm-assay-box--danger">
+                            <span class="wbm-assay-value wbm-assay-value--danger">-874.18 g</span>
                         </div>
                     </div>
-
                 </div>
-            </div>
-			 <div class="ma-footer-bar">
-                <button class="btn btn-default wbm-back-btn">← Back to Bags</button>
+
+                <!-- row 3 -->
+                <div class="wbm-assay-row">
+                    <div class="wbm-assay-field">
+                        <div class="wbm-assay-label">Actual XAU Weight</div>
+                        <div class="wbm-assay-box wbm-assay-box--info">
+                            <span class="wbm-assay-value wbm-assay-value--link">272.88 g</span>
+                        </div>
+                    </div>
+
+                    <div class="wbm-assay-field">
+                        <div class="wbm-assay-label wbm-assay-label--right">
+                            Assay Sample Weight
+                            <span class="wbm-assay-label-suffix">grams</span>
+                        </div>
+                        <div class="wbm-input-wrapper wbm-assay-input-wrapper">
+                            <input type="text" class="wbm-input wbm-input--right" value="2" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- net xau strip -->
+                <div class="wbm-assay-net-strip">
+                    <div class="wbm-assay-net-label">Net XAU (Sellable)</div>
+                    <div class="wbm-assay-net-value">271.02 g</div>
+                </div>
+
+                <!-- assay cost row -->
+                <div class="wbm-assay-cost-row">
+                    <div class="wbm-field-block wbm-field-block--wide">
+                        <div class="wbm-field-label">Assay Cost</div>
+                        <div class="wbm-input-wrapper">
+                            <input type="text" class="wbm-input" value="100" />
+                            <span class="wbm-input-suffix">RM</span>
+                        </div>
+                    </div>
+
+                    <div class="wbm-payment-group">
+                        <label class="wbm-radio-label">
+                            <input type="radio" name="assay_payment_mode" />
+                            <span class="wbm-radio-display"></span>
+                            <span class="wbm-radio-text">Cash</span>
+                        </label>
+                        <label class="wbm-radio-label">
+                            <input type="radio" name="assay_payment_mode" checked />
+                            <span class="wbm-radio-display"></span>
+                            <span class="wbm-radio-text">Transfer</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
 	$mount.html(html);
 
-	// Back button handler
-	$mount.find(".wbm-back-btn").on("click", function () {
-		if (state.onBackToBags) state.onBackToBags();
-	});
-
-	// (Optional) keep global SAVE wiring
-	$(".wbm-save-btn")
-		.off("click")
-		.on("click", function () {
-			if (state.onSaveRecord) state.onSaveRecord();
-		});
+	// hook state / events later if needed
 };

@@ -151,28 +151,28 @@ function showBagSummaryUI() {
         <div class="wbm-page-shell">
 
             <!-- HEADER -->
-            <div class="wbm-top-bar">
-                <div class="wbm-top-bar-inner">
-                    <div class="wbm-top-title-block">
-                        <div class="wbm-top-title">MELT & ASSAY RECORD</div>
-                        <div class="wbm-top-sub">
-                            Record ID: ${WBMState.bag_summary.record_id} |
-                            Date: ${WBMState.bag_summary.record_date} |
-                            Selected Bag: ${WBMState.selected_bag}
+            <div class="wbm-header">
+                <div class="wbm-header-inner">
+                    <div class="wbm-header-left">
+                        <div class="wbm-record-title">Melt & Assay Sales</div>
+                        <div class="wbm-record-meta">
+                            <a class="wbm-record-id">
+                                ${WBMState.bag_summary.record_id || "-"}
+                            </a>
+                            <span class="wbm-dot-sep">•</span>
+                            <span class="wbm-record-date-label">Sale Date:</span>
+                            <span class="wbm-record-date-value">
+                                ${WBMState.bag_summary.record_date || "-"}
+                            </span>
                         </div>
-                    </div>
-
-                    <div class="wbm-top-actions">
-                        <span class="wbm-status-pill wbm-status-draft">DRAFT</span>
-                        <button class="wbm-save-btn">SAVE</button>
                     </div>
                 </div>
 
                 <!-- TABS -->
-                <div class="wbm-tabs-inner">
+                <div class="wbm-tabs-bar">
                     <div class="wbm-tab-item" data-tab="bag_summary">Bag Summary</div>
                     <div class="wbm-tab-item" data-tab="melting_assay">Melting & Assay</div>
-                    <div class="wbm-tab-item" data-tab="buyer_sale">Buyer & Sale</div>
+                    <div class="wbm-tab-item" data-tab="buyer_sale">Sales Detail</div>
                     <div class="wbm-tab-item" data-tab="metrics">Metrics</div>
                 </div>
             </div>
@@ -185,11 +185,10 @@ function showBagSummaryUI() {
         </div>
     `);
 
-	// Load default tab (Bag Summary)
+	// default tab
 	loadTabContent("bag_summary");
 	$(`.wbm-tab-item[data-tab="bag_summary"]`).addClass("wbm-tab-active");
 
-	// Tab switching logic
 	$(".wbm-tab-item").on("click", function () {
 		$(".wbm-tab-item").removeClass("wbm-tab-active");
 		$(this).addClass("wbm-tab-active");

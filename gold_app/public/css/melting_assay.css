@@ -1,139 +1,296 @@
-/* White card under the fixed header/tabs */
-.ma-main-card {
-    max-width: 1180px;
-    margin: 0 auto;
-    background-color: #ffffff;
-    border-radius: 4px;
-    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.04),
-        0 10px 24px rgba(15, 23, 42, 0.08);
-    padding: 22px 26px 22px;
+.wbm-melt-root {
+    padding: 18px 24px 24px;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #1f2933;
+    color: #111827;
 }
 
-/* Section headers (MELTING DETAILS, ASSAY DETAILS) */
-.ma-section-header {
-    font-size: 12px;
+/* section title */
+.wbm-section-title {
+    font-size: 14px;
     font-weight: 600;
-    color: #4b5563;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 6px;
-}
-
-.ma-section-header-spacing {
-    margin-top: 28px;
-}
-
-/* Section card border & background */
-.ma-section-card {
-    margin-top: 12px;
-    border-radius: 4px;
-    border: 1px solid #e5e7eb;
-    background-color: #fbfdff;
-    padding: 16px 18px 14px;
-}
-
-/* Two-column layout */
-.ma-two-col {
-    display: flex;
-    gap: 40px;
-}
-
-.ma-col {
-    flex: 1 1 0;
-}
-
-/* Fields */
-.ma-field {
+    color: #111827;
     margin-bottom: 14px;
 }
 
-.ma-field label {
-    display: block;
+/* white cards */
+.wbm-card.wbm-melt-card,
+.wbm-card.wbm-assay-card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(209, 213, 219, 0.7);
+    padding: 18px 20px 16px;
+}
+
+/* generic rows (melting) */
+.wbm-melt-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.wbm-melt-row--two {
+    margin-bottom: 18px;
+}
+
+/* form blocks */
+.wbm-field-block {
+    flex: 1 1 0;
+}
+
+.wbm-field-block--wide {
+    flex: 2 1 0;
+}
+
+/* labels */
+.wbm-field-label {
     font-size: 11px;
     font-weight: 500;
     color: #6b7280;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
-.ma-input {
+/* input + suffix */
+.wbm-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wbm-input {
     width: 100%;
-    border-radius: 3px;
-    border: 1px solid #d1d5db;
-    padding: 7px 10px;
-    font-size: 12px;
+    height: 38px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    padding: 0 70px 0 10px;
+    font-size: 13px;
     color: #111827;
+    outline: none;
     background-color: #ffffff;
 }
 
-.ma-input::placeholder {
+.wbm-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+.wbm-input-suffix {
+    position: absolute;
+    right: 10px;
+    font-size: 11px;
     color: #9ca3af;
 }
 
-/* Highlighted readonly rows (green border like screenshot) */
-.ma-input-readonly {
-    background-color: #f3faf6;
-    border-color: #16a34a;
+/* right aligned numeric input (assay card) */
+.wbm-input--right {
+    text-align: right;
+    padding-right: 10px;
+}
+
+/* payment mode buttons */
+.wbm-payment-group {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: auto;
+    margin-bottom: 2px;
+}
+
+.wbm-radio-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background-color: #ffffff;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.wbm-radio-label input {
+    display: none;
+}
+
+.wbm-radio-display {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.wbm-radio-label input:checked + .wbm-radio-display {
+    border-color: #2563eb;
+}
+
+.wbm-radio-label input:checked + .wbm-radio-display::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 999px;
+    background-color: #2563eb;
+}
+
+.wbm-radio-text {
     color: #374151;
 }
 
-/* Melting date with icon to right */
-.ma-field-inline {
+/* loss strip */
+.wbm-loss-strip {
+    margin-top: 16px;
+    border-radius: 8px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.wbm-loss-item {
     display: flex;
-    align-items: stretch;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
-.ma-field-full {
-    flex: 1 1 auto;
-}
-
-.ma-date-icon {
-    width: 34px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 1px solid #d1d5db;
-    border-left: none;
-    border-radius: 0 3px 3px 0;
-    background-color: #ffffff;
-    color: #6b7280;
-    font-size: 14px;
-}
-
-/* Refining toggle row */
-.ma-refine-toggle {
-    margin-top: 10px;
+.wbm-loss-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #b91c1c;
     margin-bottom: 4px;
 }
 
-.ma-checkbox-label {
+.wbm-loss-main {
+    font-size: 18px;
+    font-weight: 700;
+    color: #374151;
+}
+
+.wbm-loss-main--red {
+    color: #b91c1c;
+}
+
+/* Assay title spacing */
+.wbm-assay-title {
+    margin-top: 20px;
+}
+
+/* Assay card layout */
+.wbm-assay-card {
+    margin-top: 4px;
+}
+
+.wbm-assay-row {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.wbm-assay-field {
+    flex: 1 1 0;
+}
+
+/* labels in assay rows */
+.wbm-assay-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.wbm-assay-label--right {
     display: flex;
     align-items: center;
-    font-size: 12px;
-    color: #111827;
-    gap: 6px;
+    justify-content: space-between;
 }
 
-.ma-checkbox {
-    width: 14px;
-    height: 14px;
+.wbm-assay-label-suffix {
+    font-size: 11px;
+    color: #6b7280;
+    margin-left: 4px;
 }
-/* Footer Back button (aligned like other tabs) */
-.ma-footer-bar {
-    margin-top: 14px;
+
+/* static value boxes */
+.wbm-assay-box {
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    padding: 9px 12px;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    min-height: 38px;
 }
 
-.ma-footer-bar .wbm-back-btn {
-    font-size: 12px;
-    color: #374151;
-    border-radius: 4px;
-    padding: 6px 18px;
-    background-color: #f3f4f6;
-    border: 1px solid #d1d5db;
+.wbm-assay-box--neutral {
+    background-color: #f9fafb;
 }
 
-.ma-footer-bar .wbm-back-btn:hover {
-    background-color: #e5e7eb;
+.wbm-assay-box--danger {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+.wbm-assay-box--info {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+/* assay values */
+.wbm-assay-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.wbm-assay-value--danger {
+    color: #b91c1c;
+}
+
+.wbm-assay-value--link {
+    color: #1d4ed8;
+}
+
+/* assay input wrapper aligns height with static boxes */
+.wbm-assay-input-wrapper .wbm-input {
+    height: 38px;
+}
+
+/* net XAU strip */
+.wbm-assay-net-strip {
+    margin-top: 2px;
+    margin-bottom: 18px;
+    border-radius: 8px;
+    background-color: #ecfdf3;
+    border: 1px solid #bbf7d0;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.wbm-assay-net-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.wbm-assay-net-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #16a34a;
+}
+
+/* assay cost row at bottom */
+.wbm-assay-cost-row {
+    margin-top: 4px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
 }

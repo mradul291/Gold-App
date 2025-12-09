@@ -8,6 +8,7 @@ from erpnext.controllers.accounts_controller import (
     get_advance_journal_entries,
     get_advance_payment_entries_for_regional,
 )
+from frappe.utils import nowdate
 
 @frappe.whitelist()
 def get_all_bag_overview():
@@ -200,13 +201,14 @@ def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_
     }
     
 @frappe.whitelist()
-def create_sales_invoice(customer, items, discount_amount=0, company=None):
+def create_sales_invoice(customer, items, discount_amount=0, company=None, posting_date=None):
     import json
 
     if not company:
         company = frappe.defaults.get_user_default("Company")
 
     items_list = json.loads(items)
+    posting_date = posting_date or nowdate()
 
     si_items = []
     for i in items_list:
@@ -228,7 +230,8 @@ def create_sales_invoice(customer, items, discount_amount=0, company=None):
         "customer": customer,
         "company": company,
         "discount_amount": flt(discount_amount),
-        "posting_date": frappe.utils.nowdate(),
+        "set_posting_time": 1,
+        "posting_date": posting_date,
         "update_stock": 1,
         "items": si_items
     })
@@ -269,7 +272,7 @@ def create_sales_invoice(customer, items, discount_amount=0, company=None):
     }
 
 @frappe.whitelist()
-def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount):
+def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount, posting_date=None):
  
     try:
         if not sales_invoice_name:
@@ -295,6 +298,8 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
         
         elif si.docstatus != 1:
             frappe.throw("Sales Invoice must be Draft or Submitted")
+            
+        posting_date = posting_date or nowdate()
 
         # Get default Payment Entry for this invoice
         pe = get_payment_entry("Sales Invoice", sales_invoice_name)
@@ -304,7 +309,8 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
         pe.paid_amount = float(paid_amount)
         pe.received_amount = float(paid_amount)
         pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
-        pe.reference_date = frappe.utils.nowdate()
+        pe.posting_date = posting_date
+        pe.reference_date = posting_date
 
         # Update references to reflect new paid amount
         if pe.references and len(pe.references) > 0:

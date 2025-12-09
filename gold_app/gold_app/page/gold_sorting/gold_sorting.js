@@ -23,6 +23,7 @@ class PoolPage {
 		this.make_select_field();
 		this.last_data = [];
 		this.pool_name = null;
+		this.manual_posting_date = null;
 	}
 
 	make_select_field() {
@@ -134,6 +135,33 @@ class PoolPage {
 		table.append(tbody);
 		this.table_container.append("<h4>Purity Summary</h4>");
 		this.table_container.append(table);
+
+		/* ✨ NEW UI Row for Manual Date Entry (Minimal Change) */
+		let manualDateRow = $(`
+    <div class="manual-date-row" style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+        <label style="margin:0">
+            <input type="checkbox" class="manual-date-checkbox"> Enter Date Manually
+        </label>
+        <input type="date" class="manual-date-input form-control" style="max-width:200px; display:none;">
+    </div>
+`);
+		this.table_container.append(manualDateRow);
+
+		/* Toggle logic */
+		manualDateRow.find(".manual-date-checkbox").on("change", () => {
+			let dateInput = manualDateRow.find(".manual-date-input");
+
+			if (manualDateRow.find(".manual-date-checkbox").prop("checked")) {
+				dateInput.show();
+			} else {
+				dateInput.hide().val("");
+				this.manual_posting_date = null; // reset
+			}
+		});
+
+		manualDateRow.find(".manual-date-input").on("change", () => {
+			this.manual_posting_date = manualDateRow.find(".manual-date-input").val();
+		});
 	}
 
 	async render_entry_table() {
@@ -379,14 +407,11 @@ class PoolPage {
 			});
 
 			if (!rows.length && remainingTransfers.length) {
-				frappe.show_alert(
-					{
-						message:
-							"No retail items selected. Proceeding with wholesale stock entry only.",
-						indicator: "blue",
-					},
-					6
-				);
+				frappe.show_alert({
+					message:
+						"No retail items selected. Proceeding with wholesale stock entry only.",
+					indicator: "blue",
+				});
 			}
 
 			try {
@@ -394,7 +419,9 @@ class PoolPage {
 					purity_data: JSON.stringify(rows),
 					pool_name: this.pool_name,
 					remaining_transfers: JSON.stringify(remainingTransfers),
+					posting_date: this.manual_posting_date || null,
 				});
+
 				this.render_final_table(res.created_items || [], remainingTransfers);
 
 				frappe.msgprint({

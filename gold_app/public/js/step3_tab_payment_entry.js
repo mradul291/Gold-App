@@ -455,6 +455,7 @@ class Step3TabPaymentEntry {
 							sales_invoice_name: sales_invoice,
 							payment_mode: payment.method,
 							paid_amount: payment.amount,
+							posting_date: payment.date,
 						},
 					});
 

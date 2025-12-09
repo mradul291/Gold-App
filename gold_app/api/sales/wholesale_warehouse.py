@@ -38,7 +38,7 @@ def get_warehouse_stock(warehouse_name=None):
 
 # Create Sales Invoice for Stock Reduction
 @frappe.whitelist()
-def create_sales_invoice(customer, items, company=None, total_amount=0, discount_amount=0):
+def create_sales_invoice(customer, items, company=None, total_amount=0, discount_amount=0, posting_date=None):
     if not company:
         company = frappe.defaults.get_user_default("Company")
 
@@ -61,14 +61,14 @@ def create_sales_invoice(customer, items, company=None, total_amount=0, discount
         "doctype": "Sales Invoice",
         "customer": customer,
         "company": company,
-        "posting_date": frappe.utils.nowdate(),
+        "posting_date": posting_date or frappe.utils.nowdate(),
         "update_stock": 1,
         "allocate_advances_automatically": 0,
         "items": si_items,
         "total": flt(total_amount),
         "discount_amount": flt(discount_amount)
     })
-
+    si.set_posting_time = 1
     si.insert(ignore_permissions=True)
     si.submit()
     frappe.db.commit()
@@ -80,7 +80,7 @@ def create_sales_invoice(customer, items, company=None, total_amount=0, discount
 
 # Create Payment Entry for the Sales Invoice
 @frappe.whitelist()
-def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount):
+def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount, posting_date=None):
  
     try:
         if not sales_invoice_name:
@@ -97,6 +97,8 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
 
         # Get default Payment Entry for this invoice
         pe = get_payment_entry("Sales Invoice", sales_invoice_name)
+        pe.set_posting_time = 1
+        pe.posting_date = posting_date or frappe.utils.nowdate()
 
         # Update payment details
         pe.mode_of_payment = payment_mode

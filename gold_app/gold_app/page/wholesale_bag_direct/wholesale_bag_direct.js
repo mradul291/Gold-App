@@ -1367,6 +1367,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		}
 
 		salesDetailsContainer.find(".wbd-invoice-btn").prop("disabled", true).text("Creating...");
+		const posting_date = salesDetailsContainer.find("input[type='date']").val() || null;
 
 		frappe.call({
 			method: "gold_app.api.sales.wholesale_bag_direct.create_sales_invoice",
@@ -1374,6 +1375,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 				customer: customer,
 				items: JSON.stringify(items_data),
 				discount_amount: parseFloat($("#wbd-total-discount").val()) || 0,
+				posting_date: posting_date,
 			},
 			callback: function (r) {
 				salesDetailsContainer

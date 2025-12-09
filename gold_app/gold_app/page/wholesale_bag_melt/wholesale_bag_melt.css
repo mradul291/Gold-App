@@ -125,84 +125,88 @@
 }
 
 /***************************** Header Styling ***********************/
-/* Root shell */
+/* Page shell keeps existing bag grid background */
 .wbm-page-shell {
-    background-color: #eef2f7;
+    background-color: #f5f7fb;
     min-height: 100vh;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #1f2933;
 }
 
-.wbm-top-bar {
-    background-color: #28384b; 
-    padding-top: 10px;
-    padding-bottom: 0;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.4);
+/* Header wrapper like reference */
+.wbm-header {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    padding: 16px 24px 0;
+
+    max-width: 1160px;
+    margin: 16px auto 0;
+
+    border-radius: 8px;
 }
 
-.wbm-top-bar-inner {
-    max-width: 1180px;
+.wbm-header-inner {
+    max-width: 1160px;
     margin: 0 auto;
-    padding: 4px 18px 8px;
+    padding-bottom: 12px;
+}
+
+.wbm-header-left {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.wbm-top-title {
-    font-size: 15px;
+.wbm-record-title {
+    font-size: 20px;
     font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 2px;
+    color: #111827;
 }
 
-.wbm-top-sub {
-    font-size: 11px;
-    color: #cbd5e1;
-}
-
-.wbm-top-actions {
+.wbm-record-meta {
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 12px;
+    color: #6b7280;
 }
 
-.wbm-status-pill {
-    padding: 4px 14px;
-    border-radius: 16px;
-    font-size: 11px;
+.wbm-record-id {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: #eef2ff;
+    color: #1d4ed8;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: default;
+}
+
+.wbm-dot-sep {
+    color: #9ca3af;
+}
+
+.wbm-record-date-label {
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.wbm-record-date-value {
     font-weight: 600;
-    border: 1px solid #9ca3af;
-    text-transform: uppercase;
-    background-color: #e5e7eb;
-    color: #374151;
+    color: #111827;
 }
 
-.wbm-save-btn {
-    padding: 4px 14px;             
-    font-size: 11px;              
-    font-weight: 600;
-    border-radius: 16px;           
-    border: 1px solid #16a34a;      
-    text-transform: uppercase;    
-    background-color: #22c55e;    
-    color: #ffffff;
-}
-.wbm-save-btn:hover {
-    background-color: #16a34a;
+/* Tabs bar under header */
+.wbm-tabs-bar {
+    margin-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    background-color: #ffffff;
 }
 
-.wbm-tabs-inner {
-    display: flex;
-    width: 100%;
-    background-color: #f3f4f6;   /* same as screenshot band */
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.wbm-tab-item {
-    flex: 1 1 0;
-    text-align: center;
-    padding: 10px 0;
+.wbm-tabs-bar .wbm-tab-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 18px;
     font-size: 12px;
     font-weight: 500;
     color: #6b7280;
@@ -210,13 +214,21 @@
     border-bottom: 2px solid transparent;
 }
 
-.wbm-tab-item.wbm-tab-active {
-    background-color: #ffffff;
+.wbm-tabs-bar .wbm-tab-item.wbm-tab-active {
     color: #111827;
-    border-bottom-color: #3b82f6;  /* blue underline */
+    border-bottom-color: #2563eb;
 }
 
+/* Body area under header stays on same background */
 .wbm-page-body {
-    background-color: #eef2f7;
-    padding: 24px 0 32px;
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 20px 24px 32px;
+}
+
+.wbm-main-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+    padding: 16px 18px 20px;
 }
