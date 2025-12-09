@@ -49,7 +49,7 @@ def create_material_issue(doc, method):
     se.append("items", {
         "item_code": doc.source_item,
         "qty": doc.reduce_quantity,
-        "s_warehouse": doc.source_item_warehouse,
+        "s_warehouse": "Unsorted - AGSB",
         "t_warehouse": None,
         "allow_zero_valuation_rate": 1
     })
