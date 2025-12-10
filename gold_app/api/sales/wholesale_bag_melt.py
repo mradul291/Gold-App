@@ -80,7 +80,6 @@ def get_bag_overview():
 
     return final_list
 
-
 @frappe.whitelist()
 def get_bag_details(bag_id):
     """
@@ -148,129 +147,123 @@ def get_bag_details(bag_id):
         "summary": summary,
         "items": items
     }
-
+    
+    
+    
+    
 # import frappe
-# from frappe.utils import flt
+# from frappe.utils import flt, nowdate
 
 # @frappe.whitelist()
-# def save_melt_assay_record(data):
-#     """
-#     Saves Melt & Assay Record.
-#     - Creates a new record if not exists for bag
-#     - Updates same record on subsequent saves
-#     - Accepts PARTIAL DATA (only fields sent will update)
-#     """
+# def save_melt_assay_sales(payload):
+# 	"""
+# 	Create or Update Melt and Assay Sales document
+# 	- If payload.name exists -> update
+# 	- Else -> create new
+# 	"""
 
-#     if isinstance(data, str):
-#         data = frappe.parse_json(data)
+# 	if isinstance(payload, str):
+# 		payload = frappe.parse_json(payload)
 
-#     bag_id = data.get("source_bag")
-#     if not bag_id:
-#         frappe.throw("source_bag is required.")
+# 	docname = payload.get("name")
+# 	header = payload.get("header", {})
+# 	bag_contents = payload.get("bag_contents", [])
+# 	locked_rates = payload.get("locked_rates", [])
 
-#     # 1️⃣ FIND EXISTING DOCUMENT FOR THIS BAG
-#     existing = frappe.db.get_value(
-#         "Melt And Assay Record",
-#         {"source_bag": bag_id},
-#         "name"
-#     )
+# 	# ----------------------------------------
+# 	# CREATE OR FETCH DOCUMENT
+# 	# ----------------------------------------
+# 	if docname:
+# 		doc = frappe.get_doc("Melt and Assay Sales", docname)
+# 	else:
+# 		doc = frappe.new_doc("Melt and Assay Sales")
+# 		doc.posting_date = nowdate()
 
-#     if existing:
-#         doc = frappe.get_doc("Melt And Assay Record", existing)
-#         is_new = False
-#     else:
-#         doc = frappe.new_doc("Melt And Assay Record")
-#         doc.source_bag = bag_id
-#         is_new = True
+# 	# ----------------------------------------
+# 	# SET PARENT FIELDS
+# 	# ----------------------------------------
+# 	set_parent_fields(doc, header)
 
-#     # ============================================================
-#     # 2️⃣ UPDATE MAIN FIELDS (only if provided)
-#     # ============================================================
+# 	# ----------------------------------------
+# 	# RESET & APPEND CHILD TABLES
+# 	# ----------------------------------------
+# 	doc.set("bag_contents", [])
+# 	for row in bag_contents:
+# 		doc.append("bag_contents", {
+# 			"purity": row.get("purity"),
+# 			"weight": flt(row.get("weight")),
+# 			"avco": flt(row.get("avco")),
+# 			"cost": flt(row.get("cost")),
+# 			"xau": flt(row.get("xau")),
+# 			"xau_avco": flt(row.get("xau_avco")),
+# 		})
 
-#     simple_fields = [
-#         # Bag Summary
-#         "total_weight_g", "pure_gold_xau_g", "average_purity",
-#         "total_cost_basis", "cost_per_gram", "record_id", "record_date",
+# 	doc.set("locked_rates", [])
+# 	for row in locked_rates:
+# 		doc.append("locked_rates", {
+# 			"price_per_xau": flt(row.get("price_per_xau")),
+# 			"xau_weight": flt(row.get("xau_weight")),
+# 			"amount": flt(row.get("amount")),
+# 			"remark": row.get("remark"),
+# 		})
 
-#         # Melting
-#         "pre_melt_weight", "post_melt_weight", "weight_loss_g",
-#         "weight_loss_pct", "melting_cost_rm", "melting_date",
+# 	# ----------------------------------------
+# 	# SAVE DOCUMENT
+# 	# ----------------------------------------
+# 	doc.save(ignore_permissions=True)
+# 	frappe.db.commit()
 
-#         # Assay
-#         "est_purity_from_bag", "actual_purity", "purity_variance",
-#         "actual_xau_g", "assay_cost_rm", "assay_date",
+# 	return {
+# 		"name": doc.name,
+# 		"message": "Melt and Assay Sales saved successfully"
+# 	}
 
-#         # Refining
-#         "refine_to_9999", "target_purity", "post_refining_weight",
-#         "refining_cost_rm", "refining_date",
+# def set_parent_fields(doc, data):
+# 	"""
+# 	Map all parent fields from UI payload to DocType
+# 	"""
 
-#         # Buyer Info
-#         "buyer", "buyer_contact",
+# 	parent_fields = [
+# 		# Bag Summary
+# 		"total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
 
-#         # Sale Details
-#         "final_weight_g", "final_purity", "final_xau_g",
-#         "locked_rate_rm_per_xau", "gross_sale_value_rm", "payment_term",
+# 		# Melting
+# 		"weight_before_melting", "weight_after_melting", "melting_cost",
+# 		"melting_payment_mode", "weight_loss", "xau_loss", "loss_percentage",
 
-#         # Payments Summary
-#         "total_paid_rm", "balance_due_rm",
+# 		# Assay
+# 		"current_avg_purity", "assay_purity", "purity_variance",
+# 		"xau_weight_variance", "actual_xau_weight", "assay_sample_weight",
+# 		"net_xau_sellable", "assay_cost", "assay_payment_mode",
 
-#         # Metrics
-#         "metrics_pre_melt_weight_g", "metrics_post_melt_weight_g",
-#         "metrics_loss_g", "metrics_loss_pct", "metrics_est_purity",
-#         "metrics_actual_purity", "metrics_variance", "metrics_status",
+# 		# Sales
+# 		"sale_net_weight", "sale_assay_purity", "sale_net_xau",
+# 		"total_xau_sold", "total_revenue", "weighted_avg_rate",
 
-#         "xau_before_est", "xau_after_actual", "net_xau_change_g",
-#         "net_xau_change_pct", "analysis_text",
+# 		# Metrics - Weight & Purity
+# 		"m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
+# 		"m_weight_loss_percentage", "m_xau_weight_loss", "m_net_weight_sale",
+# 		"m_original_avg_purity", "m_assay_purity", "m_purity_variance",
+# 		"m_xau_weight_variance",
 
-#         "original_cost_rm", "total_cost_basis_rm", "gross_sale_value_rm",
-#         "hedge_pl_rm", "gross_margin_rm", "net_profit_rm",
-#         "gross_margin_pct", "net_profit_pct", "gross_margin_per_g",
-#         "net_profit_per_g",
+# 		# Metrics - Cost
+# 		"m_original_gold_cost", "m_melting_cost", "m_assay_cost",
+# 		"m_total_cost",
 
-#         "insight_1", "insight_2", "insight_3",
-#     ]
+# 		# Metrics - Revenue
+# 		"m_total_revenue", "m_total_cost_profit",
+# 		"m_gross_profit", "m_profit_margin",
 
-#     for field in simple_fields:
-#         if field in data:
-#             doc.set(field, data.get(field))
+# 		# Metrics - Efficiency
+# 		"m_melting_efficiency", "m_xau_recovery",
+# 		"m_net_sellable", "m_profit_per_xau",
 
-#     # ============================================================
-#     # 3️⃣ UPDATE CHILD TABLE — Bag Items
-#     # ============================================================
-#     if "bag_items" in data:
-#         doc.set("bag_items", [])
-#         for row in data["bag_items"]:
-#             doc.append("bag_items", {
-#                 "purity": row.get("purity"),
-#                 "weight_g": row.get("weight_g"),
-#                 "xau_g": row.get("xau_g"),
-#                 "cost_rm": row.get("cost_rm"),
-#                 "cost_per_g_rm": row.get("cost_per_g_rm")
-#             })
+# 		# Vs Last Sale
+# 		"vs_weight_loss_percentage", "vs_xau_recovery_rate",
+# 		"vs_purity_variance", "vs_net_sellable_percentage",
+# 		"vs_profit_margin",
+# 	]
 
-#     # ============================================================
-#     # 4️⃣ UPDATE CHILD TABLE — Payments
-#     # ============================================================
-#     if "payments" in data:
-#         doc.set("payments", [])
-#         for p in data["payments"]:
-#             doc.append("payments", {
-#                 "payment_date": p.get("payment_date"),
-#                 "payment_type": p.get("payment_type"),
-#                 "amount_rm": p.get("amount_rm"),
-#                 "reference": p.get("reference")
-#             })
-
-#     # ============================================================
-#     # 5️⃣ SAVE DOCUMENT
-#     # ============================================================
-#     doc.save(ignore_permissions=True)
-
-#     frappe.db.commit()
-
-#     return {
-#         "status": "success",
-#         "docname": doc.name,
-#         "is_new": is_new,
-#         "message": "Record saved successfully"
-#     }
+# 	for field in parent_fields:
+# 		if field in data:
+# 			doc.set(field, data.get(field))

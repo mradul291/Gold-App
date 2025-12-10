@@ -115,6 +115,9 @@ function renderBagGrid(bags) {
 					WBMState.bag_summary = r.message.summary;
 					WBMState.bag_items = r.message.items;
 
+					WBMState.bag_summary.record_id = WBMState.selected_bag;
+					WBMState.bag_summary.record_date = getTodayDate();
+
 					showBagSummaryUI();
 				},
 			});
@@ -217,4 +220,9 @@ function loadTabContent(tabName) {
 			window.WBMComponents[tabName]($("#wbd-content"), WBMState);
 		}
 	});
+}
+
+function getTodayDate() {
+	const d = new Date();
+	return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
 }

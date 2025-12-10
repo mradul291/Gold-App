@@ -1,16 +1,17 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-12-04 15:05:51.506806",
+ "creation": "2025-12-10 14:04:52.698112",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "purity",
-  "weight_g",
-  "xau_g",
-  "cost_rm",
-  "cost_per_g_rm"
+  "weight",
+  "avco",
+  "cost",
+  "xau",
+  "xau_avco"
  ],
  "fields": [
   {
@@ -20,38 +21,44 @@
    "label": "Purity"
   },
   {
-   "fieldname": "weight_g",
+   "fieldname": "weight",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Weight (g)"
+   "label": "Weight"
   },
   {
-   "fieldname": "xau_g",
+   "fieldname": "avco",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "AVCO"
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Cost"
+  },
+  {
+   "fieldname": "xau",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "XAU (g)"
+   "label": "XAU"
   },
   {
-   "fieldname": "cost_rm",
+   "fieldname": "xau_avco",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Cost (RM)"
-  },
-  {
-   "fieldname": "cost_per_g_rm",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Cost / g (RM)"
+   "label": "XAU AVCO"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-12-04 15:38:18.210782",
+ "modified": "2025-12-10 14:08:24.498931",
  "modified_by": "Administrator",
  "module": "Gold App",
- "name": "Melt And Assay Bag Item",
+ "name": "Melt Assay Bag Content",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

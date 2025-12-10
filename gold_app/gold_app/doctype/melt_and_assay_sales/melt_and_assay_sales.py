@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class MeltAndAssayBagItem(Document):
+class MeltandAssaySales(Document):
 	pass

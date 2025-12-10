@@ -1,216 +1,114 @@
-// public/js/buyer_sale.js
-
 window.WBMComponents = window.WBMComponents || {};
 
 window.WBMComponents.buyer_sale = function ($mount, state) {
-	const sale = state.buyer_sale || {
-		buyer: "",
-		contact: "Auto-filled",
-		final_weight_g: 725.0,
-		final_purity: 905.2,
-		final_xau_g: 656.27,
-		locked_rate_rm_per_xau: "",
-		gross_sale_value_rm: "",
-		payment_term: "Net 30 Days",
-		payments: [
-			{
-				date: "10/11/2024",
-				type: "Advance",
-				amount_rm: 20000.0,
-				reference: "ADV-001",
-			},
-		],
-		total_paid_rm: 20000.0,
-		balance_due_rm: null,
-	};
-
-	const formatNumber = (val, decimals) => {
-		if (val === null || val === undefined || val === "") return "";
-		const n = typeof val === "number" ? val : parseFloat(String(val));
-		return n.toLocaleString("en-MY", {
-			minimumFractionDigits: decimals,
-			maximumFractionDigits: decimals,
-		});
-	};
-
-	const formatRM = (val) => {
-		if (val === null || val === undefined || val === "") return "";
-		const n = typeof val === "number" ? val : parseFloat(String(val));
-		return (
-			"RM" +
-			n.toLocaleString("en-MY", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			})
-		);
-	};
-
 	const html = `
-        <div>
+        <div class="wbs-root">
 
-            <!-- BUYER INFORMATION -->
-            <div class="bs-section-header">
-                <span>BUYER INFORMATION</span>
-            </div>
+            <!-- Title -->
+            <div class="wbs-title">Sales Detail</div>
 
-            <div class="bs-section-card bs-section-card-full">
-                <div class="bs-two-col">
-                    <div class="bs-col">
-                        <div class="bs-field">
-                            <label>Buyer</label>
-                            <select class="bs-input bs-select">
-                                <option value="">Select Buyer</option>
-                            </select>
-                        </div>
+            <!-- FROM ASSAY SECTION -->
+            <div class="wbs-card wbs-assay-card">
+                <div class="wbs-card-header">FROM ASSAY SECTION</div>
+
+                <div class="wbs-assay-grid">
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Net Weight</div>
+                        <div class="wbs-assay-value">293.00 g</div>
                     </div>
 
-                    <div class="bs-col">
-                        <div class="bs-field">
-                            <label>Contact</label>
-                            <input type="text" class="bs-input bs-input-readonly" value="${
-								sale.contact
-							}" readonly>
-                        </div>
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Assay Purity</div>
+                        <div class="wbs-assay-value">92.50%</div>
+                    </div>
+
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Net XAU</div>
+                        <div class="wbs-assay-value wbs-blue">271.02 g</div>
                     </div>
                 </div>
             </div>
 
-            <!-- SALE DETAILS -->
-            <div class="bs-section-header bs-section-header-spacing">
-                <span>SALE DETAILS</span>
+            <!-- LOCKED RATES -->
+            <div class="wbs-section-head">
+                <div class="wbs-section-title">Locked Rates</div>
+                <button class="wbs-add-btn">+ Add Rate</button>
             </div>
 
-            <div class="bs-section-card">
-                <!-- First row -->
-                <div class="bs-two-col">
-                    <div class="bs-col">
-                        <div class="bs-field">
-                            <label>Final Weight (g)</label>
-                            <input type="text" class="bs-input" value="${formatNumber(
-								sale.final_weight_g,
-								2
-							)}" readonly>
-                        </div>
-                    </div>
-
-                    <div class="bs-col">
-                        <div class="bs-field">
-                            <label>Final Purity</label>
-                            <input type="text" class="bs-input" value="${formatNumber(
-								sale.final_purity,
-								1
-							)}" readonly>
-                        </div>
-                    </div>
+            <div class="wbs-card">
+                <div class="wbs-table-head">
+                    <div>PRICE PER XAU</div>
+                    <div>XAU WEIGHT</div>
+                    <div>AMOUNT</div>
+                    <div>REMARK</div>
+                    <div></div>
                 </div>
 
-                <!-- Second row -->
-                <div class="bs-two-col">
-                    <div class="bs-col">
-                        <div class="bs-field">
-                            <label>Final XAU (g)</label>
-                            <input type="text" class="bs-input bs-input-readonly" value="${formatNumber(
-								sale.final_xau_g,
-								2
-							)}" readonly>
-                        </div>
-                    </div>
-
-                    <div class="bs-col">
-                        <div class="bs-field">
-                            <label>Locked Rate (RM/g XAU)</label>
-                            <input type="text" class="bs-input" placeholder="Enter locked rate">
-                        </div>
-                    </div>
+                <!-- ROW -->
+                <div class="wbs-table-row">
+                    <input class="wbs-input" value="562.05"/>
+                    <input class="wbs-input" value="362.844"/>
+                    <div class="wbs-amount">RM 203,936.47</div>
+                    <input class="wbs-input" placeholder="Optional remark"/>
+                    <div class="wbs-trash">🗑</div>
                 </div>
 
-                <!-- Third row: Gross Sale Value -->
-                <div class="bs-one-col">
-                    <div class="bs-field">
-                        <label>Gross Sale Value (RM)</label>
-                        <input type="text" class="bs-input" placeholder="Auto: XAU × Rate">
-                    </div>
+                <div class="wbs-table-row">
+                    <input class="wbs-input" value="558.88"/>
+                    <input class="wbs-input" value="460"/>
+                    <div class="wbs-amount">RM 257,084.80</div>
+                    <input class="wbs-input" placeholder="Optional remark"/>
+                    <div class="wbs-trash">🗑</div>
+                </div>
+
+                <div class="wbs-table-row">
+                    <input class="wbs-input" value="558.45"/>
+                    <input class="wbs-input" value="88.937"/>
+                    <div class="wbs-amount">RM 49,666.87</div>
+                    <input class="wbs-input" placeholder="Optional remark"/>
+                    <div class="wbs-trash">🗑</div>
+                </div>
+
+                <!-- TOTAL -->
+                <div class="wbs-table-total">
+                    <div class="wbs-total-label">TOTAL</div>
+                    <div class="wbs-total-val">911.78 g</div>
+                    <div class="wbs-total-amt">RM 510,688.14</div>
+                    <div></div>
+                    <div></div>
                 </div>
             </div>
-
-            <!-- PAYMENT DETAILS -->
-            <div class="bs-section-header bs-section-header-spacing">
-                <span>PAYMENT DETAILS</span>
+    
+            <!-- WARNING -->
+            <div class="wbs-warning">
+                ⚠ Mismatch: Table shows <b>911.78 g</b> but Net XAU is <b>271.02 g</b>
             </div>
 
-            <div class="bs-section-card">
-                <!-- Payment term -->
-                <div class="bs-field">
-                    <label>Payment Term</label>
-                    <select class="bs-input bs-select">
-                        <option value="net30">${sale.payment_term}</option>
-                    </select>
-                </div>
+            <!-- SUMMARY -->
+            <div class="wbs-card wbs-summary-card">
+                <div class="wbs-card-header">SUMMARY</div>
 
-                <!-- Payment table -->
-                <div class="bs-payment-table">
-                    <table class="table bs-pay-table">
-                        <thead>
-                            <tr>
-                                <th>DATE</th>
-                                <th>TYPE</th>
-                                <th>AMOUNT (RM)</th>
-                                <th>REFERENCE</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${sale.payments
-								.map(
-									(p) => `
-                                    <tr>
-                                        <td>${p.date}</td>
-                                        <td>${p.type}</td>
-                                        <td>${formatRM(p.amount_rm)}</td>
-                                        <td>${p.reference}</td>
-                                    </tr>
-                                `
-								)
-								.join("")}
-                        </tbody>
-                    </table>
-                </div>
+                <div class="wbs-summary-grid">
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Total XAU Sold</div>
+                        <div class="wbs-summary-value">911.78 g</div>
+                    </div>
 
-                <button class="btn btn-primary bs-add-payment-btn">+ Add Payment</button>
-            </div>
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Total Revenue</div>
+                        <div class="wbs-summary-value wbs-blue">RM 510,688.14</div>
+                    </div>
 
-            <!-- Payment summary bar -->
-            <div class="bs-summary-bar">
-                <div class="bs-summary-left">
-                    <div class="bs-summary-label">Total Paid</div>
-                    <div class="bs-summary-value">${formatRM(sale.total_paid_rm)}</div>
-                </div>
-                <div class="bs-summary-right">
-                    <div class="bs-summary-label">Balance Due</div>
-                    <div class="bs-summary-value">
-                        ${sale.balance_due_rm == null ? "RM—,--" : formatRM(sale.balance_due_rm)}
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Weighted Avg Rate</div>
+                        <div class="wbs-summary-value">RM 560.10</div>
+                        <div class="wbs-summary-sub">per gram</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Back to Bags button -->
-            <div class="bs-footer-bar">
-                <button class="btn btn-default wbm-back-btn">← Back to Bags</button>
             </div>
 
         </div>
     `;
 
 	$mount.html(html);
-
-	// Back button handler
-	$mount.find(".wbm-back-btn").on("click", function () {
-		if (state.onBackToBags) state.onBackToBags();
-	});
-
-	// Optional: SAVE handler scoped to this tab
-	$(".wbm-save-btn")
-		.off("click.buyer_sale")
-		.on("click.buyer_sale", function () {
-			if (state.onSaveRecord) state.onSaveRecord();
-		});
 };

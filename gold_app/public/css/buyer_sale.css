@@ -1,153 +1,177 @@
-/* Section headers (BUYER INFORMATION, SALE DETAILS) */
-.bs-section-header {
-    font-size: 12px;
-    font-weight: 600;
-    color: #4b5563;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 6px;
+.wbs-root {
+  font-family: Inter, system-ui, sans-serif;
+  padding: 24px 32px;
+  color: #111827;
 }
 
-.bs-section-header-spacing {
-    margin-top: 26px;
+.wbs-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 14px;
 }
 
-/* Card containers */
-.bs-section-card {
-    margin-top: 12px;
-    border-radius: 4px;
-    border: 1px solid #e5e7eb;
-    background-color: #fbfdff;
-    padding: 14px 18px 14px;
+/* Cards */
+.wbs-card {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
-/* Layout: two columns and single column */
-.bs-two-col {
-    display: flex;
-    gap: 40px;
+.wbs-card-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 12px;
 }
 
-.bs-one-col {
-    margin-top: 10px;
+/* Assay */
+.wbs-assay-card {
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
-.bs-col {
-    flex: 1 1 0;
+.wbs-assay-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
 }
 
-/* Fields */
-.bs-field {
-    margin-bottom: 14px;
+.wbs-assay-box {
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
 }
 
-.bs-field label {
-    display: block;
-    font-size: 11px;
-    font-weight: 500;
-    color: #6b7280;
-    margin-bottom: 4px;
+.wbs-assay-label {
+  font-size: 11px;
+  color: #6b7280;
 }
 
-/* Inputs */
-.bs-input {
-    width: 100%;
-    border-radius: 3px;
-    border: 1px solid #d1d5db;
-    padding: 7px 10px;
-    font-size: 12px;
-    color: #111827;
-    background-color: #ffffff;
+.wbs-assay-value {
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.bs-input::placeholder {
-    color: #9ca3af;
+.wbs-blue {
+  color: #2563eb;
 }
 
-/* Select field (buyer) */
-.bs-select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-position: right 10px center;
-    background-repeat: no-repeat;
+/* Locked rates header */
+.wbs-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
 }
 
-/* Readonly grey inputs (Contact, Final XAU) */
-.bs-input-readonly {
-    background-color: #f3f4f6;
-    color: #4b5563;
-}
-/* Payment table card */
-.bs-payment-table {
-    margin-top: 10px;
+.wbs-section-title {
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.bs-pay-table {
-    width: 100%;
-    margin-bottom: 10px;
-    font-size: 12px;
+.wbs-add-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
-.bs-pay-table thead th {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
-    border-bottom: 1px solid #e5e7eb;
-    background-color: #f9fafb;
-    padding: 6px 10px;
+/* Table */
+.wbs-table-head,
+.wbs-table-row,
+.wbs-table-total {
+  display: grid;
+  grid-template-columns: 140px 140px 1fr 200px 40px;
+  align-items: center;
+  padding: 8px 0;
+  column-gap: 22px;
 }
 
-.bs-pay-table tbody td {
-    border-top: 1px solid #e5e7eb;
-    padding: 6px 10px;
-    color: #111827;
+.wbs-table-head {
+  font-size: 11px;
+  color: #9ca3af;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-/* Add Payment button */
-.bs-add-payment-btn {
-    margin-top: 10px;
-    font-size: 12px;
-    padding: 6px 14px;
+.wbs-table-row {
+  border-bottom: 1px solid #f3f4f6;
 }
 
-/* Summary bar (Total Paid / Balance Due) */
-.bs-summary-bar {
-    margin-top: 10px;
-    padding: 10px 18px;
-    border-radius: 4px;
-    border: 1px solid #e5e7eb;
-    background-color: #f9fafb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.wbs-input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
 }
 
-.bs-summary-label {
-    font-size: 11px;
-    color: #6b7280;
+.wbs-amount {
+  font-weight: 600;
 }
 
-.bs-summary-value {
-    font-size: 13px;
-    font-weight: 600;
-    color: #111827;
+.wbs-trash {
+  color: #dc2626;
+  cursor: pointer;
 }
 
-/* Footer Back button */
-.bs-footer-bar {
-    margin-top: 14px;
-    display: flex;
-    justify-content: flex-end;
+.wbs-table-total {
+  background: #f8fafc;
+  font-weight: 700;
 }
 
-.wbm-back-btn {
-    font-size: 12px;
-    color: #374151;
-    border-radius: 4px;
-    padding: 6px 18px;
-    background-color: #f3f4f6;
-    border: 1px solid #d1d5db;
+.wbs-total-label {
+  font-size: 12px;
 }
 
-.wbm-back-btn:hover {
-    background-color: #e5e7eb;
+.wbs-total-amt {
+  color: #2563eb;
+}
+
+/* Warning */
+.wbs-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+/* Summary */
+.wbs-summary-card {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.wbs-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.wbs-summary-box {
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+}
+
+.wbs-summary-label {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.wbs-summary-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wbs-summary-sub {
+  font-size: 11px;
+  color: #6b7280;
 }

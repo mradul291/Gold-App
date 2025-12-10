@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class MeltAndAssayRecord(Document):
+class MeltAssayLockedRate(Document):
 	pass
