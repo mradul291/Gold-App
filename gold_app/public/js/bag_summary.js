@@ -59,6 +59,14 @@ window.WBMComponents.bag_summary = function ($mount, state) {
 		`;
 
 	// -----------------------------
+	// Total XAU AVCO (correct formula)
+	// -----------------------------
+	const totalXauAvco =
+		summary.pure_gold_xau_g && summary.pure_gold_xau_g !== 0
+			? summary.total_cost_basis / summary.pure_gold_xau_g
+			: 0;
+
+	// -----------------------------
 	// Main HTML
 	// -----------------------------
 	const html = `
@@ -92,7 +100,7 @@ window.WBMComponents.bag_summary = function ($mount, state) {
                         ${fmt(summary.pure_gold_xau_g, 3)} g
                     </div>
                     <div class="wbm-col wbm-col-xauavco text-right wbm-total-strong">
-                        RM ${fmt(summary.cost_per_gram)}
+                        RM ${fmt(totalXauAvco)}
                     </div>
                 </div>
             </div>
@@ -137,7 +145,7 @@ window.WBMComponents.bag_summary = function ($mount, state) {
                     <div class="wbm-summary-card">
                         <div class="wbm-summary-label">XAU AVCO</div>
                         <div class="wbm-summary-main">
-                            ${fmt(summary.cost_per_gram)}
+                            ${fmt(totalXauAvco)}
                         </div>
                         <div class="wbm-summary-sub">per gram</div>
                     </div>
@@ -152,14 +160,18 @@ window.WBMComponents.bag_summary = function ($mount, state) {
 	// -----------------------------
 	$mount.html(html);
 
-	// -----------------------------
-	// Save hook (future use)
-	// -----------------------------
-	$(".wbm-save-btn")
-		.off("click")
-		.on("click", function () {
-			if (state.onSaveRecord) {
-				state.onSaveRecord();
-			}
-		});
+	// ---------------------------------------------
+	// STORE BAG SUMMARY VALUES INTO STATE
+	// ---------------------------------------------
+	state.bag_summary.total_xau_avco = totalXauAvco;
+
+	// Also prepare clean rows for saving
+	state.bag_contents_for_save = items.map((r) => ({
+		purity: r.purity,
+		weight: r.weight_g,
+		avco: r.cost_per_g_rm,
+		cost: r.cost_rm,
+		xau: r.xau_g,
+		xau_avco: r.xau_g ? r.cost_rm / r.xau_g : 0,
+	}));
 };

@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import flt
+from frappe.utils import flt, nowdate
 
 @frappe.whitelist()
 def get_bag_overview():
@@ -26,6 +26,7 @@ def get_bag_overview():
         JOIN `tabWarehouse` wh
             ON wh.name = bin.warehouse
         WHERE wh.parent_warehouse = 'Wholesale - AGSB'
+            AND bin.actual_qty > 0 
         GROUP BY bin.warehouse, item.purity
         HAVING SUM(bin.actual_qty) > 0
     """, as_dict=True)
@@ -96,6 +97,7 @@ def get_bag_details(bag_id):
         FROM `tabBin` bin
         JOIN `tabItem` item ON item.name = bin.item_code
         WHERE bin.warehouse = %s
+          AND bin.actual_qty > 0
         GROUP BY item.purity
     """, (bag_id,), as_dict=True)
 
@@ -148,122 +150,116 @@ def get_bag_details(bag_id):
         "items": items
     }
     
-    
-    
-    
-# import frappe
-# from frappe.utils import flt, nowdate
+@frappe.whitelist()
+def save_melt_assay_sales(payload):
+	"""
+	Create or Update Melt and Assay Sales document
+	- If payload.name exists -> update
+	- Else -> create new
+	"""
 
-# @frappe.whitelist()
-# def save_melt_assay_sales(payload):
-# 	"""
-# 	Create or Update Melt and Assay Sales document
-# 	- If payload.name exists -> update
-# 	- Else -> create new
-# 	"""
+	if isinstance(payload, str):
+		payload = frappe.parse_json(payload)
 
-# 	if isinstance(payload, str):
-# 		payload = frappe.parse_json(payload)
+	docname = payload.get("name")
+	header = payload.get("header", {})
+	bag_contents = payload.get("bag_contents", [])
+	locked_rates = payload.get("locked_rates", [])
 
-# 	docname = payload.get("name")
-# 	header = payload.get("header", {})
-# 	bag_contents = payload.get("bag_contents", [])
-# 	locked_rates = payload.get("locked_rates", [])
+	# ----------------------------------------
+	# CREATE OR FETCH DOCUMENT
+	# ----------------------------------------
+	if docname:
+		doc = frappe.get_doc("Melt and Assay Sales", docname)
+	else:
+		doc = frappe.new_doc("Melt and Assay Sales")
+		doc.posting_date = nowdate()
 
-# 	# ----------------------------------------
-# 	# CREATE OR FETCH DOCUMENT
-# 	# ----------------------------------------
-# 	if docname:
-# 		doc = frappe.get_doc("Melt and Assay Sales", docname)
-# 	else:
-# 		doc = frappe.new_doc("Melt and Assay Sales")
-# 		doc.posting_date = nowdate()
+	# ----------------------------------------
+	# SET PARENT FIELDS
+	# ----------------------------------------
+	set_parent_fields(doc, header)
 
-# 	# ----------------------------------------
-# 	# SET PARENT FIELDS
-# 	# ----------------------------------------
-# 	set_parent_fields(doc, header)
+	# ----------------------------------------
+	# RESET & APPEND CHILD TABLES
+	# ----------------------------------------
+	doc.set("bag_contents", [])
+	for row in bag_contents:
+		doc.append("bag_contents", {
+			"purity": row.get("purity"),
+			"weight": flt(row.get("weight")),
+			"avco": flt(row.get("avco")),
+			"cost": flt(row.get("cost")),
+			"xau": flt(row.get("xau")),
+			"xau_avco": flt(row.get("xau_avco")),
+		})
 
-# 	# ----------------------------------------
-# 	# RESET & APPEND CHILD TABLES
-# 	# ----------------------------------------
-# 	doc.set("bag_contents", [])
-# 	for row in bag_contents:
-# 		doc.append("bag_contents", {
-# 			"purity": row.get("purity"),
-# 			"weight": flt(row.get("weight")),
-# 			"avco": flt(row.get("avco")),
-# 			"cost": flt(row.get("cost")),
-# 			"xau": flt(row.get("xau")),
-# 			"xau_avco": flt(row.get("xau_avco")),
-# 		})
+	doc.set("locked_rates", [])
+	for row in locked_rates:
+		doc.append("locked_rates", {
+			"price_per_xau": flt(row.get("price_per_xau")),
+			"xau_weight": flt(row.get("xau_weight")),
+			"amount": flt(row.get("amount")),
+			"remark": row.get("remark"),
+		})
 
-# 	doc.set("locked_rates", [])
-# 	for row in locked_rates:
-# 		doc.append("locked_rates", {
-# 			"price_per_xau": flt(row.get("price_per_xau")),
-# 			"xau_weight": flt(row.get("xau_weight")),
-# 			"amount": flt(row.get("amount")),
-# 			"remark": row.get("remark"),
-# 		})
+	# ----------------------------------------
+	# SAVE DOCUMENT
+	# ----------------------------------------
+	doc.save(ignore_permissions=True)
+	frappe.db.commit()
 
-# 	# ----------------------------------------
-# 	# SAVE DOCUMENT
-# 	# ----------------------------------------
-# 	doc.save(ignore_permissions=True)
-# 	frappe.db.commit()
+	return {
+		"name": doc.name,
+		"message": "Melt and Assay Sales saved successfully"
+	}
 
-# 	return {
-# 		"name": doc.name,
-# 		"message": "Melt and Assay Sales saved successfully"
-# 	}
+def set_parent_fields(doc, data):
+	"""
+	Map all parent fields from UI payload to DocType
+	"""
 
-# def set_parent_fields(doc, data):
-# 	"""
-# 	Map all parent fields from UI payload to DocType
-# 	"""
+	parent_fields = [
+		# Bag Summary
+		"total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
 
-# 	parent_fields = [
-# 		# Bag Summary
-# 		"total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
+		# Melting
+		"weight_before_melting", "weight_after_melting", "melting_cost",
+		"melting_payment_mode", "weight_loss", "xau_loss", "loss_percentage",
 
-# 		# Melting
-# 		"weight_before_melting", "weight_after_melting", "melting_cost",
-# 		"melting_payment_mode", "weight_loss", "xau_loss", "loss_percentage",
+		# Assay
+		"current_avg_purity", "assay_purity", "purity_variance",
+		"xau_weight_variance", "actual_xau_weight", "assay_sample_weight",
+		"net_xau_sellable", "assay_cost", "assay_payment_mode",
 
-# 		# Assay
-# 		"current_avg_purity", "assay_purity", "purity_variance",
-# 		"xau_weight_variance", "actual_xau_weight", "assay_sample_weight",
-# 		"net_xau_sellable", "assay_cost", "assay_payment_mode",
+		# Sales
+		"sale_net_weight", "sale_assay_purity", "sale_net_xau",
+		"total_xau_sold", "total_revenue", "weighted_avg_rate",
 
-# 		# Sales
-# 		"sale_net_weight", "sale_assay_purity", "sale_net_xau",
-# 		"total_xau_sold", "total_revenue", "weighted_avg_rate",
+		# Metrics - Weight & Purity
+		"m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
+		"m_weight_loss_percentage", "m_xau_weight_loss", "m_net_weight_sale",
+		"m_original_avg_purity", "m_assay_purity", "m_purity_variance",
+		"m_xau_weight_variance",
 
-# 		# Metrics - Weight & Purity
-# 		"m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
-# 		"m_weight_loss_percentage", "m_xau_weight_loss", "m_net_weight_sale",
-# 		"m_original_avg_purity", "m_assay_purity", "m_purity_variance",
-# 		"m_xau_weight_variance",
+		# Metrics - Cost
+		"m_original_gold_cost", "m_melting_cost", "m_assay_cost",
+		"m_total_cost",
 
-# 		# Metrics - Cost
-# 		"m_original_gold_cost", "m_melting_cost", "m_assay_cost",
-# 		"m_total_cost",
+		# Metrics - Revenue
+		"m_total_revenue", "m_total_cost_profit",
+		"m_gross_profit", "m_profit_margin",
 
-# 		# Metrics - Revenue
-# 		"m_total_revenue", "m_total_cost_profit",
-# 		"m_gross_profit", "m_profit_margin",
+		# Metrics - Efficiency
+		"m_melting_efficiency", "m_xau_recovery",
+		"m_net_sellable", "m_profit_per_xau",
 
-# 		# Metrics - Efficiency
-# 		"m_melting_efficiency", "m_xau_recovery",
-# 		"m_net_sellable", "m_profit_per_xau",
+		# Vs Last Sale
+		"vs_weight_loss_percentage", "vs_xau_recovery_rate",
+		"vs_purity_variance", "vs_net_sellable_percentage",
+		"vs_profit_margin",
+	]
 
-# 		# Vs Last Sale
-# 		"vs_weight_loss_percentage", "vs_xau_recovery_rate",
-# 		"vs_purity_variance", "vs_net_sellable_percentage",
-# 		"vs_profit_margin",
-# 	]
-
-# 	for field in parent_fields:
-# 		if field in data:
-# 			doc.set(field, data.get(field))
+	for field in parent_fields:
+		if field in data:
+			doc.set(field, data.get(field))

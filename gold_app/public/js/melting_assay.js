@@ -11,7 +11,7 @@ window.WBMComponents.melting_assay = function ($mount, state) {
                     <div class="wbm-field-block">
                         <div class="wbm-field-label">Weight Before Melting</div>
                         <div class="wbm-input-wrapper">
-                            <input type="text" class="wbm-input" value="300" />
+                            <input id="melt-before" type="text" class="wbm-input" readonly />
                             <span class="wbm-input-suffix">grams</span>
                         </div>
                     </div>
@@ -19,7 +19,7 @@ window.WBMComponents.melting_assay = function ($mount, state) {
                     <div class="wbm-field-block">
                         <div class="wbm-field-label">Weight After Melting</div>
                         <div class="wbm-input-wrapper">
-                            <input type="text" class="wbm-input" value="295" />
+                            <input id="melt-after" type="text" class="wbm-input" value="" />
                             <span class="wbm-input-suffix">grams</span>
                         </div>
                     </div>
@@ -29,7 +29,7 @@ window.WBMComponents.melting_assay = function ($mount, state) {
                     <div class="wbm-field-block wbm-field-block--wide">
                         <div class="wbm-field-label">Melting Cost</div>
                         <div class="wbm-input-wrapper">
-                            <input type="text" class="wbm-input" value="150" />
+                            <input id="melt-cost" type="text" class="wbm-input" value="" />
                             <span class="wbm-input-suffix">RM</span>
                         </div>
                     </div>
@@ -51,15 +51,15 @@ window.WBMComponents.melting_assay = function ($mount, state) {
                 <div class="wbm-loss-strip">
                     <div class="wbm-loss-item">
                         <div class="wbm-loss-label">Weight Loss</div>
-                        <div class="wbm-loss-main wbm-loss-main--red">5.00 g</div>
+                        <div id="loss-weight" class="wbm-loss-main wbm-loss-main--red">0.00 g</div>
                     </div>
                     <div class="wbm-loss-item">
                         <div class="wbm-loss-label">XAU Loss</div>
-                        <div class="wbm-loss-main">19.44 g</div>
+                        <div id="loss-xau" class="wbm-loss-main">0.00 g</div>
                     </div>
                     <div class="wbm-loss-item">
                         <div class="wbm-loss-label">Loss Percentage</div>
-                        <div class="wbm-loss-main wbm-loss-main--red">1.67%</div>
+                        <div id="loss-percent" class="wbm-loss-main wbm-loss-main--red">0.00%</div>
                     </div>
                 </div>
             </div>
@@ -160,5 +160,115 @@ window.WBMComponents.melting_assay = function ($mount, state) {
 
 	$mount.html(html);
 
-	// hook state / events later if needed
+	// REALTIME MELTING CALCULATIONS
+	const summary = state.bag_summary || {};
+	const before = summary.total_weight_g || 0;
+	const avgPurity = summary.average_purity || 0;
+
+	// Set initial value
+	$("#melt-before").val(before);
+
+	// Attach listener to Weight After Melting
+	$(document).on("input", "#melt-after", function () {
+		const after = parseFloat($(this).val()) || 0;
+
+		// Weight Loss
+		const weightLoss = before - after;
+
+		// XAU Before = WeightBefore * (purity/1000)
+		const xauBefore = before * (avgPurity / 1000);
+
+		// XAU After = WeightAfter * (purity/1000)
+		const xauAfter = after * (avgPurity / 1000);
+
+		// XAU Loss
+		const xauLoss = xauBefore - xauAfter;
+
+		// Loss %
+		const lossPct = before > 0 ? (weightLoss / before) * 100 : 0;
+
+		// Update UI values
+		$("#loss-weight").text(weightLoss.toFixed(2) + " g");
+		$("#loss-xau").text(xauLoss.toFixed(2) + " g");
+		$("#loss-percent").text(lossPct.toFixed(2) + "%");
+	});
+
+	// CAPTURE MELTING COST
+	$(document).on("input", "#melt-cost", function () {
+		const meltCost = parseFloat($(this).val()) || 0;
+		state.melting_cost = meltCost;
+	});
+
+	//--------------------------------------------------
+	// STORE REALTIME MELTING VALUES INTO STATE
+	//--------------------------------------------------
+	function updateMeltingState() {
+		const beforeVal = parseFloat($("#melt-before").val()) || 0;
+		const afterVal = parseFloat($("#melt-after").val()) || 0;
+		const costVal = parseFloat($("#melt-cost").val()) || 0;
+
+		const weightLoss = beforeVal - afterVal;
+		const xauLoss = weightLoss * (avgPurity / 1000);
+		const lossPct = beforeVal ? (weightLoss / beforeVal) * 100 : 0;
+
+		const paymentMode = $('input[name="melt_payment_mode"]:checked').parent().text().trim();
+
+		state.melting = {
+			before: beforeVal,
+			after: afterVal,
+			cost: costVal,
+			payment_mode: paymentMode,
+			weight_loss: weightLoss,
+			xau_loss: xauLoss,
+			loss_percentage: lossPct,
+		};
+	}
+
+	// Trigger state update on input changes
+	$(document).on("input", "#melt-after", updateMeltingState);
+	$(document).on("input", "#melt-cost", updateMeltingState);
+	$(document).on("change", 'input[name="melt_payment_mode"]', updateMeltingState);
+
+	// Initialize once
+	updateMeltingState();
+
+	//--------------------------------------------------
+	// STORE ASSAY VALUES INTO STATE
+	//--------------------------------------------------
+	function updateAssayState() {
+		const assayPurity = parseFloat($(".wbm-assay-input-wrapper input").eq(0).val()) || 0;
+		const sampleWeight = parseFloat($(".wbm-assay-input-wrapper input").eq(1).val()) || 0;
+
+		const purityVariance = assayPurity - avgPurity;
+		const actualXau = before * (assayPurity / 1000);
+		const expectedXau = before * (avgPurity / 1000);
+		const xauVariance = actualXau - expectedXau;
+		const netSellable = actualXau - sampleWeight;
+
+		const assayCost = parseFloat($(".wbm-assay-cost-row input").val()) || 0;
+		const assayPaymentMode = $('input[name="assay_payment_mode"]:checked')
+			.parent()
+			.text()
+			.trim();
+
+		state.assay = {
+			current_purity: avgPurity,
+			assay_purity: assayPurity,
+			purity_variance: purityVariance,
+			xau_weight_variance: xauVariance,
+			actual_xau_weight: actualXau,
+			assay_sample_weight: sampleWeight,
+			net_sellable: netSellable,
+			cost: assayCost,
+			payment_mode: assayPaymentMode,
+		};
+	}
+
+	// Trigger updates
+	$(document).on("input", ".wbm-assay-input-wrapper input", updateAssayState);
+	$(document).on("input", ".wbm-assay-cost-row input", updateAssayState);
+	$(document).on("change", 'input[name="assay_payment_mode"]', updateAssayState);
+
+	// Initialize once
+	updateAssayState();
 };

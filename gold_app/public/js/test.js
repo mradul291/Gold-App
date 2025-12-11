@@ -17,6 +17,7 @@ frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
   $(page.body).append(`
         <div id="wbdm-root" class="wbdm-page">
             <div class="wbdm-inner">
+				<div id="wbdm-loader" class="wbdm-loader">Loading bags...</div>
                 <div id="wbdm-bag-list" class="wbdm-grid"></div>
             </div>
         </div>
@@ -24,10 +25,16 @@ frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
 
   frappe.require("/assets/gold_app/css/wholesale_bag_melt.css");
 
+  $("#wbdm-loader").show();
+  $("#wbdm-bag-list").hide();
+
   frappe.call({
     method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
     callback: function (r) {
       if (r.message) {
+        $("#wbdm-loader").hide();
+        $("#wbdm-bag-list").show();
+
         WBMState.bag_list = r.message;
         renderBagGrid(WBMState.bag_list);
 
@@ -150,7 +157,7 @@ function renderBagGrid(bags) {
 }
 
 // ==============================================
-// SHOW GLOBAL SHELL + TABS
+// SHOW GLOBAL SHELL + TABS (SAVE BUTTON ADDED)
 // ==============================================
 function showBagSummaryUI() {
   $("#wbdm-root").html(`
@@ -159,6 +166,7 @@ function showBagSummaryUI() {
             <!-- HEADER -->
             <div class="wbm-header">
                 <div class="wbm-header-inner">
+
                     <div class="wbm-header-left">
                         <div class="wbm-record-title">Melt & Assay Sales</div>
                         <div class="wbm-record-meta">
@@ -172,6 +180,12 @@ function showBagSummaryUI() {
                             </span>
                         </div>
                     </div>
+
+                    <!-- ✅ SAVE BUTTON (RIGHT SIDE) -->
+                    <div class="wbm-header-right">
+                        <button id="wbm-save-btn" class="wbm-save-btn">Save</button>
+                    </div>
+
                 </div>
 
                 <!-- TABS -->
@@ -185,11 +199,14 @@ function showBagSummaryUI() {
 
             <!-- TAB CONTENT -->
             <div class="wbm-page-body">
+				<div id="wbm-tab-loader" class="wbm-tab-loader">Loading...</div>
                 <div id="wbd-content" class="wbm-main-card"></div>
             </div>
 
         </div>
     `);
+
+  WBMState.onSaveRecord = saveMeltAssaySales;
 
   // default tab
   loadTabContent("bag_summary");
@@ -201,6 +218,12 @@ function showBagSummaryUI() {
 
     const tab = $(this).data("tab");
     loadTabContent(tab);
+  });
+
+  $(document).on("click", "#wbm-save-btn", function () {
+    if (WBMState.onSaveRecord) {
+      WBMState.onSaveRecord();
+    }
   });
 }
 
@@ -218,9 +241,17 @@ function loadTabContent(tabName) {
   const path = map[tabName];
   if (!path) return;
 
+  // SHOW LOADER
+  $("#wbm-tab-loader").show();
+  $("#wbd-content").hide().html("");
+
   frappe.require(path, () => {
     if (window.WBMComponents && window.WBMComponents[tabName]) {
       window.WBMComponents[tabName]($("#wbd-content"), WBMState);
+
+      // HIDE LOADER AFTER RENDER
+      $("#wbm-tab-loader").hide();
+      $("#wbd-content").show();
     }
   });
 }
@@ -228,4 +259,87 @@ function loadTabContent(tabName) {
 function getTodayDate() {
   const d = new Date();
   return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
+}
+
+function saveMeltAssaySales() {
+  // 1️⃣ --- BAG SUMMARY DATA ---
+  const summary = WBMState.bag_summary || {};
+  const bagContents = WBMState.bag_items || [];
+
+  // 2️⃣ --- MELTING & ASSAY DATA ---
+  const melt = WBMState.melting || {};
+  const assay = WBMState.assay || {};
+
+  // 3️⃣ --- BUYER SALE DATA ---
+  const sale = WBMState.sale || {};
+
+  // 4️⃣ --- METRICS DATA ---
+  const metrics = WBMState.metrics || {};
+
+  // 5️⃣ --- BUILD CLEAN PAYLOAD ---
+  const payload = {
+    header: {
+      // BAG SUMMARY
+      total_weight: summary.total_weight_g,
+      avg_purity: summary.average_purity,
+      total_xau: summary.pure_gold_xau_g,
+      total_cost: summary.total_cost_basis,
+      xau_avco:
+        summary.total_cost_basis && summary.pure_gold_xau_g
+          ? summary.total_cost_basis / summary.pure_gold_xau_g
+          : 0,
+
+      // MELTING
+      weight_before_melting: melt.before,
+      weight_after_melting: melt.after,
+      melting_cost: melt.cost,
+      melting_payment_mode: melt.payment_mode,
+      weight_loss: melt.weight_loss,
+      xau_loss: melt.xau_loss,
+      loss_percentage: melt.loss_percentage,
+
+      // ASSAY
+      current_avg_purity: assay.current_purity,
+      assay_purity: assay.assay_purity,
+      purity_variance: assay.purity_variance,
+      xau_weight_variance: assay.xau_weight_variance,
+      actual_xau_weight: assay.actual_xau_weight,
+      assay_sample_weight: assay.sample_weight,
+      net_xau_sellable: assay.net_sellable,
+      assay_cost: assay.cost,
+      assay_payment_mode: assay.payment_mode,
+
+      // SALES DATA
+      sale_net_weight: sale.net_weight,
+      sale_assay_purity: sale.assay_purity,
+      sale_net_xau: sale.net_xau,
+      total_xau_sold: sale.total_xau_sold,
+      total_revenue: sale.revenue,
+      weighted_avg_rate: sale.weighted_avg_rate,
+
+      // METRICS (optional)
+      ...metrics,
+    },
+
+    bag_contents: bagContents.map((r) => ({
+      purity: r.purity,
+      weight: r.weight_g,
+      avco: r.cost_per_g_rm,
+      cost: r.cost_rm,
+      xau: r.xau_g,
+      xau_avco: r.xau_g ? r.cost_rm / r.xau_g : 0,
+    })),
+
+    locked_rates: sale.locked_rates || [],
+  };
+
+  // 6️⃣ --- CALL BACKEND API ---
+  frappe.call({
+    method: "gold_app.api.sales.wholesale_bag_melt.save_melt_assay_sales",
+    args: { payload },
+    freeze: true,
+    callback: function (r) {
+      frappe.msgprint("Melt & Assay Sales saved successfully.");
+    },
+  });
 }

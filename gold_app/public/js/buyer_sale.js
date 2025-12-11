@@ -111,4 +111,92 @@ window.WBMComponents.buyer_sale = function ($mount, state) {
     `;
 
 	$mount.html(html);
+
+	//--------------------------------------------------
+	// PARSE LOCKED RATE TABLE
+	//--------------------------------------------------
+	function getLockedRates() {
+		const rows = [];
+
+		$(".wbs-table-row").each(function () {
+			const price = parseFloat($(this).find("input").eq(0).val()) || 0;
+			const xauWeight = parseFloat($(this).find("input").eq(1).val()) || 0;
+			const remark = $(this).find("input").eq(2).val() || "";
+
+			const amount = price * xauWeight;
+
+			rows.push({
+				price_per_xau: price,
+				xau_weight: xauWeight,
+				amount: amount,
+				remark: remark,
+			});
+		});
+
+		return rows;
+	}
+
+	//--------------------------------------------------
+	// CALCULATE SUMMARY VALUES
+	//--------------------------------------------------
+	function computeSummary(lockedRates) {
+		let totalXau = 0;
+		let totalRevenue = 0;
+
+		lockedRates.forEach((r) => {
+			totalXau += r.xau_weight;
+			totalRevenue += r.amount;
+		});
+
+		const weightedAvgRate = totalXau > 0 ? totalRevenue / totalXau : 0;
+
+		return { totalXau, totalRevenue, weightedAvgRate };
+	}
+
+	//--------------------------------------------------
+	// STORE VALUES INTO STATE ON EACH CHANGE
+	//--------------------------------------------------
+	function updateSaleState() {
+		const lockedRates = getLockedRates();
+		const summary = computeSummary(lockedRates);
+
+		state.sale = {
+			net_weight: state.assay?.net_sellable || 0,
+			assay_purity: state.assay?.assay_purity || 0,
+			net_xau: state.assay?.net_sellable || 0,
+
+			// SUMMARY FIELDS
+			total_xau_sold: summary.totalXau,
+			total_revenue: summary.totalRevenue,
+			weighted_avg_rate: summary.weightedAvgRate,
+
+			// CHILD TABLE
+			locked_rates: lockedRates,
+		};
+	}
+
+	//--------------------------------------------------
+	// TRIGGER UPDATE ON INPUT CHANGE
+	//--------------------------------------------------
+	$(document).on("input", ".wbs-table-row input", updateSaleState);
+	$(document).on("click", ".wbs-trash", function () {
+		$(this).closest(".wbs-table-row").remove();
+		updateSaleState();
+	});
+	$(document).on("click", ".wbs-add-btn", function () {
+		// Add new empty row
+		$(".wbs-card").append(`
+        <div class="wbs-table-row">
+            <input class="wbs-input" value=""/>
+            <input class="wbs-input" value=""/>
+            <div class="wbs-amount">RM 0.00</div>
+            <input class="wbs-input" placeholder="Optional remark"/>
+            <div class="wbs-trash">🗑</div>
+        </div>
+    `);
+		updateSaleState();
+	});
+
+	// Initialize once
+	updateSaleState();
 };
