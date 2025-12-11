@@ -17,7 +17,10 @@ frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
 	$(page.body).append(`
         <div id="wbdm-root" class="wbdm-page">
             <div class="wbdm-inner">
-				<div id="wbdm-loader" class="wbdm-loader">Loading bags...</div>
+				<div id="wbdm-loader" class="loader-overlay">
+    				<div class="loader"></div>
+    				<p>Loading...</p>
+				</div>
                 <div id="wbdm-bag-list" class="wbdm-grid"></div>
             </div>
         </div>
@@ -25,15 +28,16 @@ frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
 
 	frappe.require("/assets/gold_app/css/wholesale_bag_melt.css");
 
-	$("#wbdm-loader").show();
+	$("#wbdm-loader").fadeIn(150);
 	$("#wbdm-bag-list").hide();
 
 	frappe.call({
 		method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
 		callback: function (r) {
 			if (r.message) {
-				$("#wbdm-loader").hide();
-				$("#wbdm-bag-list").show();
+				$("#wbdm-loader").fadeOut(200, () => {
+					$("#wbdm-bag-list").fadeIn(200);
+				});
 
 				WBMState.bag_list = r.message;
 				renderBagGrid(WBMState.bag_list);
@@ -196,7 +200,10 @@ function showBagSummaryUI() {
 
             <!-- TAB CONTENT -->
             <div class="wbm-page-body">
-				<div id="wbm-tab-loader" class="wbm-tab-loader">Loading...</div>
+				<div id="wbm-tab-loader" class="loader-overlay">
+    				<div class="loader"></div>
+    				<p>Loading...</p>
+				</div>
                 <div id="wbd-content" class="wbm-main-card"></div>
             </div>
 
@@ -239,16 +246,17 @@ function loadTabContent(tabName) {
 	if (!path) return;
 
 	// SHOW LOADER
-	$("#wbm-tab-loader").show();
-	$("#wbd-content").hide().html("");
+	$("#wbm-tab-loader").fadeIn(150);
+	$("#wbd-content").hide();
 
 	frappe.require(path, () => {
 		if (window.WBMComponents && window.WBMComponents[tabName]) {
 			window.WBMComponents[tabName]($("#wbd-content"), WBMState);
 
 			// HIDE LOADER AFTER RENDER
-			$("#wbm-tab-loader").hide();
-			$("#wbd-content").show();
+			$("#wbm-tab-loader").fadeOut(200, () => {
+				$("#wbd-content").fadeIn(200);
+			});
 		}
 	});
 }

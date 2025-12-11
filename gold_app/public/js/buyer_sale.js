@@ -184,17 +184,8 @@ window.WBMComponents.buyer_sale = function ($mount, state) {
 		updateSaleState();
 	});
 	$(document).on("click", ".wbs-add-btn", function () {
-		// Add new empty row
-		$(".wbs-card").append(`
-        <div class="wbs-table-row">
-            <input class="wbs-input" value=""/>
-            <input class="wbs-input" value=""/>
-            <div class="wbs-amount">RM 0.00</div>
-            <input class="wbs-input" placeholder="Optional remark"/>
-            <div class="wbs-trash">🗑</div>
-        </div>
-    `);
-		updateSaleState();
+		// Dummy placeholder – does nothing for now
+		frappe.msgprint("Add Rate feature coming soon.");
 	});
 
 	// Initialize once

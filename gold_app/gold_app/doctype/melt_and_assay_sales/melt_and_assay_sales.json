@@ -112,7 +112,8 @@
    "fieldname": "bag_contents",
    "fieldtype": "Table",
    "label": "Contents",
-   "options": "Melt Assay Bag Content"
+   "options": "Melt Assay Bag Content",
+   "read_only": 1
   },
   {
    "fieldname": "sec_bag_summary_totals",
@@ -122,27 +123,32 @@
   {
    "fieldname": "total_weight",
    "fieldtype": "Float",
-   "label": "Total Weight (g)"
+   "label": "Total Weight (g)",
+   "read_only": 1
   },
   {
    "fieldname": "avg_purity",
    "fieldtype": "Percent",
-   "label": "Avg Purity (%)"
+   "label": "Avg Purity (%)",
+   "read_only": 1
   },
   {
    "fieldname": "total_xau",
    "fieldtype": "Float",
-   "label": "Total XAU (g)"
+   "label": "Total XAU (g)",
+   "read_only": 1
   },
   {
    "fieldname": "total_cost",
    "fieldtype": "Currency",
-   "label": "Total Cost (RM)"
+   "label": "Total Cost (RM)",
+   "read_only": 1
   },
   {
    "fieldname": "xau_avco",
    "fieldtype": "Currency",
-   "label": "XAU AVCO (RM/g)"
+   "label": "XAU AVCO (RM/g)",
+   "read_only": 1
   },
   {
    "fieldname": "tab_melting_assay",
@@ -157,38 +163,45 @@
   {
    "fieldname": "weight_before_melting",
    "fieldtype": "Float",
-   "label": "Weight Before Melting (g)"
+   "label": "Weight Before Melting (g)",
+   "read_only": 1
   },
   {
    "fieldname": "weight_after_melting",
    "fieldtype": "Float",
-   "label": "Weight After Melting (g)"
+   "label": "Weight After Melting (g)",
+   "read_only": 1
   },
   {
    "fieldname": "melting_cost",
    "fieldtype": "Currency",
-   "label": "Melting Cost (RM)"
+   "label": "Melting Cost (RM)",
+   "read_only": 1
   },
   {
    "fieldname": "melting_payment_mode",
    "fieldtype": "Select",
    "label": "Melting Payment Mode",
-   "options": "Cash\nTransfer"
+   "options": "Cash\nTransfer",
+   "read_only": 1
   },
   {
    "fieldname": "weight_loss",
    "fieldtype": "Float",
-   "label": "Weight Loss (g)"
+   "label": "Weight Loss (g)",
+   "read_only": 1
   },
   {
    "fieldname": "xau_loss",
    "fieldtype": "Float",
-   "label": "XAU Loss (g)"
+   "label": "XAU Loss (g)",
+   "read_only": 1
   },
   {
    "fieldname": "loss_percentage",
    "fieldtype": "Percent",
-   "label": "Loss Percentage (%)"
+   "label": "Loss Percentage (%)",
+   "read_only": 1
   },
   {
    "fieldname": "sec_assay_results",
@@ -198,48 +211,57 @@
   {
    "fieldname": "current_avg_purity",
    "fieldtype": "Percent",
-   "label": "Current Avg Purity (%)"
+   "label": "Current Avg Purity (%)",
+   "read_only": 1
   },
   {
    "fieldname": "assay_purity",
    "fieldtype": "Percent",
-   "label": "Assay Purity (%)"
+   "label": "Assay Purity (%)",
+   "read_only": 1
   },
   {
    "fieldname": "purity_variance",
    "fieldtype": "Percent",
-   "label": "Purity Variance (%)"
+   "label": "Purity Variance (%)",
+   "read_only": 1
   },
   {
    "fieldname": "xau_weight_variance",
    "fieldtype": "Float",
-   "label": "XAU Weight Variance (g)"
+   "label": "XAU Weight Variance (g)",
+   "read_only": 1
   },
   {
    "fieldname": "actual_xau_weight",
    "fieldtype": "Float",
-   "label": "Actual XAU Weight (g)"
+   "label": "Actual XAU Weight (g)",
+   "read_only": 1
   },
   {
    "fieldname": "assay_sample_weight",
    "fieldtype": "Float",
-   "label": "Assay Sample Weight (g)"
+   "label": "Assay Sample Weight (g)",
+   "read_only": 1
   },
   {
    "fieldname": "net_xau_sellable",
    "fieldtype": "Float",
-   "label": "Net XAU (Sellable) (g)"
+   "label": "Net XAU (Sellable) (g)",
+   "read_only": 1
   },
   {
    "fieldname": "assay_cost",
    "fieldtype": "Currency",
-   "label": "Assay Cost (RM)"
+   "label": "Assay Cost (RM)",
+   "read_only": 1
   },
   {
    "fieldname": "assay_payment_mode",
    "fieldtype": "Select",
    "label": "Assay Payment Mode",
-   "options": "Cash\nTransfer"
+   "options": "Cash\nTransfer",
+   "read_only": 1
   },
   {
    "fieldname": "tab_sales_detail",
@@ -254,17 +276,20 @@
   {
    "fieldname": "sale_net_weight",
    "fieldtype": "Float",
-   "label": "Net Weight (g)"
+   "label": "Net Weight (g)",
+   "read_only": 1
   },
   {
    "fieldname": "sale_assay_purity",
    "fieldtype": "Percent",
-   "label": "Assay Purity (%)"
+   "label": "Assay Purity (%)",
+   "read_only": 1
   },
   {
    "fieldname": "sale_net_xau",
    "fieldtype": "Float",
-   "label": "Net XAU (g)"
+   "label": "Net XAU (g)",
+   "read_only": 1
   },
   {
    "fieldname": "sec_locked_rates",
@@ -275,7 +300,8 @@
    "fieldname": "locked_rates",
    "fieldtype": "Table",
    "label": "Rates",
-   "options": "Melt Assay Locked Rate"
+   "options": "Melt Assay Locked Rate",
+   "read_only": 1
   },
   {
    "fieldname": "sec_sales_summary",
@@ -285,17 +311,20 @@
   {
    "fieldname": "total_xau_sold",
    "fieldtype": "Float",
-   "label": "Total XAU Sold (g)"
+   "label": "Total XAU Sold (g)",
+   "read_only": 1
   },
   {
    "fieldname": "total_revenue",
    "fieldtype": "Currency",
-   "label": "Total Revenue (RM)"
+   "label": "Total Revenue (RM)",
+   "read_only": 1
   },
   {
    "fieldname": "weighted_avg_rate",
    "fieldtype": "Currency",
-   "label": "Weighted Avg Rate (RM/g)"
+   "label": "Weighted Avg Rate (RM/g)",
+   "read_only": 1
   },
   {
    "fieldname": "tab_metrics",
@@ -310,52 +339,62 @@
   {
    "fieldname": "m_original_gross_weight",
    "fieldtype": "Float",
-   "label": "Original Gross Weight"
+   "label": "Original Gross Weight",
+   "read_only": 1
   },
   {
    "fieldname": "m_weight_after_melting",
    "fieldtype": "Float",
-   "label": "Weight After Melting"
+   "label": "Weight After Melting",
+   "read_only": 1
   },
   {
    "fieldname": "m_weight_loss",
    "fieldtype": "Float",
-   "label": "Weight Loss"
+   "label": "Weight Loss",
+   "read_only": 1
   },
   {
    "fieldname": "m_weight_loss_percentage",
    "fieldtype": "Percent",
-   "label": "Weight Loss %"
+   "label": "Weight Loss %",
+   "read_only": 1
   },
   {
    "fieldname": "m_xau_weight_loss",
    "fieldtype": "Float",
-   "label": "XAU Weight Loss"
+   "label": "XAU Weight Loss",
+   "read_only": 1
   },
   {
    "fieldname": "m_net_weight_sale",
    "fieldtype": "Float",
-   "label": "Net Weight for Sale"
+   "label": "Net Weight for Sale",
+   "read_only": 1
   },
   {
    "fieldname": "m_original_avg_purity",
    "fieldtype": "Percent",
-   "label": "Original Avg Purity"
+   "label": "Original Avg Purity",
+   "read_only": 1
   },
   {
    "fieldname": "m_assay_purity",
    "fieldtype": "Percent",
-   "label": "Assay Purity"
+   "label": "Assay Purity",
+   "read_only": 1
   },
   {
    "fieldname": "m_purity_variance",
    "fieldtype": "Percent",
-   "label": "Purity Variance"
+   "label": "Purity Variance",
+   "read_only": 1
   },
   {
    "fieldname": "m_xau_weight_variance",
    "fieldtype": "Float",
-   "label": "XAU Weight Variance"
+   "label": "XAU Weight Variance",
+   "read_only": 1
   },
   {
    "fieldname": "sec_metrics_cost",
@@ -364,42 +403,50 @@
   {
    "fieldname": "m_original_gold_cost",
    "fieldtype": "Currency",
-   "label": "Original Gold Cost"
+   "label": "Original Gold Cost",
+   "read_only": 1
   },
   {
    "fieldname": "m_melting_cost",
    "fieldtype": "Currency",
-   "label": "Melting Cost"
+   "label": "Melting Cost",
+   "read_only": 1
   },
   {
    "fieldname": "m_assay_cost",
    "fieldtype": "Currency",
-   "label": "Assay Cost"
+   "label": "Assay Cost",
+   "read_only": 1
   },
   {
    "fieldname": "m_total_cost",
    "fieldtype": "Currency",
-   "label": "Total Cost"
+   "label": "Total Cost",
+   "read_only": 1
   },
   {
    "fieldname": "m_total_revenue",
    "fieldtype": "Currency",
-   "label": "Total Revenue"
+   "label": "Total Revenue",
+   "read_only": 1
   },
   {
    "fieldname": "m_total_cost_profit",
    "fieldtype": "Currency",
-   "label": "Total Cost"
+   "label": "Total Cost",
+   "read_only": 1
   },
   {
    "fieldname": "m_gross_profit",
    "fieldtype": "Currency",
-   "label": "Gross Profit"
+   "label": "Gross Profit",
+   "read_only": 1
   },
   {
    "fieldname": "m_profit_margin",
    "fieldtype": "Percent",
-   "label": "Profit Margin (%)"
+   "label": "Profit Margin (%)",
+   "read_only": 1
   },
   {
    "fieldname": "sec_metrics_efficiency",
@@ -409,22 +456,26 @@
   {
    "fieldname": "m_melting_efficiency",
    "fieldtype": "Percent",
-   "label": "Melting Efficiency (%)"
+   "label": "Melting Efficiency (%)",
+   "read_only": 1
   },
   {
    "fieldname": "m_xau_recovery",
    "fieldtype": "Percent",
-   "label": "XAU Recovery (%)"
+   "label": "XAU Recovery (%)",
+   "read_only": 1
   },
   {
    "fieldname": "m_net_sellable",
    "fieldtype": "Percent",
-   "label": "Net Sellable (%)"
+   "label": "Net Sellable (%)",
+   "read_only": 1
   },
   {
    "fieldname": "m_profit_per_xau",
    "fieldtype": "Currency",
-   "label": "Profit per XAU"
+   "label": "Profit per XAU",
+   "read_only": 1
   },
   {
    "fieldname": "sec_metrics_vs_last_sale",
@@ -434,27 +485,32 @@
   {
    "fieldname": "vs_weight_loss_percentage",
    "fieldtype": "Percent",
-   "label": "Weight Loss %"
+   "label": "Weight Loss %",
+   "read_only": 1
   },
   {
    "fieldname": "vs_xau_recovery_rate",
    "fieldtype": "Percent",
-   "label": "XAU Recovery Rate %"
+   "label": "XAU Recovery Rate %",
+   "read_only": 1
   },
   {
    "fieldname": "vs_purity_variance",
    "fieldtype": "Percent",
-   "label": "Purity Variance"
+   "label": "Purity Variance",
+   "read_only": 1
   },
   {
    "fieldname": "vs_net_sellable_percentage",
    "fieldtype": "Percent",
-   "label": "Net Sellable %"
+   "label": "Net Sellable %",
+   "read_only": 1
   },
   {
    "fieldname": "vs_profit_margin",
    "fieldtype": "Percent",
-   "label": "Profit Margin %"
+   "label": "Profit Margin %",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_sagd",
@@ -538,7 +594,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-10 14:43:03.830580",
+ "modified": "2025-12-11 20:46:09.940102",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Melt and Assay Sales",
