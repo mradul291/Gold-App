@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import flt, nowdate
 
 @frappe.whitelist()
@@ -263,3 +264,90 @@ def set_parent_fields(doc, data):
 	for field in parent_fields:
 		if field in data:
 			doc.set(field, data.get(field))
+
+@frappe.whitelist()
+def get_resume_data(log_id):
+    """
+    Return a JSON payload that contains all data needed to fully
+    restore a saved Melt and Assay Sales document on the frontend.
+
+    Response shape:
+    {
+      "name": doc.name,
+      "header": { ... parent fields ... },
+      "bag_contents": [ { purity, weight, avco, cost, xau, xau_avco }, ... ],
+      "locked_rates": [ { price_per_xau, xau_weight, amount, remark }, ... ]
+    }
+    """
+    if not log_id:
+        frappe.throw(_("log_id is required"))
+
+    try:
+        doc = frappe.get_doc("Melt and Assay Sales", log_id)
+    except Exception as e:
+        frappe.throw(_("Cannot load document: {0}").format(str(e)))
+
+    # Build header dict — include all parent fields used by frontend
+    header = {}
+    parent_fields = [
+        # Bag Summary
+        "total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
+
+        # Melting
+        "weight_before_melting", "weight_after_melting", "melting_cost",
+        "melting_payment_mode", "weight_loss", "xau_loss", "loss_percentage",
+
+        # Assay
+        "current_avg_purity", "assay_purity", "purity_variance",
+        "xau_weight_variance", "actual_xau_weight", "assay_sample_weight",
+        "net_xau_sellable", "assay_cost", "assay_payment_mode",
+
+        # Sales
+        "sale_net_weight", "sale_assay_purity", "sale_net_xau",
+        "total_xau_sold", "total_revenue", "weighted_avg_rate",
+
+        # Metrics
+        "m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
+        "m_weight_loss_percentage", "m_xau_weight_loss", "m_net_weight_sale",
+        "m_original_avg_purity", "m_assay_purity", "m_purity_variance",
+        "m_xau_weight_variance", "m_original_gold_cost", "m_melting_cost",
+        "m_assay_cost", "m_total_cost", "m_total_revenue", "m_total_cost_profit",
+        "m_gross_profit", "m_profit_margin", "m_melting_efficiency",
+        "m_xau_recovery", "m_net_sellable", "m_profit_per_xau",
+
+        # Vs last sale
+        "vs_weight_loss_percentage", "vs_xau_recovery_rate", "vs_purity_variance",
+        "vs_net_sellable_percentage", "vs_profit_margin",
+    ]
+
+    for f in parent_fields:
+        header[f] = doc.get(f)
+
+    # bag_contents child table
+    bag_contents = []
+    for row in (doc.get("bag_contents") or []):
+        bag_contents.append({
+            "purity": row.get("purity"),
+            "weight": row.get("weight"),
+            "avco": row.get("avco"),
+            "cost": row.get("cost"),
+            "xau": row.get("xau"),
+            "xau_avco": row.get("xau_avco"),
+        })
+
+    # locked_rates child table
+    locked_rates = []
+    for row in (doc.get("locked_rates") or []):
+        locked_rates.append({
+            "price_per_xau": row.get("price_per_xau"),
+            "xau_weight": row.get("xau_weight"),
+            "amount": row.get("amount"),
+            "remark": row.get("remark"),
+        })
+
+    return {
+        "name": doc.name,
+        "header": header,
+        "bag_contents": bag_contents,
+        "locked_rates": locked_rates,
+    }

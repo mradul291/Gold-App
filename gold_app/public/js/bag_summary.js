@@ -72,40 +72,7 @@ window.WBMComponents.bag_summary = function ($mount, state) {
 	const html = `
         <div class="wbm-bag-summary-root">
 
-            <!-- Bag contents table -->
-            <div class="wbm-section-header">Bag Contents</div>
-
-            <div class="wbm-bag-card">
-                <div class="wbm-table-header-row">
-                    <div class="wbm-col wbm-col-purity">PURITY</div>
-                    <div class="wbm-col wbm-col-weight text-right">WEIGHT</div>
-                    <div class="wbm-col wbm-col-avco text-right">AVCO</div>
-                    <div class="wbm-col wbm-col-cost text-right">COST</div>
-                    <div class="wbm-col wbm-col-xau text-right">XAU</div>
-                    <div class="wbm-col wbm-col-xauavco text-right">XAU AVCO</div>
-                </div>
-
-                ${rowsHtml}
-
-                <div class="wbm-table-total-row">
-                    <div class="wbm-col wbm-col-purity wbm-total-label">TOTAL</div>
-                    <div class="wbm-col wbm-col-weight text-right wbm-total-strong">
-                        ${fmt(summary.total_weight_g)} g
-                    </div>
-                    <div class="wbm-col wbm-col-avco text-right">—</div>
-                    <div class="wbm-col wbm-col-cost text-right wbm-total-blue">
-                        RM ${fmt(summary.total_cost_basis)}
-                    </div>
-                    <div class="wbm-col wbm-col-xau text-right wbm-total-strong">
-                        ${fmt(summary.pure_gold_xau_g, 3)} g
-                    </div>
-                    <div class="wbm-col wbm-col-xauavco text-right wbm-total-strong">
-                        RM ${fmt(totalXauAvco)}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Summary cards -->
+		<!-- Summary cards -->
             <div class="wbm-summary-wrapper">
                 <div class="wbm-summary-header">Summary</div>
 
@@ -148,6 +115,39 @@ window.WBMComponents.bag_summary = function ($mount, state) {
                             ${fmt(totalXauAvco)}
                         </div>
                         <div class="wbm-summary-sub">per gram</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bag contents table -->
+            <div class="wbm-section-header">Bag Contents</div>
+
+            <div class="wbm-bag-card">
+                <div class="wbm-table-header-row">
+                    <div class="wbm-col wbm-col-purity">PURITY</div>
+                    <div class="wbm-col wbm-col-weight text-right">WEIGHT</div>
+                    <div class="wbm-col wbm-col-avco text-right">AVCO</div>
+                    <div class="wbm-col wbm-col-cost text-right">COST</div>
+                    <div class="wbm-col wbm-col-xau text-right">XAU</div>
+                    <div class="wbm-col wbm-col-xauavco text-right">XAU AVCO</div>
+                </div>
+
+                ${rowsHtml}
+
+                <div class="wbm-table-total-row">
+                    <div class="wbm-col wbm-col-purity wbm-total-label">TOTAL</div>
+                    <div class="wbm-col wbm-col-weight text-right wbm-total-strong">
+                        ${fmt(summary.total_weight_g)} g
+                    </div>
+                    <div class="wbm-col wbm-col-avco text-right">—</div>
+                    <div class="wbm-col wbm-col-cost text-right wbm-total-blue">
+                        RM ${fmt(summary.total_cost_basis)}
+                    </div>
+                    <div class="wbm-col wbm-col-xau text-right wbm-total-strong">
+                        ${fmt(summary.pure_gold_xau_g, 3)} g
+                    </div>
+                    <div class="wbm-col wbm-col-xauavco text-right wbm-total-strong">
+                        RM ${fmt(totalXauAvco)}
                     </div>
                 </div>
             </div>

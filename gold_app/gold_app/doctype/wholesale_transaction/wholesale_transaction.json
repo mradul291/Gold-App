@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "autoname": "WT-.#####",
  "creation": "2025-10-27 20:37:42.386548",
  "doctype": "DocType",
@@ -193,7 +192,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-03 15:51:08.426211",
+ "modified": "2025-12-12 16:39:53.539464",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Wholesale Transaction",

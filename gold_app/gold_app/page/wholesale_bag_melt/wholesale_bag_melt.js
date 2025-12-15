@@ -28,6 +28,20 @@ frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
 
 	frappe.require("/assets/gold_app/css/wholesale_bag_melt.css");
 
+	// detect resume param
+	const urlParams = new URLSearchParams(window.location.search);
+	const RESUME_LOG_ID = urlParams.get("log_id");
+
+	if (RESUME_LOG_ID) {
+		// show small loader while we load the saved doc
+		$("#wbdm-loader").fadeIn(150);
+		$("#wbdm-bag-list").hide();
+
+		// call the resume loader
+		loadResumeData(RESUME_LOG_ID);
+		return; // skip normal bag-overview flow (we will load bag overview in background if needed)
+	}
+
 	$("#wbdm-loader").fadeIn(150);
 	$("#wbdm-bag-list").hide();
 
@@ -261,6 +275,148 @@ function loadTabContent(tabName) {
 	});
 }
 
+/**
+ * loadResumeData(log_id)
+ * - Fetches resume payload from backend
+ * - Maps server fields -> frontend WBMState shape
+ * - Calls showBagSummaryUI() and selects default tab
+ */
+function loadResumeData(log_id) {
+	if (!log_id) return;
+
+	frappe.call({
+		method: "gold_app.api.sales.wholesale_bag_melt.get_resume_data",
+		args: { log_id: log_id },
+		callback: function (r) {
+			if (!r.message) {
+				frappe.msgprint("Failed to load saved record: " + (log_id || ""));
+				// fallback to normal bag overview
+				loadBagOverviewFallback();
+				return;
+			}
+
+			const payload = r.message || {};
+			const header = payload.header || {};
+			const bag_contents = payload.bag_contents || [];
+			const locked_rates = payload.locked_rates || [];
+
+			// 1) Bag summary mapping — match keys expected by bag_summary component
+			WBMState.bag_summary = {
+				// use record_id if saved in header else fallback to doc name
+				record_id: header.record_id || payload.name || header.name || log_id,
+				record_date: header.posting_date || header.date || getTodayDate(),
+
+				// map names used by bag_summary component
+				total_weight_g: header.total_weight || header.m_original_gross_weight || 0,
+				average_purity: header.avg_purity || header.m_original_avg_purity || 0,
+				pure_gold_xau_g: header.total_xau || 0,
+				total_cost_basis: header.total_cost || 0,
+				// keep other useful fields too
+				xau_avco: header.xau_avco || 0,
+			};
+
+			// 2) bag_items mapping — adapt saved child table shape to component expected shape
+			WBMState.bag_items = (bag_contents || []).map((row) => ({
+				purity: row.purity || "",
+				weight_g: row.weight || 0,
+				cost_per_g_rm: row.avco || 0,
+				cost_rm: row.cost || 0,
+				xau_g: row.xau || 0,
+				xau_avco: row.xau_avco || 0,
+			}));
+
+			// 3) melting
+			WBMState.melting = {
+				before: header.weight_before_melting || 0,
+				after: header.weight_after_melting || 0,
+				cost: header.melting_cost || 0,
+				payment_mode: header.melting_payment_mode || "",
+				weight_loss: header.weight_loss || 0,
+				xau_loss: header.xau_loss || 0,
+				loss_percentage: header.loss_percentage || 0,
+			};
+
+			// 4) assay
+			WBMState.assay = {
+				current_purity:
+					header.current_avg_purity || WBMState.bag_summary.average_purity || 0,
+				assay_purity: header.assay_purity || 0,
+				purity_variance: header.purity_variance || 0,
+				xau_weight_variance: header.xau_weight_variance || 0,
+				actual_xau_weight: header.actual_xau_weight || 0,
+				assay_sample_weight: header.assay_sample_weight || 0,
+				net_sellable: header.net_xau_sellable || 0,
+				cost: header.assay_cost || 0,
+				payment_mode: header.assay_payment_mode || "",
+			};
+
+			// 5) sale
+			WBMState.sale = {
+				net_weight: header.sale_net_weight || 0,
+				assay_purity: header.sale_assay_purity || 0,
+				net_xau: header.sale_net_xau || 0,
+				total_xau_sold: header.total_xau_sold || 0,
+				total_revenue: header.total_revenue || 0,
+				weighted_avg_rate: header.weighted_avg_rate || 0,
+				locked_rates: locked_rates || [],
+			};
+
+			// 6) metrics
+			WBMState.metrics = header || {}; // since header already contains m_* fields
+
+			// 7) store bag_list in background (optional) — helpful for UI that uses bag overview
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
+				callback: function (ov) {
+					if (ov && ov.message) {
+						WBMState.bag_list = ov.message;
+					}
+				},
+			});
+
+			// 8) now render UI shell and restore tabs
+			showBagSummaryUI();
+
+			// after render, make sure the default tab loads and that tab components pick up restored WBMState
+			// If you want to open a specific tab (e.g., 'buyer_sale'), set it here:
+			// loadTabContent("buyer_sale"); and set active class
+			// For now we keep default bag_summary (as showBagSummaryUI already loads it)
+		},
+		error: function (err) {
+			console.error("Resume load failed", err);
+			frappe.msgprint("Failed to load resume data.");
+			// fallback to bag-overview
+			loadBagOverviewFallback();
+		},
+	});
+}
+
+// helper to fallback to normal overview if resume fails
+function loadBagOverviewFallback() {
+	// normal flow - fetch bag overview
+	frappe.call({
+		method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
+		callback: function (r) {
+			if (r.message) {
+				$("#wbdm-loader").fadeOut(200, () => {
+					$("#wbdm-bag-list").fadeIn(200);
+				});
+				WBMState.bag_list = r.message;
+				renderBagGrid(WBMState.bag_list);
+
+				WBMState.onBackToBags = function () {
+					$("#wbdm-root").html(`
+                        <div class="wbdm-inner">
+                            <div id="wbdm-bag-list" class="wbdm-grid"></div>
+                        </div>
+                    `);
+					renderBagGrid(WBMState.bag_list);
+				};
+			}
+		},
+	});
+}
+
 function getTodayDate() {
 	const d = new Date();
 	return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
@@ -309,7 +465,7 @@ function saveMeltAssaySales() {
 			purity_variance: assay.purity_variance,
 			xau_weight_variance: assay.xau_weight_variance,
 			actual_xau_weight: assay.actual_xau_weight,
-			assay_sample_weight: assay.sample_weight,
+			assay_sample_weight: assay.assay_sample_weight,
 			net_xau_sellable: assay.net_sellable,
 			assay_cost: assay.cost,
 			assay_payment_mode: assay.payment_mode,
@@ -319,7 +475,7 @@ function saveMeltAssaySales() {
 			sale_assay_purity: sale.assay_purity,
 			sale_net_xau: sale.net_xau,
 			total_xau_sold: sale.total_xau_sold,
-			total_revenue: sale.revenue,
+			total_revenue: sale.total_revenue,
 			weighted_avg_rate: sale.weighted_avg_rate,
 
 			// METRICS (optional)

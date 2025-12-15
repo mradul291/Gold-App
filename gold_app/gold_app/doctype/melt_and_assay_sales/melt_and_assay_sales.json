@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 1,
  "autoname": "format:MAS-{DD}{MM}{YY}-{###}",
  "creation": "2025-12-10 14:15:29.653714",
  "doctype": "DocType",
@@ -240,7 +239,7 @@
   },
   {
    "fieldname": "assay_sample_weight",
-   "fieldtype": "Float",
+   "fieldtype": "Data",
    "label": "Assay Sample Weight (g)",
    "read_only": 1
   },
@@ -594,7 +593,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-11 20:46:09.940102",
+ "modified": "2025-12-15 16:09:02.668941",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Melt and Assay Sales",
