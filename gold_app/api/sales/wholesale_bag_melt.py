@@ -262,8 +262,7 @@ def set_parent_fields(doc, data):
 	]
 
 	for field in parent_fields:
-		if field in data:
-			doc.set(field, data.get(field))
+		doc.set(field, data.get(field) or 0)
 
 @frappe.whitelist()
 def get_resume_data(log_id):
@@ -350,4 +349,104 @@ def get_resume_data(log_id):
         "header": header,
         "bag_contents": bag_contents,
         "locked_rates": locked_rates,
+    }
+
+@frappe.whitelist()
+def create_purity_and_unsorted_item(purity):
+    if not purity:
+        frappe.throw("Purity is required")
+
+    purity = float(purity)
+    purity_name = str(purity)
+    item_code = f"Unsorted-{purity_name}"
+
+    # -------------------------
+    # Create Purity (if missing)
+    # -------------------------
+    if not frappe.db.exists("Purity", purity_name):
+        purity_doc = frappe.new_doc("Purity")
+        purity_doc.purity_name = purity_name
+        purity_doc.insert(ignore_permissions=True)
+
+    # -------------------------
+    # Create Item (if missing)
+    # -------------------------
+    if not frappe.db.exists("Item", item_code):
+        item = frappe.new_doc("Item")
+        item.item_code = item_code
+        item.item_name = item_code
+        item.item_group = "MG - Mixed Gold"
+        item.stock_uom = "Gram"
+        item.purity = purity
+        item.is_stock_item = 1
+        item.insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "purity": purity_name,
+        "item_code": item_code
+    }
+
+@frappe.whitelist()
+def create_repack_stock_entry(
+    source_items,
+    finished_item_code,
+    s_warehouse,
+    t_warehouse
+):
+    if not source_items:
+        frappe.throw("Source items are required")
+
+    if not finished_item_code:
+        frappe.throw("Finished item purity is required")
+
+    # Parse source items
+    source_items = frappe.parse_json(source_items)
+
+    se = frappe.new_doc("Stock Entry")
+    se.stock_entry_type = "Repack"
+
+    total_finished_qty = 0
+
+    # -------------------------
+    # Source Items (Consumed)
+    # -------------------------
+    for row in source_items:
+        purity = row.get("item_code")
+        qty = row.get("qty", 0)
+
+        if not purity or not qty:
+            frappe.throw("Each source item must have purity and qty")
+
+        item_code = f"Unsorted-{purity}"
+
+        se.append("items", {
+            "item_code": item_code,
+            "qty": qty,
+            "s_warehouse": s_warehouse,
+        })
+
+        total_finished_qty += qty
+
+    # -------------------------
+    # Finished Item (Produced)
+    # -------------------------
+    finished_item_code = f"Unsorted-{finished_item_code}"
+
+    se.append("items", {
+        "item_code": finished_item_code,
+        "qty": total_finished_qty,
+        "t_warehouse": t_warehouse,
+        "is_finished_item": 1
+    })
+
+    se.insert(ignore_permissions=True)
+    se.submit()
+
+    return {
+        "status": "success",
+        "stock_entry": se.name,
+        "finished_qty": total_finished_qty
     }

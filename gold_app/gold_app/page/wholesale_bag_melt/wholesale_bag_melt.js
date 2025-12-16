@@ -5,6 +5,7 @@ let WBMState = {
 	bag_summary: null,
 	bag_items: [],
 	bag_list: [],
+	record_name: null,
 };
 
 frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
@@ -296,6 +297,7 @@ function loadResumeData(log_id) {
 			}
 
 			const payload = r.message || {};
+			WBMState.record_name = payload.name || log_id; // ✅ CRITICAL
 			const header = payload.header || {};
 			const bag_contents = payload.bag_contents || [];
 			const locked_rates = payload.locked_rates || [];
@@ -439,6 +441,7 @@ function saveMeltAssaySales() {
 
 	// 5️⃣ --- BUILD CLEAN PAYLOAD ---
 	const payload = {
+		name: WBMState.record_name || null,
 		header: {
 			// BAG SUMMARY
 			total_weight: summary.total_weight_g,
@@ -477,9 +480,6 @@ function saveMeltAssaySales() {
 			total_xau_sold: sale.total_xau_sold,
 			total_revenue: sale.total_revenue,
 			weighted_avg_rate: sale.weighted_avg_rate,
-
-			// METRICS (optional)
-			...metrics,
 		},
 
 		bag_contents: bagContents.map((r) => ({
@@ -500,6 +500,9 @@ function saveMeltAssaySales() {
 		args: { payload },
 		freeze: true,
 		callback: function (r) {
+			if (r.message && r.message.name) {
+				WBMState.record_name = r.message.name;
+			}
 			frappe.msgprint("Melt & Assay Sales saved successfully.");
 		},
 	});

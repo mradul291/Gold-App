@@ -89,10 +89,12 @@
 
 /* payment mode buttons */
 .wbm-payment-group {
-    display: inline-flex;
-    gap: 8px;
-    margin-left: auto;
-    margin-bottom: 2px;
+	display: inline-flex;
+	align-items: center;
+	height: 38px;          /* SAME as .wbm-input */
+	gap: 8px;
+	margin-left: auto;
+	margin-bottom: 0;     /* remove offset */
 }
 
 .wbm-radio-label {
