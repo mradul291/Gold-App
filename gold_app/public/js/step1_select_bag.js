@@ -21,10 +21,7 @@ class Step1SelectBag {
 
 		try {
 			let warehouses = await frappe.db.get_list("Warehouse", {
-				filters: [
-					["warehouse_name", "like", "Bag%"],
-					["parent_warehouse", "=", "Wholesale - AGSB"],
-				],
+				filters: [["parent_warehouse", "=", "Wholesale - AGSB"]],
 				fields: ["name", "warehouse_name"],
 			});
 
