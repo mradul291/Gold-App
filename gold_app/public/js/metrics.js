@@ -73,46 +73,36 @@ window.WBMComponents.metrics = function ($mount, state) {
 			</div>
 
 			<!-- VS LAST SALE -->
-			<div class="wmt-card">
-			    <div class="wmt-card-header">VS LAST SALE</div>
+	<div class="wmt-card">
+		<div class="wmt-card-header">VS LAST SALE</div>
 
-			    <div class="wmt-compare-row">
-			        <div class="wmt-compare-label">Weight Loss %</div>
-			        <div class="wmt-compare-old">2.10%</div>
-			        <div class="wmt-compare-new">1.67%</div>
-			        <div class="wmt-compare-diff wmt-negative">-0.43%</div>
-			    </div>
+		<div class="wmt-row">
+			<div class="wmt-label">Weight Loss %</div>
+			<div class="wmt-value" id="vs_weight_loss_pct">—</div>
+		</div>
 
-			    <div class="wmt-compare-row">
-			        <div class="wmt-compare-label">XAU Recovery Rate</div>
-			        <div class="wmt-compare-old">102.50%</div>
-			        <div class="wmt-compare-new">23.79%</div>
-			        <div class="wmt-compare-diff wmt-negative">-78.71%</div>
-			    </div>
+		<div class="wmt-row">
+			<div class="wmt-label">XAU Recovery Rate %</div>
+			<div class="wmt-value" id="vs_xau_recovery">—</div>
+		</div>
 
-			    <div class="wmt-compare-row">
-			        <div class="wmt-compare-label">Purity Variance</div>
-			        <div class="wmt-compare-old">2.80%</div>
-			        <div class="wmt-compare-new">-296.33%</div>
-			        <div class="wmt-compare-diff wmt-negative">-299.13%</div>
-			    </div>
+		<div class="wmt-row">
+			<div class="wmt-label">Purity Variance %</div>
+			<div class="wmt-value" id="vs_purity_variance">—</div>
+		</div>
 
-			    <div class="wmt-compare-row">
-			        <div class="wmt-compare-label">Net Sellable %</div>
-			        <div class="wmt-compare-old">96.90%</div>
-			        <div class="wmt-compare-new">97.67%</div>
-			        <div class="wmt-compare-diff wmt-positive">+0.77%</div>
-			    </div>
+		<div class="wmt-row">
+			<div class="wmt-label">Net Sellable %</div>
+			<div class="wmt-value" id="vs_net_sellable">—</div>
+		</div>
 
-			    <div class="wmt-compare-row">
-			        <div class="wmt-compare-label">Profit Margin</div>
-			        <div class="wmt-compare-old">94.80%</div>
-			        <div class="wmt-compare-new">95.35%</div>
-			        <div class="wmt-compare-diff wmt-positive">+0.55%</div>
-			    </div>
-			</div>
+		<div class="wmt-row">
+			<div class="wmt-label">Profit Margin %</div>
+			<div class="wmt-value" id="vs_profit_margin">—</div>
+		</div>
+	</div>
 
-			</div>
+	</div>
 	`;
 
 	$mount.html(html);
@@ -165,6 +155,21 @@ window.WBMComponents.metrics = function ($mount, state) {
 
 		const profitPerXau = netSellableXau ? grossProfit / netSellableXau : 0;
 
+		// ------------------------------------
+		// VS LAST SALE (DIFF ONLY)
+		// ------------------------------------
+		const last = state.last_sale_metrics || {};
+
+		const vsWeightLoss = (weightLossPct || 0) - (last.weight_loss_pct || 0);
+
+		const vsXauRecovery = (xauRecovery || 0) - (last.xau_recovery || 0);
+
+		const vsPurityVariance = (purityVariance || 0) - (last.purity_variance || 0);
+
+		const vsNetSellable = (netSellablePct || 0) - (last.net_sellable || 0);
+
+		const vsProfitMargin = (profitMargin || 0) - (last.profit_margin || 0);
+
 		// STORE
 		state.metrics = {
 			m_original_gross_weight: grossWeight,
@@ -192,6 +197,12 @@ window.WBMComponents.metrics = function ($mount, state) {
 			m_xau_recovery: xauRecovery,
 			m_net_sellable: netSellablePct,
 			m_profit_per_xau: profitPerXau,
+
+			vs_weight_loss_percentage: vsWeightLoss,
+			vs_xau_recovery_rate: vsXauRecovery,
+			vs_purity_variance: vsPurityVariance,
+			vs_net_sellable_percentage: vsNetSellable,
+			vs_profit_margin: vsProfitMargin,
 		};
 	})();
 
@@ -234,5 +245,26 @@ window.WBMComponents.metrics = function ($mount, state) {
 		$("#m_eff_xau").text((m.m_xau_recovery || 0).toFixed(2) + "%");
 		$("#m_eff_net").text((m.m_net_sellable || 0).toFixed(2) + "%");
 		$("#m_profit_xau").text(rm(m.m_profit_per_xau));
+
+		// ------------------------------------
+		// VS LAST SALE (UI)
+		// ------------------------------------
+		function setVsValue(id, val) {
+			const $el = $(id);
+			const v = Number(val) || 0;
+
+			$el.text(v.toFixed(2) + "%")
+				.removeClass("wmt-positive wmt-negative")
+				.addClass(v > 0 ? "wmt-positive" : v < 0 ? "wmt-negative" : "");
+		}
+
+		// ------------------------------------
+		// VS LAST SALE (UI with colors)
+		// ------------------------------------
+		setVsValue("#vs_weight_loss_pct", m.vs_weight_loss_percentage);
+		setVsValue("#vs_xau_recovery", m.vs_xau_recovery_rate);
+		setVsValue("#vs_purity_variance", m.vs_purity_variance);
+		setVsValue("#vs_net_sellable", m.vs_net_sellable_percentage);
+		setVsValue("#vs_profit_margin", m.vs_profit_margin);
 	})();
 };

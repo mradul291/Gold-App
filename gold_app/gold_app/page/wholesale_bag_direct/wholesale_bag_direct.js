@@ -933,7 +933,7 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 
 			totalWeight += weight;
 			totalAvcoCost += avcoRate * weight;
-			totalSelling += sellRate * weight;
+			totalSelling += Number((sellRate * weight).toFixed(2));
 			totalProfit += totalProfitRow; // Or recalculate if needed
 			profitPerGramSum += profitPerGram;
 			rowCount += 1;

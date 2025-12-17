@@ -366,6 +366,15 @@ function loadResumeData(log_id) {
 			// 6) metrics
 			WBMState.metrics = header || {}; // since header already contains m_* fields
 
+			// 6.1) LAST SALE METRICS (for VS comparison)
+			WBMState.last_sale_metrics = {
+				weight_loss_pct: header.prev_weight_loss_percentage || 0,
+				xau_recovery: header.prev_xau_recovery_rate || 0,
+				purity_variance: header.prev_purity_variance || 0,
+				net_sellable: header.prev_net_sellable_percentage || 0,
+				profit_margin: header.prev_profit_margin || 0,
+			};
+
 			// 7) store bag_list in background (optional) — helpful for UI that uses bag overview
 			frappe.call({
 				method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
@@ -461,6 +470,21 @@ function computeMetricsIntoState(state) {
 	const netSellablePct = grossWeight ? (netWeightSale / grossWeight) * 100 : 0;
 	const profitPerXau = netSellableXau ? grossProfit / netSellableXau : 0;
 
+	// ------------------------------------
+	// VS LAST SALE (DIFF ONLY)
+	// ------------------------------------
+	const last = state.last_sale_metrics || {};
+
+	const vsWeightLoss = (weightLossPct || 0) - (last.weight_loss_pct || 0);
+
+	const vsXauRecovery = (xauRecovery || 0) - (last.xau_recovery || 0);
+
+	const vsPurityVariance = (purityVariance || 0) - (last.purity_variance || 0);
+
+	const vsNetSellable = (netSellablePct || 0) - (last.net_sellable || 0);
+
+	const vsProfitMargin = (profitMargin || 0) - (last.profit_margin || 0);
+
 	state.metrics = {
 		m_original_gross_weight: grossWeight,
 		m_weight_after_melting: afterMelting,
@@ -487,6 +511,12 @@ function computeMetricsIntoState(state) {
 		m_xau_recovery: xauRecovery,
 		m_net_sellable: netSellablePct,
 		m_profit_per_xau: profitPerXau,
+
+		vs_weight_loss_percentage: vsWeightLoss,
+		vs_xau_recovery_rate: vsXauRecovery,
+		vs_purity_variance: vsPurityVariance,
+		vs_net_sellable_percentage: vsNetSellable,
+		vs_profit_margin: vsProfitMargin,
 	};
 }
 
