@@ -201,7 +201,7 @@ def update_wholesale_bag_direct_payments(log_id, payments, total_amount, amount_
     }
     
 @frappe.whitelist()
-def create_sales_invoice(customer, items, discount_amount=0, company=None, posting_date=None):
+def create_sales_invoice(customer, items, discount_amount=0, company=None, posting_date=None, posting_time=None):
     import json
 
     if not company:
@@ -235,6 +235,9 @@ def create_sales_invoice(customer, items, discount_amount=0, company=None, posti
         "update_stock": 1,
         "items": si_items
     })
+    
+    if posting_time:
+        si.posting_time = posting_time
 
     si.insert(ignore_permissions=True)
     frappe.db.commit()

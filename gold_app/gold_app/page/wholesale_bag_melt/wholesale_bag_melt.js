@@ -424,7 +424,74 @@ function getTodayDate() {
 	return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
 }
 
+function computeMetricsIntoState(state) {
+	const s = state.bag_summary || {};
+	const melt = state.melting || {};
+	const assay = state.assay || {};
+	const sale = state.sale || {};
+
+	const grossWeight = s.total_weight_g || 0;
+	const avgPurity = s.average_purity || 0;
+	const originalGoldCost = s.total_cost_basis || 0;
+
+	const afterMelting = melt.after || 0;
+	const weightLoss = melt.weight_loss || 0;
+	const xauLoss = melt.xau_loss || 0;
+	const weightLossPct = melt.loss_percentage || 0;
+
+	const assayPurity = assay.assay_purity || 0;
+	const purityVariance = assay.purity_variance || 0;
+	const xauVariance = assay.xau_weight_variance || 0;
+
+	const sampleWeight = assay.assay_sample_weight || 0;
+	const netWeightSale = afterMelting - sampleWeight;
+	const netSellableXau = assay.net_sellable || 0;
+
+	const meltingCost = melt.cost || 0;
+	const assayCost = assay.cost || 0;
+	const totalCost = originalGoldCost + meltingCost + assayCost;
+
+	const revenue = sale.total_revenue || 0;
+	const grossProfit = revenue - totalCost;
+	const profitMargin = revenue ? (grossProfit / revenue) * 100 : 0;
+
+	const meltingEfficiency = grossWeight ? (afterMelting / grossWeight) * 100 : 0;
+	const xauRecovery = s.pure_gold_xau_g ? (netSellableXau / s.pure_gold_xau_g) * 100 : 0;
+
+	const netSellablePct = grossWeight ? (netWeightSale / grossWeight) * 100 : 0;
+	const profitPerXau = netSellableXau ? grossProfit / netSellableXau : 0;
+
+	state.metrics = {
+		m_original_gross_weight: grossWeight,
+		m_weight_after_melting: afterMelting,
+		m_weight_loss: weightLoss,
+		m_weight_loss_percentage: weightLossPct,
+		m_xau_weight_loss: xauLoss,
+		m_net_weight_sale: netWeightSale,
+
+		m_original_avg_purity: avgPurity,
+		m_assay_purity: assayPurity,
+		m_purity_variance: purityVariance,
+		m_xau_weight_variance: xauVariance,
+
+		m_original_gold_cost: originalGoldCost,
+		m_melting_cost: meltingCost,
+		m_assay_cost: assayCost,
+		m_total_cost: totalCost,
+
+		m_total_revenue: revenue,
+		m_gross_profit: grossProfit,
+		m_profit_margin: profitMargin,
+
+		m_melting_efficiency: meltingEfficiency,
+		m_xau_recovery: xauRecovery,
+		m_net_sellable: netSellablePct,
+		m_profit_per_xau: profitPerXau,
+	};
+}
+
 function saveMeltAssaySales() {
+	computeMetricsIntoState(WBMState);
 	// 1️⃣ --- BAG SUMMARY DATA ---
 	const summary = WBMState.bag_summary || {};
 	const bagContents = WBMState.bag_items || [];
@@ -480,6 +547,8 @@ function saveMeltAssaySales() {
 			total_xau_sold: sale.total_xau_sold,
 			total_revenue: sale.total_revenue,
 			weighted_avg_rate: sale.weighted_avg_rate,
+
+			...(metrics || {}),
 		},
 
 		bag_contents: bagContents.map((r) => ({
