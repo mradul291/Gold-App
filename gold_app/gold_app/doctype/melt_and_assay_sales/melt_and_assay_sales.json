@@ -49,6 +49,10 @@
   "sale_assay_purity",
   "column_break_pmlj",
   "sale_net_xau",
+  "customer_info_section",
+  "customer",
+  "column_break_fyio",
+  "customer_id_number",
   "sec_locked_rates",
   "locked_rates",
   "sec_sales_summary",
@@ -601,12 +605,33 @@
    "fieldtype": "Select",
    "label": "Status",
    "options": "Active\nCompleted"
+  },
+  {
+   "fieldname": "customer_info_section",
+   "fieldtype": "Section Break",
+   "label": "Customer Info"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "label": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_fyio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_id_number",
+   "fieldtype": "Data",
+   "label": "ID Number",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-16 20:09:48.125445",
+ "modified": "2025-12-18 15:19:58.615951",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Melt and Assay Sales",

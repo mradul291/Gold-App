@@ -1,199 +1,111 @@
-//Metrics Tab
+//Before Customer
 window.WBMComponents = window.WBMComponents || {};
 
-window.WBMComponents.metrics = function ($mount, state) {
+window.WBMComponents.buyer_sale = function ($mount, state) {
   const html = `
-        <div class="wmt-root">
+        <div class="wbs-root">
 
-            <!-- Page Title -->
-            <div class="wmt-title">Transaction Metrics</div>
+            <!-- Title -->
+            <div class="wbs-title">Sales Detail</div>
 
-            <!-- WEIGHT & PURITY ANALYSIS -->
-            <div class="wmt-card">
-                <div class="wmt-card-header">WEIGHT & PURITY ANALYSIS</div>
+            <!-- FROM ASSAY SECTION -->
+            <div class="wbs-card wbs-assay-card">
+                <div class="wbs-card-header">FROM ASSAY SECTION</div>
 
-                <div class="wmt-two-col">
-                    <div class="wmt-col">
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Original Gross Weight</div>
-                            <div class="wmt-value">300.00 g</div>
-                        </div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Weight Loss</div>
-                            <div class="wmt-value wmt-negative">5.00 g</div>
-                        </div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">XAU Weight Loss</div>
-                            <div class="wmt-value wmt-negative">19.44 g</div>
-                        </div>
-
-                        <div class="wmt-divider"></div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Original Avg Purity</div>
-                            <div class="wmt-value">388.83%</div>
-                        </div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Purity Variance</div>
-                            <div class="wmt-value wmt-negative">-296.33%</div>
-                        </div>
+                <div class="wbs-assay-grid">
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Net Weight</div>
+                        <div class="wbs-assay-value" id="wbs-net-weight">—</div>
                     </div>
 
-                    <div class="wmt-col">
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Assay Purity</div>
+                        <div class="wbs-assay-value" id="wbs-assay-purity">—</div>
+                    </div>
 
-                        <div class="wmt-row">
-                            <div class="wmt-label">Weight After Melting</div>
-                            <div class="wmt-value">295.00 g</div>
-                        </div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Weight Loss %</div>
-                            <div class="wmt-value wmt-negative">1.67%</div>
-                        </div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Net Weight For Sale</div>
-                            <div class="wmt-value">293.00 g</div>
-                        </div>
-
-                        <div class="wmt-divider"></div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">Assay Purity</div>
-                            <div class="wmt-value">92.50%</div>
-                        </div>
-
-                        <div class="wmt-row">
-                            <div class="wmt-label">XAU Weight Variance</div>
-                            <div class="wmt-value wmt-negative">-874.18 g</div>
-                        </div>
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Net XAU</div>
+                        <div class="wbs-assay-value wbs-blue" id="wbs-net-xau">—</div>
                     </div>
                 </div>
             </div>
 
-            <!-- COST + PROFIT -->
-            <div class="wmt-bottom-grid">
-                <div class="wmt-card">
-                    <div class="wmt-card-header">COST ANALYSIS</div>
+			<!-- CUSTOMER INFO -->
+<div class="wbs-card">
+	<div class="wbs-card-header">CUSTOMER INFO</div>
 
-                    <div class="wmt-row">
-                        <div class="wmt-label">Original Gold Cost</div>
-                        <div class="wmt-value">RM 23,500.00</div>
-                    </div>
+	<div class="wbs-customer-grid">
+		<div class="wbs-field-block">
+			<div class="wbs-field-label">Customer</div>
+			<input
+				id="wbs-customer"
+				class="wbs-input"
+				placeholder="Select Customer"
+			/>
+		</div>
 
-                    <div class="wmt-row">
-                        <div class="wmt-label">Melting Cost</div>
-                        <div class="wmt-value">RM 150.00</div>
-                    </div>
+		<div class="wbs-field-block">
+			<div class="wbs-field-label">ID Number</div>
+			<input
+				id="wbs-id-number"
+				class="wbs-input"
+				placeholder="Customer ID"
+			/>
+		</div>
+	</div>
+</div>
 
-                    <div class="wmt-row">
-                        <div class="wmt-label">Assay Cost</div>
-                        <div class="wmt-value">RM 100.00</div>
-                    </div>
+            <!-- LOCKED RATES -->
+            <div class="wbs-section-head">
+                <div class="wbs-section-title">Locked Rates</div>
+                <button class="wbs-add-btn">+ Add Rate</button>
+            </div>
 
-                    <div class="wmt-divider"></div>
-
-                    <div class="wmt-row wmt-total-row">
-                        <div class="wmt-label">Total Cost</div>
-                        <div class="wmt-value">RM 23,750.00</div>
-                    </div>
+            <div class="wbs-card">
+                <div class="wbs-table-head">
+                    <div>PRICE PER XAU</div>
+                    <div>XAU WEIGHT</div>
+                    <div>AMOUNT</div>
+                    <div>REMARK</div>
+                    <div></div>
                 </div>
 
-                <div class="wmt-card wmt-profit-card">
-                    <div class="wmt-card-header">REVENUE & PROFIT</div>
+                <div id="wbs-table-body"></div>
 
-                    <div class="wmt-row">
-                        <div class="wmt-label">Total Revenue</div>
-                        <div class="wmt-value">RM 510,688.14</div>
-                    </div>
-
-                    <div class="wmt-row">
-                        <div class="wmt-label">Total Cost</div>
-                        <div class="wmt-value">RM 23,750.00</div>
-                    </div>
-
-                    <div class="wmt-divider"></div>
-
-                    <div class="wmt-row wmt-profit-row">
-                        <div class="wmt-label">Gross Profit</div>
-                        <div class="wmt-profit-value">RM 486,938.14</div>
-                    </div>
-
-                    <div class="wmt-row">
-                        <div class="wmt-label">Profit Margin</div>
-                        <div class="wmt-profit-percent">95.35%</div>
-                    </div>
+                <div class="wbs-table-total">
+                    <div class="wbs-total-label">TOTAL</div>
+                    <div class="wbs-total-val" id="wbs-total-xau">0.00 g</div>
+                    <div class="wbs-total-amt" id="wbs-total-amount">RM 0.00</div>
+                    <div></div>
+                    <div></div>
                 </div>
             </div>
 
-             <!-- PROCESS EFFICIENCY -->
-            <div class="wmt-card">
-                <div class="wmt-card-header">PROCESS EFFICIENCY</div>
+            <!-- WARNING -->
+            <div class="wbs-warning" style="display:none;"></div>
 
-                <div class="wmt-efficiency-grid">
-                    <div class="wmt-eff-card">
-                        <div class="wmt-eff-label">Melting Efficiency</div>
-                        <div class="wmt-eff-value">98.3%</div>
+            <!-- SUMMARY -->
+            <div class="wbs-card wbs-summary-card">
+                <div class="wbs-card-header">SUMMARY</div>
+
+                <div class="wbs-summary-grid">
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Total XAU Sold</div>
+                        <div class="wbs-summary-value" id="wbs-summary-xau">0.00 g</div>
                     </div>
 
-                    <div class="wmt-eff-card wmt-eff-green">
-                        <div class="wmt-eff-label">XAU Recovery</div>
-                        <div class="wmt-eff-value">23.8%</div>
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Total Revenue</div>
+                        <div class="wbs-summary-value wbs-blue" id="wbs-summary-revenue">
+                            RM 0.00
+                        </div>
                     </div>
 
-                    <div class="wmt-eff-card wmt-eff-blue">
-                        <div class="wmt-eff-label">Net Sellable</div>
-                        <div class="wmt-eff-value">97.7%</div>
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Weighted Avg Rate</div>
+                        <div class="wbs-summary-value" id="wbs-summary-rate">0.00</div>
+                        <div class="wbs-summary-sub">per gram</div>
                     </div>
-
-                    <div class="wmt-eff-card wmt-eff-purple">
-                        <div class="wmt-eff-label">Profit per XAU</div>
-                        <div class="wmt-eff-value">1797</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VS LAST SALE -->
-            <div class="wmt-card">
-                <div class="wmt-card-header">VS LAST SALE</div>
-
-                <div class="wmt-compare-row">
-                    <div class="wmt-compare-label">Weight Loss %</div>
-                    <div class="wmt-compare-old">2.10%</div>
-                    <div class="wmt-compare-new">1.67%</div>
-                    <div class="wmt-compare-diff wmt-positive">+0.43%</div>
-                </div>
-
-                <div class="wmt-compare-row">
-                    <div class="wmt-compare-label">XAU Recovery Rate</div>
-                    <div class="wmt-compare-old">102.50%</div>
-                    <div class="wmt-compare-new">23.79%</div>
-                    <div class="wmt-compare-diff wmt-negative">-78.71%</div>
-                </div>
-
-                <div class="wmt-compare-row">
-                    <div class="wmt-compare-label">Purity Variance</div>
-                    <div class="wmt-compare-old">2.80%</div>
-                    <div class="wmt-compare-new">-296.33%</div>
-                    <div class="wmt-compare-diff wmt-negative">-299.13%</div>
-                </div>
-
-                <div class="wmt-compare-row">
-                    <div class="wmt-compare-label">Net Sellable %</div>
-                    <div class="wmt-compare-old">96.90%</div>
-                    <div class="wmt-compare-new">97.67%</div>
-                    <div class="wmt-compare-diff wmt-positive">+0.77%</div>
-                </div>
-
-                <div class="wmt-compare-row">
-                    <div class="wmt-compare-label">Profit Margin</div>
-                    <div class="wmt-compare-old">94.80%</div>
-                    <div class="wmt-compare-new">95.35%</div>
-                    <div class="wmt-compare-diff wmt-positive">+0.55%</div>
                 </div>
             </div>
 
@@ -202,608 +114,775 @@ window.WBMComponents.metrics = function ($mount, state) {
 
   $mount.html(html);
 
-  // ---------------------------------------------------------
-  // COMPUTE METRICS AND STORE IN STATE
-  // ---------------------------------------------------------
-  (function computeMetrics() {
-    const s = state.bag_summary || {};
-    const melt = state.melting || {};
+  // --------------------------------------------------
+  // HYDRATE FROM ASSAY + LOCKED RATES
+  // --------------------------------------------------
+  (function hydrateSale() {
     const assay = state.assay || {};
     const sale = state.sale || {};
 
-    // BAG SUMMARY VALUES
-    const grossWeight = s.total_weight_g || 0;
-    const avgPurity = s.average_purity || 0;
-    const originalGoldCost = s.total_cost_basis || 0;
+    $("#wbs-net-weight").text((assay.net_sellable || 0).toFixed(2) + " g");
+    $("#wbs-assay-purity").text((assay.assay_purity || 0).toFixed(2) + "%");
+    $("#wbs-net-xau").text((assay.net_sellable || 0).toFixed(2) + " g");
+    $("#wbs-customer").val(sale.customer || "");
+    $("#wbs-id-number").val(sale.customer_id_number || "");
 
-    // MELTING VALUES
-    const afterMelting = melt.after || 0;
-    const weightLoss = melt.weight_loss || 0;
-    const xauLoss = melt.xau_loss || 0;
-    const weightLossPct = melt.loss_percentage || 0;
+    const body = $("#wbs-table-body");
+    body.empty();
 
-    // ASSAY VALUES
-    const assayPurity = assay.assay_purity || 0;
-    const purityVariance = assay.purity_variance || 0;
-    const xauVariance = assay.xau_weight_variance || 0;
+    if (sale.locked_rates && sale.locked_rates.length) {
+      sale.locked_rates.forEach((r) => {
+        body.append(createLockedRateRow(r));
+      });
+    } else {
+      body.append(createLockedRateRow());
+    }
 
-    const netWeightSale = assay.sample_weight
-      ? afterMelting - assay.sample_weight
-      : afterMelting;
-    const netSellableXau = assay.net_sellable || 0;
-
-    // COST METRICS
-    const meltingCost = melt.cost || 0;
-    const assayCost = assay.cost || 0;
-    const totalCost = originalGoldCost + meltingCost + assayCost;
-
-    // REVENUE & PROFIT
-    const revenue = sale.total_revenue || 0;
-    const grossProfit = revenue - totalCost;
-    const profitMargin = revenue ? (grossProfit / revenue) * 100 : 0;
-
-    // EFFICIENCY
-    const meltingEfficiency = grossWeight
-      ? (afterMelting / grossWeight) * 100
-      : 0;
-    const xauRecovery = s.pure_gold_xau_g
-      ? (netSellableXau / s.pure_gold_xau_g) * 100
-      : 0;
-    const netSellablePct = grossWeight
-      ? (netWeightSale / grossWeight) * 100
-      : 0;
-    const profitPerXau = netSellableXau ? grossProfit / netSellableXau : 0;
-
-    // FINAL METRICS OBJECT STORED IN STATE
-    state.metrics = {
-      // Weight & Purity
-      m_original_gross_weight: grossWeight,
-      m_weight_after_melting: afterMelting,
-      m_weight_loss: weightLoss,
-      m_weight_loss_percentage: weightLossPct,
-      m_xau_weight_loss: xauLoss,
-      m_net_weight_sale: netWeightSale,
-
-      m_original_avg_purity: avgPurity,
-      m_assay_purity: assayPurity,
-      m_purity_variance: purityVariance,
-      m_xau_weight_variance: xauVariance,
-
-      // Cost
-      m_original_gold_cost: originalGoldCost,
-      m_melting_cost: meltingCost,
-      m_assay_cost: assayCost,
-      m_total_cost: totalCost,
-
-      // Revenue
-      m_total_revenue: revenue,
-      m_total_cost_profit: totalCost,
-      m_gross_profit: grossProfit,
-      m_profit_margin: profitMargin,
-
-      // Efficiency
-      m_melting_efficiency: meltingEfficiency,
-      m_xau_recovery: xauRecovery,
-      m_net_sellable: netSellablePct,
-      m_profit_per_xau: profitPerXau,
-
-      // VS Last Sale (Static UI values)
-      vs_weight_loss_percentage: 2.1,
-      vs_xau_recovery_rate: 102.5,
-      vs_purity_variance: 2.8,
-      vs_net_sellable_percentage: 96.9,
-      vs_profit_margin: 94.8,
-    };
+    updateSaleState();
   })();
-};
 
-// gold_app/page/wholesale_bag_melt/wholesale_bag_melt.js
-
-let WBMState = {
-  selected_bag: null,
-  bag_summary: null,
-  bag_items: [],
-  bag_list: [],
-};
-
-frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
-  const page = frappe.ui.make_app_page({
-    parent: wrapper,
-    title: "Select Wholesale Bag to Melt",
-    single_column: true,
-  });
-
-  $(page.body).append(`
-        <div id="wbdm-root" class="wbdm-page">
-            <div class="wbdm-inner">
-				<div id="wbdm-loader" class="loader-overlay">
-    				<div class="loader"></div>
-    				<p>Loading...</p>
-				</div>
-                <div id="wbdm-bag-list" class="wbdm-grid"></div>
-            </div>
-        </div>
-    `);
-
-  frappe.require("/assets/gold_app/css/wholesale_bag_melt.css");
-
-  // detect resume param
-  const urlParams = new URLSearchParams(window.location.search);
-  const RESUME_LOG_ID = urlParams.get("log_id");
-
-  if (RESUME_LOG_ID) {
-    // show small loader while we load the saved doc
-    $("#wbdm-loader").fadeIn(150);
-    $("#wbdm-bag-list").hide();
-
-    // call the resume loader
-    loadResumeData(RESUME_LOG_ID);
-    return; // skip normal bag-overview flow (we will load bag overview in background if needed)
+  // --------------------------------------------------
+  // ROW BUILDER
+  // --------------------------------------------------
+  function createLockedRateRow(data = {}) {
+    return `
+			<div class="wbs-table-row">
+				<input class="wbs-input" value="${data.price_per_xau || ""}" />
+				<input class="wbs-input" value="${data.xau_weight || ""}" />
+				<div class="wbs-amount">RM ${(data.amount || 0).toFixed(2)}</div>
+				<input class="wbs-input" placeholder="Optional remark" value="${
+          data.remark || ""
+        }" />
+				<div class="wbs-trash">🗑</div>
+			</div>
+		`;
   }
 
-  $("#wbdm-loader").fadeIn(150);
-  $("#wbdm-bag-list").hide();
+  // --------------------------------------------------
+  // PARSE LOCKED RATE TABLE
+  // --------------------------------------------------
+  function getLockedRates() {
+    const rows = [];
 
-  frappe.call({
-    method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
-    callback: function (r) {
-      if (r.message) {
-        $("#wbdm-loader").fadeOut(200, () => {
-          $("#wbdm-bag-list").fadeIn(200);
-        });
+    $(".wbs-table-row").each(function () {
+      const price = parseFloat($(this).find("input").eq(0).val()) || 0;
+      const xauWeight = parseFloat($(this).find("input").eq(1).val()) || 0;
+      const remark = $(this).find("input").eq(2).val() || "";
 
-        WBMState.bag_list = r.message;
-        renderBagGrid(WBMState.bag_list);
+      const amount = price * xauWeight;
 
-        WBMState.onBackToBags = function () {
-          $("#wbdm-root").html(`
-                        <div class="wbdm-inner">
-                            <div id="wbdm-bag-list" class="wbdm-grid"></div>
+      $(this)
+        .find(".wbs-amount")
+        .text("RM " + amount.toFixed(2));
+
+      rows.push({
+        price_per_xau: price,
+        xau_weight: xauWeight,
+        amount: amount,
+        remark: remark,
+      });
+    });
+
+    return rows;
+  }
+
+  // --------------------------------------------------
+  // SUMMARY CALCULATION
+  // --------------------------------------------------
+  function computeSummary(lockedRates) {
+    let totalXau = 0;
+    let totalRevenue = 0;
+
+    lockedRates.forEach((r) => {
+      totalXau += r.xau_weight;
+      totalRevenue += r.amount;
+    });
+
+    return {
+      totalXau,
+      totalRevenue,
+      weightedAvgRate: totalXau ? totalRevenue / totalXau : 0,
+    };
+  }
+
+  // --------------------------------------------------
+  // UPDATE STATE + UI
+  // --------------------------------------------------
+  function updateSaleState() {
+    const lockedRates = getLockedRates();
+    const summary = computeSummary(lockedRates);
+    const netXau = state.assay?.net_sellable || 0;
+    const customer = $("#wbs-customer").val() || "";
+    const idNumber = $("#wbs-id-number").val() || "";
+
+    state.sale = {
+      customer: customer,
+      customer_id_number: idNumber,
+      net_weight: netXau,
+      assay_purity: state.assay?.assay_purity || 0,
+      net_xau: netXau,
+      total_xau_sold: summary.totalXau,
+      total_revenue: summary.totalRevenue,
+      weighted_avg_rate: summary.weightedAvgRate,
+      locked_rates: lockedRates,
+    };
+
+    $("#wbs-total-xau").text(summary.totalXau.toFixed(2) + " g");
+    $("#wbs-total-amount").text(
+      "RM " +
+        summary.totalRevenue.toLocaleString("en-MY", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+    );
+
+    $("#wbs-summary-xau").text(summary.totalXau.toFixed(2) + " g");
+    $("#wbs-summary-revenue").text(
+      "RM " +
+        summary.totalRevenue.toLocaleString("en-MY", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+    );
+    $("#wbs-summary-rate").text(summary.weightedAvgRate.toFixed(2));
+
+    if (summary.totalXau > netXau) {
+      $(".wbs-warning")
+        .show()
+        .html(
+          `⚠ Mismatch: Table shows <b>${summary.totalXau.toFixed(
+            2
+          )} g</b> but Net XAU is <b>${netXau.toFixed(2)} g</b>`
+        );
+    } else {
+      $(".wbs-warning").hide();
+    }
+  }
+
+  // --------------------------------------------------
+  // EVENTS
+  // --------------------------------------------------
+  $(document).on("input", ".wbs-table-row input", updateSaleState);
+
+  $(document).on("click", ".wbs-trash", function () {
+    $(this).closest(".wbs-table-row").remove();
+    updateSaleState();
+  });
+  $(document)
+    .off("click", ".wbs-add-btn")
+    .on("click", ".wbs-add-btn", function () {
+      $("#wbs-table-body").append(createLockedRateRow());
+    });
+  $(document).on("input", "#wbs-customer, #wbs-id-number", updateSaleState);
+};
+
+//After Customer FIeld
+window.WBMComponents = window.WBMComponents || {};
+
+window.WBMComponents.buyer_sale = function ($mount, state) {
+  const html = `
+        <div class="wbs-root">
+
+            <!-- Title -->
+            <div class="wbs-title">Sales Detail</div>
+
+            <!-- FROM ASSAY SECTION -->
+            <div class="wbs-card wbs-assay-card">
+                <div class="wbs-card-header">FROM ASSAY SECTION</div>
+
+                <div class="wbs-assay-grid">
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Net Weight</div>
+                        <div class="wbs-assay-value" id="wbs-net-weight">—</div>
+                    </div>
+
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Assay Purity</div>
+                        <div class="wbs-assay-value" id="wbs-assay-purity">—</div>
+                    </div>
+
+                    <div class="wbs-assay-box">
+                        <div class="wbs-assay-label">Net XAU</div>
+                        <div class="wbs-assay-value wbs-blue" id="wbs-net-xau">—</div>
+                    </div>
+                </div>
+            </div>
+
+			<!-- CUSTOMER INFO -->
+<div class="wbs-card">
+	<div class="wbs-card-header">CUSTOMER INFO</div>
+
+	<div class="wbs-customer-grid">
+		<div class="wbs-field-block">
+			<div class="wbs-field-label">Customer</div>
+			<div class="wbs-customer-wrapper" style="position:relative;">
+    <input
+        id="wbs-customer"
+        class="wbs-input"
+        placeholder="Select or search customer"
+        autocomplete="off"
+    />
+    <div id="wbs-customer-suggestions"
+         class="wbs-customer-suggestions"
+         style="display:none;"></div>
+</div>
+
+		</div>
+
+		<div class="wbs-field-block">
+			<div class="wbs-field-label">ID Number</div>
+			<input
+				id="wbs-id-number"
+				class="wbs-input"
+				placeholder="Customer ID"
+			/>
+		</div>
+	</div>
+</div>
+
+            <!-- LOCKED RATES -->
+            <div class="wbs-section-head">
+                <div class="wbs-section-title">Locked Rates</div>
+                <button class="wbs-add-btn">+ Add Rate</button>
+            </div>
+
+            <div class="wbs-card">
+                <div class="wbs-table-head">
+                    <div>PRICE PER XAU</div>
+                    <div>XAU WEIGHT</div>
+                    <div>AMOUNT</div>
+                    <div>REMARK</div>
+                    <div></div>
+                </div>
+
+                <div id="wbs-table-body"></div>
+
+                <div class="wbs-table-total">
+                    <div class="wbs-total-label">TOTAL</div>
+                    <div class="wbs-total-val" id="wbs-total-xau">0.00 g</div>
+                    <div class="wbs-total-amt" id="wbs-total-amount">RM 0.00</div>
+                    <div></div>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- WARNING -->
+            <div class="wbs-warning" style="display:none;"></div>
+
+            <!-- SUMMARY -->
+            <div class="wbs-card wbs-summary-card">
+                <div class="wbs-card-header">SUMMARY</div>
+
+                <div class="wbs-summary-grid">
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Total XAU Sold</div>
+                        <div class="wbs-summary-value" id="wbs-summary-xau">0.00 g</div>
+                    </div>
+
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Total Revenue</div>
+                        <div class="wbs-summary-value wbs-blue" id="wbs-summary-revenue">
+                            RM 0.00
                         </div>
-                    `);
-          renderBagGrid(WBMState.bag_list);
-        };
+                    </div>
+
+                    <div class="wbs-summary-box">
+                        <div class="wbs-summary-label">Weighted Avg Rate</div>
+                        <div class="wbs-summary-value" id="wbs-summary-rate">0.00</div>
+                        <div class="wbs-summary-sub">per gram</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    `;
+
+  $mount.html(html);
+
+  // --------------------------------------------------
+  // HYDRATE FROM ASSAY + LOCKED RATES
+  // --------------------------------------------------
+  (function hydrateSale() {
+    const assay = state.assay || {};
+    const sale = state.sale || {};
+
+    $("#wbs-net-weight").text((assay.net_sellable || 0).toFixed(2) + " g");
+    $("#wbs-assay-purity").text((assay.assay_purity || 0).toFixed(2) + "%");
+    $("#wbs-net-xau").text((assay.net_sellable || 0).toFixed(2) + " g");
+    $("#wbs-customer").val(sale.customer || "");
+    $("#wbs-id-number").val(sale.customer_id_number || "");
+
+    const body = $("#wbs-table-body");
+    body.empty();
+
+    if (sale.locked_rates && sale.locked_rates.length) {
+      sale.locked_rates.forEach((r) => {
+        body.append(createLockedRateRow(r));
+      });
+    } else {
+      body.append(createLockedRateRow());
+    }
+
+    updateSaleState();
+  })();
+
+  // --------------------------------------------------
+  // ROW BUILDER
+  // --------------------------------------------------
+  function createLockedRateRow(data = {}) {
+    return `
+			<div class="wbs-table-row">
+				<input class="wbs-input" value="${data.price_per_xau || ""}" />
+				<input class="wbs-input" value="${data.xau_weight || ""}" />
+				<div class="wbs-amount">RM ${(data.amount || 0).toFixed(2)}</div>
+				<input class="wbs-input" placeholder="Optional remark" value="${
+          data.remark || ""
+        }" />
+				<div class="wbs-trash">🗑</div>
+			</div>
+		`;
+  }
+
+  // --------------------------------------------------
+  // PARSE LOCKED RATE TABLE
+  // --------------------------------------------------
+  function getLockedRates() {
+    const rows = [];
+
+    $(".wbs-table-row").each(function () {
+      const price = parseFloat($(this).find("input").eq(0).val()) || 0;
+      const xauWeight = parseFloat($(this).find("input").eq(1).val()) || 0;
+      const remark = $(this).find("input").eq(2).val() || "";
+
+      const amount = price * xauWeight;
+
+      $(this)
+        .find(".wbs-amount")
+        .text("RM " + amount.toFixed(2));
+
+      rows.push({
+        price_per_xau: price,
+        xau_weight: xauWeight,
+        amount: amount,
+        remark: remark,
+      });
+    });
+
+    return rows;
+  }
+
+  // --------------------------------------------------
+  // SUMMARY CALCULATION
+  // --------------------------------------------------
+  function computeSummary(lockedRates) {
+    let totalXau = 0;
+    let totalRevenue = 0;
+
+    lockedRates.forEach((r) => {
+      totalXau += r.xau_weight;
+      totalRevenue += r.amount;
+    });
+
+    return {
+      totalXau,
+      totalRevenue,
+      weightedAvgRate: totalXau ? totalRevenue / totalXau : 0,
+    };
+  }
+
+  // --------------------------------------------------
+  // UPDATE STATE + UI
+  // --------------------------------------------------
+  function updateSaleState() {
+    const lockedRates = getLockedRates();
+    const summary = computeSummary(lockedRates);
+    const netXau = state.assay?.net_sellable || 0;
+    const customer = $("#wbs-customer").val() || "";
+    const idNumber = $("#wbs-id-number").val() || "";
+
+    state.sale = {
+      customer: customer,
+      customer_id_number: idNumber,
+      net_weight: netXau,
+      assay_purity: state.assay?.assay_purity || 0,
+      net_xau: netXau,
+      total_xau_sold: summary.totalXau,
+      total_revenue: summary.totalRevenue,
+      weighted_avg_rate: summary.weightedAvgRate,
+      locked_rates: lockedRates,
+    };
+
+    $("#wbs-total-xau").text(summary.totalXau.toFixed(2) + " g");
+    $("#wbs-total-amount").text(
+      "RM " +
+        summary.totalRevenue.toLocaleString("en-MY", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+    );
+
+    $("#wbs-summary-xau").text(summary.totalXau.toFixed(2) + " g");
+    $("#wbs-summary-revenue").text(
+      "RM " +
+        summary.totalRevenue.toLocaleString("en-MY", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+    );
+    $("#wbs-summary-rate").text(summary.weightedAvgRate.toFixed(2));
+
+    if (summary.totalXau > netXau) {
+      $(".wbs-warning")
+        .show()
+        .html(
+          `⚠ Mismatch: Table shows <b>${summary.totalXau.toFixed(
+            2
+          )} g</b> but Net XAU is <b>${netXau.toFixed(2)} g</b>`
+        );
+    } else {
+      $(".wbs-warning").hide();
+    }
+  }
+
+  // --------------------------------------------------
+  // EVENTS
+  // --------------------------------------------------
+  $(document).on("input", ".wbs-table-row input", updateSaleState);
+
+  $(document).on("click", ".wbs-trash", function () {
+    $(this).closest(".wbs-table-row").remove();
+    updateSaleState();
+  });
+  $(document)
+    .off("click", ".wbs-add-btn")
+    .on("click", ".wbs-add-btn", function () {
+      $("#wbs-table-body").append(createLockedRateRow());
+    });
+
+  // Customer Field Flow------------------------------------------------------------------------------------
+  $(document).on("input", "#wbs-customer, #wbs-id-number", updateSaleState);
+
+  $(document).ready(function () {
+    const $wrap = $(".wbs-customer-wrapper");
+
+    if (!$wrap.find(".wbs-add-customer").length) {
+      $wrap.append(`
+            <button type="button"
+        	class="wbs-add-customer wbd-add-customer-btn"
+        	title="Add Customer">
+			+
+			</button>
+        `);
+    }
+  });
+
+  $(document).on("click", ".wbs-add-customer", function () {
+    const dialog = new frappe.ui.Dialog({
+      title: "Add New Customer",
+      fields: [
+        {
+          label: "Customer Name",
+          fieldname: "customer_name",
+          fieldtype: "Data",
+          reqd: 1,
+        },
+
+        {
+          label: "Customer Group",
+          fieldname: "customer_group",
+          fieldtype: "Select",
+          options: ["Wholesale", "Retail", "Individual"],
+          default: "Wholesale",
+          reqd: 1,
+        },
+
+        {
+          label: "Nationality",
+          fieldname: "customer_nationality",
+          fieldtype: "Select",
+          options: ["Malaysian", "Others"],
+          default: "Malaysian",
+          reqd: 1,
+        },
+
+        { label: "Malaysian ID", fieldname: "malaysian_id", fieldtype: "Data" },
+        {
+          label: "Other ID Type",
+          fieldname: "other_id_type",
+          fieldtype: "Data",
+        },
+        {
+          label: "Other ID Number",
+          fieldname: "other_id_number",
+          fieldtype: "Data",
+        },
+
+        {
+          label: "Mobile Number",
+          fieldname: "mobile_number",
+          fieldtype: "Data",
+          reqd: 1,
+        },
+        {
+          label: "Mobile Number NA",
+          fieldname: "mobile_number_na",
+          fieldtype: "Check",
+          default: 0,
+        },
+      ],
+
+      primary_action_label: "Save Customer",
+
+      primary_action: async (values) => {
+        // ---------------- VALIDATION ----------------
+
+        if (!values.customer_name) {
+          frappe.msgprint("Customer name is required.");
+          return;
+        }
+
+        // Malaysian ID logic
+        if (values.customer_nationality === "Malaysian") {
+          let digits = (values.malaysian_id || "").replace(/\D/g, "");
+          if (digits && digits.length !== 12) {
+            frappe.msgprint("Malaysian ID must be exactly 12 digits.");
+            return;
+          }
+          if (digits) {
+            values.malaysian_id = `${digits.slice(0, 6)}-${digits.slice(
+              6,
+              8
+            )}-${digits.slice(8)}`;
+          }
+        }
+
+        // Others nationality validation
+        if (
+          values.customer_nationality === "Others" &&
+          !values.other_id_number
+        ) {
+          frappe.msgprint("Nationality ID is required for non-Malaysians.");
+          return;
+        }
+
+        // Mobile validation
+        if (!values.mobile_number_na) {
+          let digits = (values.mobile_number || "").replace(/\D/g, "");
+          if (!digits || (digits.length !== 10 && digits.length !== 11)) {
+            frappe.msgprint(
+              "Mobile number must be 10 or 11 digits, or mark Mobile Number NA."
+            );
+            return;
+          }
+
+          values.mobile_number =
+            digits.length === 10
+              ? `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6)}`
+              : `${digits.slice(0, 3)}-${digits.slice(3, 7)} ${digits.slice(
+                  7
+                )}`;
+        }
+
+        dialog.hide();
+
+        // ---------------- CREATE CUSTOMER ----------------
+        try {
+          const res = await frappe.call({
+            method: "frappe.client.insert",
+            args: {
+              doc: {
+                doctype: "Customer",
+                customer_name: values.customer_name,
+                customer_group: values.customer_group,
+                mobile_number: values.mobile_number || "",
+                mobile_number_na: values.mobile_number_na || 0,
+                customer_nationality: values.customer_nationality,
+                malaysian_id: values.malaysian_id || "",
+                other_id_type: values.other_id_type || "",
+                other_id_number: values.other_id_number || "",
+              },
+            },
+          });
+
+          const c = res.message;
+
+          // ---------------- UPDATE SALES DETAIL UI ----------------
+          $("#wbs-customer").val(c.customer_name).data("customer-id", c.name);
+
+          $("#wbs-id-number").val(c.id_number || "");
+
+          // ---------------- UPDATE STATE ----------------
+          WBMState.sale = WBMState.sale || {};
+          WBMState.sale.customer = c.name;
+          WBMState.sale.customer_name = c.customer_name;
+          WBMState.sale.customer_id_number = c.id_number || "";
+
+          frappe.show_alert({ message: "Customer added successfully." });
+        } catch (err) {
+          console.error(err);
+          frappe.msgprint("Error creating customer.");
+        }
+      },
+    });
+
+    // ---------------- UI TOGGLES ----------------
+    function toggleNationality() {
+      const nationality = dialog.get_value("customer_nationality");
+
+      if (nationality === "Malaysian") {
+        dialog.set_df_property("malaysian_id", "reqd", 1);
+        dialog.get_field("malaysian_id").$wrapper.show();
+
+        dialog.set_df_property("other_id_type", "reqd", 0);
+        dialog.get_field("other_id_type").$wrapper.hide();
+
+        dialog.set_df_property("other_id_number", "reqd", 0);
+        dialog.get_field("other_id_number").$wrapper.hide();
+      } else {
+        dialog.set_df_property("malaysian_id", "reqd", 0);
+        dialog.get_field("malaysian_id").$wrapper.hide();
+
+        dialog.get_field("other_id_type").$wrapper.show();
+        dialog.get_field("other_id_number").$wrapper.show();
+
+        dialog.set_df_property("other_id_type", "reqd", 1);
+        dialog.set_df_property("other_id_number", "reqd", 1);
       }
-    },
+    }
+
+    const midField = dialog.get_field("malaysian_id");
+    if (midField && midField.$input) {
+      midField.$input.on("blur", () => {
+        let val = midField.$input.val() || "";
+        let digits = val.replace(/\D/g, "");
+
+        if (!digits) return;
+
+        if (digits.length !== 12) {
+          frappe.msgprint("Malaysian ID must be exactly 12 digits.");
+          return;
+        }
+
+        dialog.set_value(
+          "malaysian_id",
+          `${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+        );
+      });
+    }
+
+    const mobileField = dialog.get_field("mobile_number");
+    if (mobileField && mobileField.$input) {
+      mobileField.$input.on("blur", () => {
+        if (dialog.get_value("mobile_number_na")) return;
+
+        let val = mobileField.$input.val() || "";
+        let digits = val.replace(/\D/g, "");
+
+        if (!digits) return;
+
+        if (digits.length !== 10 && digits.length !== 11) {
+          frappe.msgprint("Mobile number must be 10 or 11 digits.");
+          return;
+        }
+
+        const formatted =
+          digits.length === 10
+            ? `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6)}`
+            : `${digits.slice(0, 3)}-${digits.slice(3, 7)} ${digits.slice(7)}`;
+
+        dialog.set_value("mobile_number", formatted);
+      });
+    }
+    const mobileNAField = dialog.get_field("mobile_number_na");
+    if (mobileNAField && mobileNAField.$input) {
+      mobileNAField.$input.on("change", () => {
+        const isNA = dialog.get_value("mobile_number_na");
+        dialog.set_df_property("mobile_number", "reqd", isNA ? 0 : 1);
+        if (isNA) dialog.set_value("mobile_number", "");
+      });
+    }
+
+    dialog.fields_dict.customer_nationality.$input.on(
+      "change",
+      toggleNationality
+    );
+    setTimeout(toggleNationality, 150);
+
+    dialog.show();
   });
 };
 
-// ==============================================
-// RENDER BAG CARD GRID
-// ==============================================
-function renderBagGrid(bags) {
-  const grid = $("#wbdm-bag-list");
-  grid.empty();
+// --------------------------------------------------
+// CUSTOMER SEARCH + SELECT LOGIC (ADDED CLEANLY)
+// --------------------------------------------------
 
-  const fmtNumber = (val, decimals) => {
-    if (val === null || val === undefined || val === "") return "";
-    const n = typeof val === "number" ? val : parseFloat(String(val));
-    return n.toLocaleString("en-MY", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    });
-  };
+let WBS_ALL_CUSTOMERS = [];
+let WBS_SELECTED_CUSTOMER_ID = null;
 
-  bags.forEach((bag) => {
-    grid.append(`
-            <div class="wbdm-card">
-                <div class="wbdm-bag-title">${bag.bag_id}</div>
+// Load customers once
+frappe.call({
+  method: "frappe.client.get_list",
+  args: {
+    doctype: "Customer",
+    fields: ["name", "customer_name", "id_number"],
+    limit_page_length: 500,
+  },
+  callback: function (r) {
+    WBS_ALL_CUSTOMERS = r.message || [];
+  },
+});
 
-                <div class="wbdm-row">
-                    <span>Total Weight</span>
-                    <strong>${fmtNumber(bag.total_weight, 0)}g</strong>
-                </div>
+// Search customers
+$(document).on("input", "#wbs-customer", function () {
+  const query = $(this).val().toLowerCase().trim();
+  const $list = $("#wbs-customer-suggestions");
 
-                <div class="wbdm-row">
-                    <span>XAU (Pure Gold)</span>
-                    <strong class="wbdm-blue">${fmtNumber(
-                      bag.xau_g,
-                      2
-                    )}g</strong>
-                </div>
+  if (!query) {
+    $list.hide();
+    return;
+  }
 
-                <div class="wbdm-row">
-                    <span>Avg Purity</span>
-                    <strong>${fmtNumber(bag.avg_purity, 1)}</strong>
-                </div>
+  const matches = WBS_ALL_CUSTOMERS.filter((c) =>
+    (c.customer_name || "").toLowerCase().includes(query)
+  ).slice(0, 10);
 
-                <div class="wbdm-row">
-                    <span>Total Cost</span>
-                    <strong>RM${fmtNumber(bag.total_cost, 2)}</strong>
-                </div>
+  $list.empty();
 
-                <div class="wbdm-row">
-                    <span>Cost per Gram</span>
-                    <strong>RM${fmtNumber(bag.cost_per_gram, 2)}</strong>
-                </div>
+  if (!matches.length) {
+    $list.append(`<div>No customers found</div>`).show();
+    return;
+  }
 
-                <div class="wbdm-view-items">▼ View Items</div>
-
-                <button class="wbdm-select-btn" data-bag="${bag.bag_id}">
-                    SELECT BAG
-                </button>
+  matches.forEach((c) => {
+    $list.append(`
+            <div data-id="${c.name}"
+                 data-name="${c.customer_name}"
+                 data-idnum="${c.id_number || ""}">
+                ${c.customer_name}
+                ${c.id_number ? " - " + c.id_number : ""}
             </div>
         `);
   });
 
-  $(".wbdm-select-btn")
-    .off("click")
-    .on("click", function () {
-      const bagId = $(this).data("bag");
+  $list.show();
+});
 
-      WBMState.selected_bag = bagId;
+// Select customer
+$(document).on("click", "#wbs-customer-suggestions div", function () {
+  const name = $(this).data("name");
+  const id = $(this).data("id");
+  const idnum = $(this).data("idnum");
 
-      frappe.call({
-        method: "gold_app.api.sales.wholesale_bag_melt.get_bag_details",
-        args: { bag_id: bagId },
-        callback: function (r) {
-          if (!r.message) return;
+  WBS_SELECTED_CUSTOMER_ID = id;
 
-          WBMState.bag_summary = r.message.summary;
-          WBMState.bag_items = r.message.items;
+  $("#wbs-customer").val(name);
+  $("#wbs-id-number").val(idnum || "");
+  $("#wbs-customer-suggestions").hide();
 
-          WBMState.bag_summary.record_id = WBMState.selected_bag;
-          WBMState.bag_summary.record_date = getTodayDate();
+  updateSaleState(); // 🔴 IMPORTANT
+});
 
-          showBagSummaryUI();
-        },
-      });
-    });
-
-  $(".wbdm-view-items")
-    .off("click")
-    .on("click", function () {
-      const card = $(this).closest(".wbdm-card");
-      const bagId = card.find(".wbdm-select-btn").data("bag");
-
-      WBMState.selected_bag = bagId;
-
-      frappe.call({
-        method: "gold_app.api.sales.wholesale_bag_melt.get_bag_details",
-        args: { bag_id: bagId },
-        callback: function (r) {
-          if (!r.message) return;
-
-          WBMState.bag_summary = r.message.summary;
-          WBMState.bag_items = r.message.items;
-
-          showBagSummaryUI();
-        },
-      });
-    });
-}
-
-// ==============================================
-// SHOW GLOBAL SHELL + TABS (SAVE BUTTON ADDED)
-// ==============================================
-function showBagSummaryUI() {
-  $("#wbdm-root").html(`
-        <div class="wbm-page-shell">
-
-            <!-- HEADER -->
-            <div class="wbm-header">
-                <div class="wbm-header-inner">
-
-                    <div class="wbm-header-left">
-                        <div class="wbm-record-title">Melt & Assay Sales</div>
-                        <div class="wbm-record-meta">
-                            <a class="wbm-record-id">
-                                ${WBMState.bag_summary.record_id || "-"}
-                            </a>
-                            <span class="wbm-dot-sep">•</span>
-                            <span class="wbm-record-date-label">Sale Date:</span>
-                            <span class="wbm-record-date-value">
-                                ${WBMState.bag_summary.record_date || "-"}
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- ✅ SAVE BUTTON (RIGHT SIDE) -->
-                    <div class="wbm-header-right">
-                        <button id="wbm-save-btn" class="wbm-save-btn">Save</button>
-                    </div>
-
-                </div>
-
-                <!-- TABS -->
-                <div class="wbm-tabs-bar">
-                    <div class="wbm-tab-item" data-tab="bag_summary">Bag Summary</div>
-                    <div class="wbm-tab-item" data-tab="melting_assay">Melting & Assay</div>
-                    <div class="wbm-tab-item" data-tab="buyer_sale">Sales Detail</div>
-                    <div class="wbm-tab-item" data-tab="metrics">Metrics</div>
-                </div>
-            </div>
-
-            <!-- TAB CONTENT -->
-            <div class="wbm-page-body">
-				<div id="wbm-tab-loader" class="loader-overlay">
-    				<div class="loader"></div>
-    				<p>Loading...</p>
-				</div>
-                <div id="wbd-content" class="wbm-main-card"></div>
-            </div>
-
-        </div>
-    `);
-
-  WBMState.onSaveRecord = saveMeltAssaySales;
-
-  // default tab
-  loadTabContent("bag_summary");
-  $(`.wbm-tab-item[data-tab="bag_summary"]`).addClass("wbm-tab-active");
-
-  $(".wbm-tab-item").on("click", function () {
-    $(".wbm-tab-item").removeClass("wbm-tab-active");
-    $(this).addClass("wbm-tab-active");
-
-    const tab = $(this).data("tab");
-    loadTabContent(tab);
-  });
-
-  $(document).on("click", "#wbm-save-btn", function () {
-    if (WBMState.onSaveRecord) {
-      WBMState.onSaveRecord();
-    }
-  });
-}
-
-// ==============================================
-// TAB CONTENT LOADER
-// ==============================================
-function loadTabContent(tabName) {
-  const map = {
-    bag_summary: "/assets/gold_app/js/bag_summary.js",
-    melting_assay: "/assets/gold_app/js/melting_assay.js",
-    buyer_sale: "/assets/gold_app/js/buyer_sale.js",
-    metrics: "/assets/gold_app/js/metrics.js",
-  };
-
-  const path = map[tabName];
-  if (!path) return;
-
-  // SHOW LOADER
-  $("#wbm-tab-loader").fadeIn(150);
-  $("#wbd-content").hide();
-
-  frappe.require(path, () => {
-    if (window.WBMComponents && window.WBMComponents[tabName]) {
-      window.WBMComponents[tabName]($("#wbd-content"), WBMState);
-
-      // HIDE LOADER AFTER RENDER
-      $("#wbm-tab-loader").fadeOut(200, () => {
-        $("#wbd-content").fadeIn(200);
-      });
-    }
-  });
-}
-
-/**
- * loadResumeData(log_id)
- * - Fetches resume payload from backend
- * - Maps server fields -> frontend WBMState shape
- * - Calls showBagSummaryUI() and selects default tab
- */
-function loadResumeData(log_id) {
-  if (!log_id) return;
-
-  frappe.call({
-    method: "gold_app.api.sales.wholesale_bag_melt.get_resume_data",
-    args: { log_id: log_id },
-    callback: function (r) {
-      if (!r.message) {
-        frappe.msgprint("Failed to load saved record: " + (log_id || ""));
-        // fallback to normal bag overview
-        loadBagOverviewFallback();
-        return;
-      }
-
-      const payload = r.message || {};
-      const header = payload.header || {};
-      const bag_contents = payload.bag_contents || [];
-      const locked_rates = payload.locked_rates || [];
-
-      // 1) Bag summary mapping — match keys expected by bag_summary component
-      WBMState.bag_summary = {
-        // use record_id if saved in header else fallback to doc name
-        record_id: header.record_id || payload.name || header.name || log_id,
-        record_date: header.posting_date || header.date || getTodayDate(),
-
-        // map names used by bag_summary component
-        total_weight_g:
-          header.total_weight || header.m_original_gross_weight || 0,
-        average_purity: header.avg_purity || header.m_original_avg_purity || 0,
-        pure_gold_xau_g: header.total_xau || 0,
-        total_cost_basis: header.total_cost || 0,
-        // keep other useful fields too
-        xau_avco: header.xau_avco || 0,
-      };
-
-      // 2) bag_items mapping — adapt saved child table shape to component expected shape
-      WBMState.bag_items = (bag_contents || []).map((row) => ({
-        purity: row.purity || "",
-        weight_g: row.weight || 0,
-        cost_per_g_rm: row.avco || 0,
-        cost_rm: row.cost || 0,
-        xau_g: row.xau || 0,
-        xau_avco: row.xau_avco || 0,
-      }));
-
-      // 3) melting
-      WBMState.melting = {
-        before: header.weight_before_melting || 0,
-        after: header.weight_after_melting || 0,
-        cost: header.melting_cost || 0,
-        payment_mode: header.melting_payment_mode || "",
-        weight_loss: header.weight_loss || 0,
-        xau_loss: header.xau_loss || 0,
-        loss_percentage: header.loss_percentage || 0,
-      };
-
-      // 4) assay
-      WBMState.assay = {
-        current_purity:
-          header.current_avg_purity || WBMState.bag_summary.average_purity || 0,
-        assay_purity: header.assay_purity || 0,
-        purity_variance: header.purity_variance || 0,
-        xau_weight_variance: header.xau_weight_variance || 0,
-        actual_xau_weight: header.actual_xau_weight || 0,
-        assay_sample_weight: header.assay_sample_weight || 0,
-        net_sellable: header.net_xau_sellable || 0,
-        cost: header.assay_cost || 0,
-        payment_mode: header.assay_payment_mode || "",
-      };
-
-      // 5) sale
-      WBMState.sale = {
-        net_weight: header.sale_net_weight || 0,
-        assay_purity: header.sale_assay_purity || 0,
-        net_xau: header.sale_net_xau || 0,
-        total_xau_sold: header.total_xau_sold || 0,
-        total_revenue: header.total_revenue || 0,
-        weighted_avg_rate: header.weighted_avg_rate || 0,
-        locked_rates: locked_rates || [],
-      };
-
-      // 6) metrics
-      WBMState.metrics = header || {}; // since header already contains m_* fields
-
-      // 7) store bag_list in background (optional) — helpful for UI that uses bag overview
-      frappe.call({
-        method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
-        callback: function (ov) {
-          if (ov && ov.message) {
-            WBMState.bag_list = ov.message;
-          }
-        },
-      });
-
-      // 8) now render UI shell and restore tabs
-      showBagSummaryUI();
-
-      // after render, make sure the default tab loads and that tab components pick up restored WBMState
-      // If you want to open a specific tab (e.g., 'buyer_sale'), set it here:
-      // loadTabContent("buyer_sale"); and set active class
-      // For now we keep default bag_summary (as showBagSummaryUI already loads it)
-    },
-    error: function (err) {
-      console.error("Resume load failed", err);
-      frappe.msgprint("Failed to load resume data.");
-      // fallback to bag-overview
-      loadBagOverviewFallback();
-    },
-  });
-}
-
-// helper to fallback to normal overview if resume fails
-function loadBagOverviewFallback() {
-  // normal flow - fetch bag overview
-  frappe.call({
-    method: "gold_app.api.sales.wholesale_bag_melt.get_bag_overview",
-    callback: function (r) {
-      if (r.message) {
-        $("#wbdm-loader").fadeOut(200, () => {
-          $("#wbdm-bag-list").fadeIn(200);
-        });
-        WBMState.bag_list = r.message;
-        renderBagGrid(WBMState.bag_list);
-
-        WBMState.onBackToBags = function () {
-          $("#wbdm-root").html(`
-                        <div class="wbdm-inner">
-                            <div id="wbdm-bag-list" class="wbdm-grid"></div>
-                        </div>
-                    `);
-          renderBagGrid(WBMState.bag_list);
-        };
-      }
-    },
-  });
-}
-
-function getTodayDate() {
-  const d = new Date();
-  return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
-}
-
-function saveMeltAssaySales() {
-  // 1️⃣ --- BAG SUMMARY DATA ---
-  const summary = WBMState.bag_summary || {};
-  const bagContents = WBMState.bag_items || [];
-
-  // 2️⃣ --- MELTING & ASSAY DATA ---
-  const melt = WBMState.melting || {};
-  const assay = WBMState.assay || {};
-
-  // 3️⃣ --- BUYER SALE DATA ---
-  const sale = WBMState.sale || {};
-
-  // 4️⃣ --- METRICS DATA ---
-  const metrics = WBMState.metrics || {};
-
-  // 5️⃣ --- BUILD CLEAN PAYLOAD ---
-  const payload = {
-    header: {
-      // BAG SUMMARY
-      total_weight: summary.total_weight_g,
-      avg_purity: summary.average_purity,
-      total_xau: summary.pure_gold_xau_g,
-      total_cost: summary.total_cost_basis,
-      xau_avco:
-        summary.total_cost_basis && summary.pure_gold_xau_g
-          ? summary.total_cost_basis / summary.pure_gold_xau_g
-          : 0,
-
-      // MELTING
-      weight_before_melting: melt.before,
-      weight_after_melting: melt.after,
-      melting_cost: melt.cost,
-      melting_payment_mode: melt.payment_mode,
-      weight_loss: melt.weight_loss,
-      xau_loss: melt.xau_loss,
-      loss_percentage: melt.loss_percentage,
-
-      // ASSAY
-      current_avg_purity: assay.current_purity,
-      assay_purity: assay.assay_purity,
-      purity_variance: assay.purity_variance,
-      xau_weight_variance: assay.xau_weight_variance,
-      actual_xau_weight: assay.actual_xau_weight,
-      assay_sample_weight: assay.assay_sample_weight,
-      net_xau_sellable: assay.net_sellable,
-      assay_cost: assay.cost,
-      assay_payment_mode: assay.payment_mode,
-
-      // SALES DATA
-      sale_net_weight: sale.net_weight,
-      sale_assay_purity: sale.assay_purity,
-      sale_net_xau: sale.net_xau,
-      total_xau_sold: sale.total_xau_sold,
-      total_revenue: sale.total_revenue,
-      weighted_avg_rate: sale.weighted_avg_rate,
-
-      // METRICS (optional)
-      ...metrics,
-    },
-
-    bag_contents: bagContents.map((r) => ({
-      purity: r.purity,
-      weight: r.weight_g,
-      avco: r.cost_per_g_rm,
-      cost: r.cost_rm,
-      xau: r.xau_g,
-      xau_avco: r.xau_g ? r.cost_rm / r.xau_g : 0,
-    })),
-
-    locked_rates: sale.locked_rates || [],
-  };
-
-  // 6️⃣ --- CALL BACKEND API ---
-  frappe.call({
-    method: "gold_app.api.sales.wholesale_bag_melt.save_melt_assay_sales",
-    args: { payload },
-    freeze: true,
-    callback: function (r) {
-      frappe.msgprint("Melt & Assay Sales saved successfully.");
-    },
-  });
-}
+// Hide dropdown
+$(document).on("blur", "#wbs-customer", function () {
+  setTimeout(() => $("#wbs-customer-suggestions").hide(), 150);
+});

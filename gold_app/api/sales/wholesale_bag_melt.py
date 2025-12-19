@@ -234,6 +234,8 @@ def set_parent_fields(doc, data):
 		"net_xau_sellable", "assay_cost", "assay_payment_mode",
 
 		# Sales
+        "customer",
+        "customer_id_number",
 		"sale_net_weight", "sale_assay_purity", "sale_net_xau",
 		"total_xau_sold", "total_revenue", "weighted_avg_rate",
 
@@ -302,6 +304,8 @@ def get_resume_data(log_id):
         "net_xau_sellable", "assay_cost", "assay_payment_mode",
 
         # Sales
+        "customer",
+        "customer_id_number",
         "sale_net_weight", "sale_assay_purity", "sale_net_xau",
         "total_xau_sold", "total_revenue", "weighted_avg_rate",
 
@@ -450,3 +454,40 @@ def create_repack_stock_entry(
         "stock_entry": se.name,
         "finished_qty": total_finished_qty
     }
+
+@frappe.whitelist()
+def create_sales_invoice(customer, items, posting_date=None):
+	if not customer:
+		frappe.throw("Customer is required")
+
+	if isinstance(items, str):
+		items = frappe.parse_json(items)
+
+	if not items:
+		frappe.throw("At least one item is required")
+
+	company = frappe.defaults.get_user_default("Company")
+
+	si = frappe.new_doc("Sales Invoice")
+	si.customer = customer
+	si.company = company
+	si.posting_date = posting_date or nowdate()
+	si.update_stock = 1
+
+	for row in items:
+		qty = flt(row.get("qty"))
+
+		si.append("items", {
+			"item_code": row.get("item_code"),
+			"qty": qty,
+			"weight_per_unit": qty,
+			"rate": flt(row.get("rate")),
+		})
+
+	si.insert(ignore_permissions=True)
+	frappe.db.commit()        
+
+	return {
+		"status": "success",
+		"sales_invoice": si.name
+	}

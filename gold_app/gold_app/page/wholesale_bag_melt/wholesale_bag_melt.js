@@ -360,6 +360,8 @@ function loadResumeData(log_id) {
 				total_xau_sold: header.total_xau_sold || 0,
 				total_revenue: header.total_revenue || 0,
 				weighted_avg_rate: header.weighted_avg_rate || 0,
+				customer: header.customer || "",
+				customer_id_number: header.customer_id_number || "",
 				locked_rates: locked_rates || [],
 			};
 
@@ -577,6 +579,8 @@ function saveMeltAssaySales() {
 			total_xau_sold: sale.total_xau_sold,
 			total_revenue: sale.total_revenue,
 			weighted_avg_rate: sale.weighted_avg_rate,
+			customer: sale.customer,
+			customer_id_number: sale.customer_id_number,
 
 			...(metrics || {}),
 		},
