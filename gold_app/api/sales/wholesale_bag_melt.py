@@ -1,11 +1,12 @@
 import frappe
 from frappe import _
-from frappe.utils import flt, nowdate
+from frappe.utils import flt, nowdate, getdate
 from erpnext.accounts.party import get_party_account
 from erpnext.controllers.accounts_controller import (
     get_advance_journal_entries,
     get_advance_payment_entries_for_regional,
 )
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
 @frappe.whitelist()
 def get_bag_overview():
@@ -244,7 +245,7 @@ def set_parent_fields(doc, data):
 
 	parent_fields = [
 		# Bag Summary
-		"total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
+		"wholesale_bag","total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
 
 		# Melting
 		"weight_before_melting", "weight_after_melting", "melting_cost",
@@ -314,7 +315,7 @@ def get_resume_data(log_id):
 	header = {}
 	parent_fields = [
 		# Bag Summary
-		"total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
+		"wholesale_bag","total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
 
 		# Melting
 		"weight_before_melting", "weight_after_melting", "melting_cost",
@@ -594,6 +595,7 @@ def create_sales_invoice(customer, items, posting_date=None):
 			"qty": qty,
 			"weight_per_unit": qty,
 			"rate": flt(row.get("rate")),
+            "warehouse": row.get("warehouse"),
 		})
 
 	si.insert(ignore_permissions=True)
@@ -603,3 +605,190 @@ def create_sales_invoice(customer, items, posting_date=None):
 		"status": "success",
 		"sales_invoice": si.name
 	}
+
+@frappe.whitelist()
+def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, company=None):
+    """
+    Allocate customer advance amount to DRAFT Sales Invoice
+    """
+    try:
+        if not sales_invoice_name:
+            frappe.throw("Sales Invoice name is required")
+        
+        allocate_amount = flt(allocate_amount)
+        if allocate_amount <= 0:
+            frappe.throw("Allocation amount must be greater than zero")
+        
+        if not company:
+            company = frappe.defaults.get_user_default("Company")
+        
+        # Get Sales Invoice - MUST BE DRAFT
+        si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+        if si.docstatus != 0:
+            frappe.throw("Sales Invoice must be in Draft state (not submitted)")
+        
+        customer = si.customer
+        party_type = "Customer"
+        party = customer
+        amount_field = "credit_in_account_currency"
+        order_doctype = "Sales Order"
+        order_list = []
+        
+        # Get party accounts (receivable + advance accounts)
+        party_accounts = get_party_account(
+            party_type, party=customer, company=company, include_advance=True
+        )
+        
+        party_account = [party_accounts[0]] if party_accounts else []
+        default_advance_account = party_accounts[1] if len(party_accounts) == 2 else None
+        
+        # Fetch available customer advances
+        journal_entries = get_advance_journal_entries(
+            party_type, party, party_account, amount_field,
+            order_doctype, order_list, include_unallocated=True
+        )
+        
+        payment_entries = get_advance_payment_entries_for_regional(
+            party_type, party, party_account,
+            order_doctype, order_list, default_advance_account,
+            include_unallocated=True
+        )
+        
+        all_advances = journal_entries + payment_entries
+        available_advance_total = sum(flt(d.amount) for d in all_advances)
+        
+        if available_advance_total < allocate_amount:
+            frappe.throw(f"Insufficient advance balance. Available: {available_advance_total}, Requested: {allocate_amount}")
+                
+        # Allocate from available advances (first-come-first-served)
+        remaining_to_allocate = allocate_amount
+        allocated_advances = []
+        
+        for advance in all_advances:
+            if remaining_to_allocate <= 0:
+                break
+                
+            advance_amount = flt(advance.amount)
+            alloc_amount = min(advance_amount, remaining_to_allocate)
+            
+            si.append("advances", {
+                "reference_type": advance.reference_type,
+                "reference_name": advance.reference_name,
+                "reference_row": advance.get("reference_row"),
+                "remarks": advance.remarks,
+                "advance_amount": advance_amount,
+                "allocated_amount": alloc_amount,
+                "ref_exchange_rate": flt(advance.get("exchange_rate", 1)),
+                "difference_posting_date": frappe.utils.nowdate(),
+            })
+            
+            allocated_advances.append({
+                "reference_type": advance.reference_type,
+                "reference_name": advance.reference_name,
+                "allocated": alloc_amount
+            })
+            
+            remaining_to_allocate -= alloc_amount
+        
+        # Save updated DRAFT invoice
+        si.flags.ignore_permissions = True
+        try:
+            si.save()
+        except frappe.ValidationError as e:
+            # Handle submission errors, maybe rollback or report back
+            frappe.db.rollback()
+            frappe.throw(f"Invoice submission failed: {str(e)}")
+
+        frappe.db.commit()
+
+        return {
+            "status": "success",
+            "message": f"Allocated RM {allocate_amount} from customer advances to DRAFT invoice {sales_invoice_name}",
+            "sales_invoice": sales_invoice_name,
+            "allocated_amount": allocate_amount,
+            "outstanding_amount": si.outstanding_amount,
+            "allocated_advances": allocated_advances,
+            "total_advance_used": sum(item.allocated_amount for item in si.advances)
+        }
+        
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "allocate_customer_advance_to_invoice")
+        frappe.db.rollback()
+        return {
+            "status": "error",
+            "message": str(e),
+            "sales_invoice": sales_invoice_name
+        }
+
+@frappe.whitelist()
+def create_payment_entry_for_invoice(
+    sales_invoice_name,
+    payment_mode,
+    paid_amount,
+    posting_date=None
+):
+    if not sales_invoice_name:
+        frappe.throw("Sales Invoice name is required")
+
+    if not payment_mode:
+        frappe.throw("Mode of Payment is required")
+
+    paid_amount = flt(paid_amount)
+    if paid_amount <= 0:
+        frappe.throw("Paid Amount must be greater than zero")
+
+    # Normalize payment mode
+    if payment_mode == "Bank Transfer":
+        payment_mode = "Bank Draft"
+
+    si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+
+    # Auto-submit invoice if still draft
+    if si.docstatus == 0:
+        si.flags.ignore_permissions = True
+        si.submit()
+
+    if si.docstatus != 1:
+        frappe.throw("Sales Invoice must be submitted")
+
+    posting_date = getdate(posting_date) if posting_date else nowdate()
+    # Create Payment Entry using ERPNext utility
+    pe = get_payment_entry("Sales Invoice", sales_invoice_name)
+
+    pe.mode_of_payment = payment_mode
+    pe.paid_amount = paid_amount
+    pe.received_amount = paid_amount
+    pe.reference_no = f"AUTO-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+    pe.reference_date = posting_date
+    pe.posting_date = posting_date
+
+    if pe.references:
+        pe.references[0].allocated_amount = paid_amount
+
+    pe.insert(ignore_permissions=True)
+    pe.submit()
+
+    frappe.db.commit()
+
+    return {
+        "status": "success",
+        "payment_entry": pe.name,
+        "sales_invoice": sales_invoice_name,
+        "paid_amount": paid_amount
+    }
+
+@frappe.whitelist()
+def mark_melt_assay_log_completed(name):
+	if not name:
+		frappe.throw("Log name is required")
+
+	doc = frappe.get_doc("Melt and Assay Sales", name)
+
+	if doc.status == "Completed":
+		return {"status": "already_completed"}
+
+	doc.status = "Completed"
+	doc.save(ignore_permissions=True)
+	frappe.db.commit()
+
+	return {"status": "success"}

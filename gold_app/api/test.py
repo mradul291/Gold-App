@@ -1,6 +1,11 @@
 import frappe
 from frappe import _
 from frappe.utils import flt, nowdate
+from erpnext.accounts.party import get_party_account
+from erpnext.controllers.accounts_controller import (
+    get_advance_journal_entries,
+    get_advance_payment_entries_for_regional,
+)
 
 @frappe.whitelist()
 def get_bag_overview():
@@ -150,7 +155,7 @@ def get_bag_details(bag_id):
         "summary": summary,
         "items": items
     }
-    
+
 @frappe.whitelist()
 def save_melt_assay_sales(payload):
 	"""
@@ -166,6 +171,7 @@ def save_melt_assay_sales(payload):
 	header = payload.get("header", {})
 	bag_contents = payload.get("bag_contents", [])
 	locked_rates = payload.get("locked_rates", [])
+	payments = payload.get("payments", [])
 
 	# ----------------------------------------
 	# CREATE OR FETCH DOCUMENT
@@ -182,7 +188,7 @@ def save_melt_assay_sales(payload):
 	set_parent_fields(doc, header)
 
 	# ----------------------------------------
-	# RESET & APPEND CHILD TABLES
+	# RESET & APPEND BAG CONTENTS
 	# ----------------------------------------
 	doc.set("bag_contents", [])
 	for row in bag_contents:
@@ -195,6 +201,9 @@ def save_melt_assay_sales(payload):
 			"xau_avco": flt(row.get("xau_avco")),
 		})
 
+	# ----------------------------------------
+	# RESET & APPEND LOCKED RATES
+	# ----------------------------------------
 	doc.set("locked_rates", [])
 	for row in locked_rates:
 		doc.append("locked_rates", {
@@ -202,6 +211,19 @@ def save_melt_assay_sales(payload):
 			"xau_weight": flt(row.get("xau_weight")),
 			"amount": flt(row.get("amount")),
 			"remark": row.get("remark"),
+		})
+
+	# ----------------------------------------
+	# RESET & APPEND PAYMENTS
+	# ----------------------------------------
+	doc.set("payments", [])
+	for row in payments:
+		doc.append("payments", {
+			"payment_date": row.get("payment_date"),
+			"payment_method": row.get("payment_method"),
+			"amount": flt(row.get("amount")),
+			"reference_no": row.get("reference_no"),
+			"status": row.get("status"),
 		})
 
 	# ----------------------------------------
@@ -234,8 +256,16 @@ def set_parent_fields(doc, data):
 		"net_xau_sellable", "assay_cost", "assay_payment_mode",
 
 		# Sales
+		"customer",
+		"customer_id_number",
 		"sale_net_weight", "sale_assay_purity", "sale_net_xau",
 		"total_xau_sold", "total_revenue", "weighted_avg_rate",
+
+		# Payments Summary
+		"total_amount",
+		"amount_paid",
+		"balance_due",
+		"customer_advance_balance",
 
 		# Metrics - Weight & Purity
 		"m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
@@ -262,92 +292,314 @@ def set_parent_fields(doc, data):
 	]
 
 	for field in parent_fields:
-		if field in data:
-			doc.set(field, data.get(field))
+		doc.set(field, data.get(field) or 0)
 
 @frappe.whitelist()
 def get_resume_data(log_id):
-    """
-    Return a JSON payload that contains all data needed to fully
-    restore a saved Melt and Assay Sales document on the frontend.
+	"""
+	Return all data needed to restore Melt and Assay Sales
+	"""
 
-    Response shape:
-    {
-      "name": doc.name,
-      "header": { ... parent fields ... },
-      "bag_contents": [ { purity, weight, avco, cost, xau, xau_avco }, ... ],
-      "locked_rates": [ { price_per_xau, xau_weight, amount, remark }, ... ]
-    }
-    """
-    if not log_id:
-        frappe.throw(_("log_id is required"))
+	if not log_id:
+		frappe.throw(_("log_id is required"))
 
-    try:
-        doc = frappe.get_doc("Melt and Assay Sales", log_id)
-    except Exception as e:
-        frappe.throw(_("Cannot load document: {0}").format(str(e)))
+	try:
+		doc = frappe.get_doc("Melt and Assay Sales", log_id)
+	except Exception as e:
+		frappe.throw(_("Cannot load document: {0}").format(str(e)))
 
-    # Build header dict — include all parent fields used by frontend
-    header = {}
-    parent_fields = [
-        # Bag Summary
-        "total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
+	# ----------------------------------------
+	# PARENT FIELDS
+	# ----------------------------------------
+	header = {}
+	parent_fields = [
+		# Bag Summary
+		"total_weight", "avg_purity", "total_xau", "total_cost", "xau_avco",
 
-        # Melting
-        "weight_before_melting", "weight_after_melting", "melting_cost",
-        "melting_payment_mode", "weight_loss", "xau_loss", "loss_percentage",
+		# Melting
+		"weight_before_melting", "weight_after_melting", "melting_cost",
+		"melting_payment_mode", "weight_loss", "xau_loss", "loss_percentage",
 
-        # Assay
-        "current_avg_purity", "assay_purity", "purity_variance",
-        "xau_weight_variance", "actual_xau_weight", "assay_sample_weight",
-        "net_xau_sellable", "assay_cost", "assay_payment_mode",
+		# Assay
+		"current_avg_purity", "assay_purity", "purity_variance",
+		"xau_weight_variance", "actual_xau_weight", "assay_sample_weight",
+		"net_xau_sellable", "assay_cost", "assay_payment_mode",
 
-        # Sales
-        "sale_net_weight", "sale_assay_purity", "sale_net_xau",
-        "total_xau_sold", "total_revenue", "weighted_avg_rate",
+		# Sales
+		"customer",
+		"customer_id_number",
+		"sale_net_weight", "sale_assay_purity", "sale_net_xau",
+		"total_xau_sold", "total_revenue", "weighted_avg_rate",
 
-        # Metrics
-        "m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
-        "m_weight_loss_percentage", "m_xau_weight_loss", "m_net_weight_sale",
-        "m_original_avg_purity", "m_assay_purity", "m_purity_variance",
-        "m_xau_weight_variance", "m_original_gold_cost", "m_melting_cost",
-        "m_assay_cost", "m_total_cost", "m_total_revenue", "m_total_cost_profit",
-        "m_gross_profit", "m_profit_margin", "m_melting_efficiency",
-        "m_xau_recovery", "m_net_sellable", "m_profit_per_xau",
+		# Payments Summary
+		"total_amount",
+		"amount_paid",
+		"balance_due",
+		"customer_advance_balance",
 
-        # Vs last sale
-        "vs_weight_loss_percentage", "vs_xau_recovery_rate", "vs_purity_variance",
-        "vs_net_sellable_percentage", "vs_profit_margin",
-    ]
+		# Metrics
+		"m_original_gross_weight", "m_weight_after_melting", "m_weight_loss",
+		"m_weight_loss_percentage", "m_xau_weight_loss", "m_net_weight_sale",
+		"m_original_avg_purity", "m_assay_purity", "m_purity_variance",
+		"m_xau_weight_variance", "m_original_gold_cost", "m_melting_cost",
+		"m_assay_cost", "m_total_cost", "m_total_revenue",
+		"m_total_cost_profit", "m_gross_profit", "m_profit_margin",
+		"m_melting_efficiency", "m_xau_recovery",
+		"m_net_sellable", "m_profit_per_xau",
 
-    for f in parent_fields:
-        header[f] = doc.get(f)
+		# Vs Last Sale
+		"vs_weight_loss_percentage", "vs_xau_recovery_rate",
+		"vs_purity_variance", "vs_net_sellable_percentage",
+		"vs_profit_margin",
+	]
 
-    # bag_contents child table
-    bag_contents = []
-    for row in (doc.get("bag_contents") or []):
-        bag_contents.append({
-            "purity": row.get("purity"),
-            "weight": row.get("weight"),
-            "avco": row.get("avco"),
-            "cost": row.get("cost"),
-            "xau": row.get("xau"),
-            "xau_avco": row.get("xau_avco"),
-        })
+	for f in parent_fields:
+		header[f] = doc.get(f)
 
-    # locked_rates child table
-    locked_rates = []
-    for row in (doc.get("locked_rates") or []):
-        locked_rates.append({
-            "price_per_xau": row.get("price_per_xau"),
-            "xau_weight": row.get("xau_weight"),
-            "amount": row.get("amount"),
-            "remark": row.get("remark"),
-        })
+	# ----------------------------------------
+	# BAG CONTENTS
+	# ----------------------------------------
+	bag_contents = []
+	for row in doc.get("bag_contents") or []:
+		bag_contents.append({
+			"purity": row.purity,
+			"weight": row.weight,
+			"avco": row.avco,
+			"cost": row.cost,
+			"xau": row.xau,
+			"xau_avco": row.xau_avco,
+		})
+
+	# ----------------------------------------
+	# LOCKED RATES
+	# ----------------------------------------
+	locked_rates = []
+	for row in doc.get("locked_rates") or []:
+		locked_rates.append({
+			"price_per_xau": row.price_per_xau,
+			"xau_weight": row.xau_weight,
+			"amount": row.amount,
+			"remark": row.remark,
+		})
+
+	# ----------------------------------------
+	# PAYMENTS
+	# ----------------------------------------
+	payments = []
+	for row in doc.get("payments") or []:
+		payments.append({
+			"payment_date": row.payment_date,
+			"payment_method": row.payment_method,
+			"amount": row.amount,
+			"reference_no": row.reference_no,
+			"status": row.status,
+		})
+
+	return {
+		"name": doc.name,
+		"header": header,
+		"bag_contents": bag_contents,
+		"locked_rates": locked_rates,
+		"payments": payments,
+	}
+
+@frappe.whitelist()
+def create_purity_and_unsorted_item(purity):
+    if not purity:
+        frappe.throw("Purity is required")
+
+    purity = float(purity)
+    purity_name = str(purity)
+    item_code = f"Unsorted-{purity_name}"
+
+    # -------------------------
+    # Create Purity (if missing)
+    # -------------------------
+    if not frappe.db.exists("Purity", purity_name):
+        purity_doc = frappe.new_doc("Purity")
+        purity_doc.purity_name = purity_name
+        purity_doc.insert(ignore_permissions=True)
+
+    # -------------------------
+    # Create Item (if missing)
+    # -------------------------
+    if not frappe.db.exists("Item", item_code):
+        item = frappe.new_doc("Item")
+        item.item_code = item_code
+        item.item_name = item_code
+        item.item_group = "MG - Mixed Gold"
+        item.stock_uom = "Gram"
+        item.purity = purity
+        item.is_stock_item = 1
+        item.insert(ignore_permissions=True)
+
+    frappe.db.commit()
 
     return {
-        "name": doc.name,
-        "header": header,
-        "bag_contents": bag_contents,
-        "locked_rates": locked_rates,
+        "status": "success",
+        "purity": purity_name,
+        "item_code": item_code
     }
+
+@frappe.whitelist()
+def create_repack_stock_entry(
+    source_items,
+    finished_item_code,
+    s_warehouse,
+    t_warehouse
+):
+    if not source_items:
+        frappe.throw("Source items are required")
+
+    if not finished_item_code:
+        frappe.throw("Finished item purity is required")
+
+    # Parse source items
+    source_items = frappe.parse_json(source_items)
+
+    se = frappe.new_doc("Stock Entry")
+    se.stock_entry_type = "Repack"
+
+    total_finished_qty = 0
+
+    # -------------------------
+    # Source Items (Consumed)
+    # -------------------------
+    for row in source_items:
+        purity = row.get("item_code")
+        qty = row.get("qty", 0)
+
+        if not purity or not qty:
+            frappe.throw("Each source item must have purity and qty")
+
+        item_code = f"Unsorted-{purity}"
+
+        se.append("items", {
+            "item_code": item_code,
+            "qty": qty,
+            "s_warehouse": s_warehouse,
+        })
+
+        total_finished_qty += qty
+
+    # -------------------------
+    # Finished Item (Produced)
+    # -------------------------
+    finished_item_code = f"Unsorted-{finished_item_code}"
+
+    se.append("items", {
+        "item_code": finished_item_code,
+        "qty": total_finished_qty,
+        "t_warehouse": t_warehouse,
+        "is_finished_item": 1
+    })
+
+    se.insert(ignore_permissions=True)
+    se.submit()
+
+    return {
+        "status": "success",
+        "stock_entry": se.name,
+        "finished_qty": total_finished_qty
+    }
+
+@frappe.whitelist()
+def get_customer_advance_balance(customer, company=None):
+    """
+    Return total advance balance for a Customer (sum of available advances).
+    Used only to show a single number on Wholesale Bag Direct Payment page.
+    """
+    if not customer:
+        return {"status": "error", "message": "Customer is required.", "advance_balance": 0}
+
+    if not company:
+        company = frappe.defaults.get_user_default("Company")
+
+    party_type = "Customer"
+    party = customer
+    amount_field = "credit_in_account_currency"  # for Customer advances
+    order_doctype = "Sales Order"
+    order_list = []  # not linking to specific SO here
+
+    # Get party account list including advance accounts
+    party_accounts = get_party_account(
+        party_type, party=party, company=company, include_advance=True
+    )
+
+    party_account = []
+    default_advance_account = None
+
+    if party_accounts:
+        party_account.append(party_accounts[0])
+        if len(party_accounts) == 2:
+            default_advance_account = party_accounts[1]
+
+    # Advances from Journal Entries
+    journal_entries = get_advance_journal_entries(
+        party_type,
+        party,
+        party_account,
+        amount_field,
+        order_doctype,
+        order_list,
+        include_unallocated=True,
+    )
+
+    # Advances from Payment Entries
+    payment_entries = get_advance_payment_entries_for_regional(
+        party_type,
+        party,
+        party_account,
+        order_doctype,
+        order_list,
+        default_advance_account,
+        include_unallocated=True,
+    )
+
+    total_advance = 0
+    for d in journal_entries + payment_entries:
+        total_advance += flt(d.amount)
+
+    return {
+        "status": "success",
+        "customer": customer,
+        "company": company,
+        "advance_balance": flt(total_advance),
+    }
+
+@frappe.whitelist()
+def create_sales_invoice(customer, items, posting_date=None):
+	if not customer:
+		frappe.throw("Customer is required")
+
+	if isinstance(items, str):
+		items = frappe.parse_json(items)
+
+	if not items:
+		frappe.throw("At least one item is required")
+
+	company = frappe.defaults.get_user_default("Company")
+
+	si = frappe.new_doc("Sales Invoice")
+	si.customer = customer
+	si.company = company
+	si.posting_date = posting_date or nowdate()
+	si.update_stock = 1
+
+	for row in items:
+		qty = flt(row.get("qty"))
+
+		si.append("items", {
+			"item_code": row.get("item_code"),
+			"qty": qty,
+			"weight_per_unit": qty,
+			"rate": flt(row.get("rate")),
+		})
+
+	si.insert(ignore_permissions=True)
+	frappe.db.commit()        
+
+	return {
+		"status": "success",
+		"sales_invoice": si.name
+	}

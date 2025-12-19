@@ -124,8 +124,6 @@ function renderBagGrid(bags) {
                     <strong>RM${fmtNumber(bag.cost_per_gram, 2)}</strong>
                 </div>
 
-                <div class="wbdm-view-items">▼ View Items</div>
-
                 <button class="wbdm-select-btn" data-bag="${bag.bag_id}">
                     SELECT BAG
                 </button>
@@ -151,28 +149,6 @@ function renderBagGrid(bags) {
 
 					WBMState.bag_summary.record_id = WBMState.selected_bag;
 					WBMState.bag_summary.record_date = getTodayDate();
-
-					showBagSummaryUI();
-				},
-			});
-		});
-
-	$(".wbdm-view-items")
-		.off("click")
-		.on("click", function () {
-			const card = $(this).closest(".wbdm-card");
-			const bagId = card.find(".wbdm-select-btn").data("bag");
-
-			WBMState.selected_bag = bagId;
-
-			frappe.call({
-				method: "gold_app.api.sales.wholesale_bag_melt.get_bag_details",
-				args: { bag_id: bagId },
-				callback: function (r) {
-					if (!r.message) return;
-
-					WBMState.bag_summary = r.message.summary;
-					WBMState.bag_items = r.message.items;
 
 					showBagSummaryUI();
 				},
@@ -208,6 +184,7 @@ function showBagSummaryUI() {
                     <!-- ✅ SAVE BUTTON (RIGHT SIDE) -->
                     <div class="wbm-header-right">
                         <button id="wbm-save-btn" class="wbm-save-btn">Save</button>
+						<button id="wbm-submit-btn" class="wbm-submit-btn">Submit</button>
                     </div>
 
                 </div>
@@ -235,6 +212,7 @@ function showBagSummaryUI() {
     `);
 
 	WBMState.onSaveRecord = saveMeltAssaySales;
+	WBMState.onSubmitRecord = submitMeltAssaySales;
 
 	// default tab
 	loadTabContent("bag_summary");
@@ -251,6 +229,12 @@ function showBagSummaryUI() {
 	$(document).on("click", "#wbm-save-btn", function () {
 		if (WBMState.onSaveRecord) {
 			WBMState.onSaveRecord();
+		}
+	});
+
+	$(document).on("click", "#wbm-submit-btn", function () {
+		if (WBMState.onSubmitRecord) {
+			WBMState.onSubmitRecord();
 		}
 	});
 }
@@ -309,6 +293,7 @@ function loadResumeData(log_id) {
 			const payload = r.message || {};
 			WBMState.record_name = payload.name || log_id; // ✅ CRITICAL
 			const header = payload.header || {};
+			WBMState.selected_bag = header.wholesale_bag || null;
 			const bag_contents = payload.bag_contents || [];
 			const locked_rates = payload.locked_rates || [];
 			const payments = payload.payments || [];
@@ -574,6 +559,8 @@ function saveMeltAssaySales() {
 		name: WBMState.record_name || null,
 		header: {
 			// BAG SUMMARY
+			wholesale_bag: WBMState.selected_bag,
+
 			total_weight: summary.total_weight_g,
 			avg_purity: summary.average_purity,
 			total_xau: summary.pure_gold_xau_g,
@@ -651,7 +638,220 @@ function saveMeltAssaySales() {
 			if (r.message && r.message.name) {
 				WBMState.record_name = r.message.name;
 			}
-			frappe.msgprint("Melt & Assay Sales saved successfully.");
+			frappe.show_alert({
+				message: "Melt & Assay Sales saved successfully.",
+				indicator: "green",
+			});
 		},
 	});
+}
+
+function submitMeltAssaySales() {
+	// Always recompute & save first
+	computeMetricsIntoState(WBMState);
+	saveMeltAssaySales();
+
+	// -------- BASIC GUARDS --------
+	if (!WBMState.record_name) {
+		frappe.msgprint("Please save the record before submitting.");
+		return;
+	}
+
+	const summary = WBMState.bag_summary || {};
+	const assay = WBMState.assay || {};
+	const sale = WBMState.sale || {};
+
+	// -------- BUSINESS VALIDATIONS --------
+	if (!summary.average_purity || summary.average_purity <= 0) {
+		frappe.msgprint("Average Purity is missing or invalid.");
+		return;
+	}
+
+	if (!assay.assay_purity || assay.assay_purity <= 0) {
+		frappe.msgprint("Assay Purity must be entered before submit.");
+		return;
+	}
+
+	if (!assay.net_sellable || assay.net_sellable <= 0) {
+		frappe.msgprint("Net XAU (Sellable) must be greater than zero.");
+		return;
+	}
+
+	if (!sale.customer) {
+		frappe.msgprint("Customer is required before submit.");
+		return;
+	}
+
+	if (!sale.locked_rates || !sale.locked_rates.length) {
+		frappe.msgprint("At least one Locked Rate entry is required.");
+		return;
+	}
+
+	// -------- BAG + STOCK SAFETY --------
+	if (!WBMState.selected_bag) {
+		frappe.msgprint("Wholesale Bag is missing.");
+		return;
+	}
+
+	if (!WBMState.bag_items || !WBMState.bag_items.length) {
+		frappe.msgprint("Bag has no items to process.");
+		return;
+	}
+
+	const invalidBagItem = WBMState.bag_items.find(
+		(r) => !r.purity || !r.weight_g || r.weight_g <= 0
+	);
+
+	if (invalidBagItem) {
+		frappe.msgprint("Invalid purity or weight found in bag contents.");
+		return;
+	}
+
+	// Locked rates consistency
+	const totalLockedXAU = sale.locked_rates.reduce((t, r) => t + (r.xau_weight || 0), 0);
+
+	if (Math.abs(totalLockedXAU - assay.net_sellable) > 0.001) {
+		frappe.msgprint("Locked Rate XAU total must match Net XAU (Sellable).");
+		return;
+	}
+
+	// -------- CONFIRMATION --------
+	frappe.confirm(
+		"Submitting will create stock entries, sales invoice, and lock this record. Continue?",
+		() => runSubmitFlow()
+	);
+}
+
+function runSubmitFlow() {
+	frappe.dom.freeze("Submitting Melt & Assay Sales…");
+
+	const avgPurity = WBMState.bag_summary.average_purity;
+	const bagItems = WBMState.bag_items || [];
+	const sale = WBMState.sale || {};
+	const bagWarehouse = WBMState.selected_bag;
+
+	// -------------------------------
+	// 1️⃣ CREATE PURITY + ITEM
+	// -------------------------------
+	frappe.call({
+		method: "gold_app.api.sales.wholesale_bag_melt.create_purity_and_unsorted_item",
+		args: { purity: avgPurity },
+		callback: function (r1) {
+			if (!r1.message || r1.message.status !== "success") {
+				failSubmit("Failed to create purity item");
+				return;
+			}
+
+			// -------------------------------
+			// 2️⃣ REPACK STOCK ENTRY
+			// -------------------------------
+			frappe.call({
+				method: "gold_app.api.sales.wholesale_bag_melt.create_repack_stock_entry",
+				args: {
+					source_items: bagItems.map((r) => ({
+						item_code: r.purity, // purity only
+						qty: r.weight_g,
+					})),
+					finished_item_code: avgPurity,
+					s_warehouse: bagWarehouse,
+					t_warehouse: bagWarehouse,
+				},
+				callback: function (r2) {
+					if (!r2.message || !r2.message.stock_entry) {
+						failSubmit("Stock entry failed");
+						return;
+					}
+
+					// -------------------------------
+					// 3️⃣ SALES INVOICE
+					// -------------------------------
+					frappe.call({
+						method: "gold_app.api.sales.wholesale_bag_melt.create_sales_invoice",
+						args: {
+							customer: sale.customer_id_number,
+							items: sale.locked_rates.map((r) => ({
+								item_code: `Unsorted-${avgPurity}`,
+								qty: r.xau_weight,
+								rate: r.price_per_xau,
+								warehouse: bagWarehouse,
+							})),
+						},
+						callback: function (r3) {
+							if (!r3.message || !r3.message.sales_invoice) {
+								failSubmit("Sales Invoice creation failed");
+								return;
+							}
+
+							const salesInvoice = r3.message.sales_invoice;
+							const payments = WBMState.payments || [];
+
+							// -------------------------------
+							// 4️⃣ CREATE PAYMENT ENTRIES (IF ANY)
+							// -------------------------------
+							function createNextPayment(index) {
+								if (index >= payments.length) {
+									finalizeSubmit();
+									return;
+								}
+
+								const p = payments[index];
+
+								frappe.call({
+									method: "gold_app.api.sales.wholesale_bag_melt.create_payment_entry_for_invoice",
+									args: {
+										sales_invoice_name: salesInvoice,
+										payment_mode: p.method,
+										paid_amount: p.amount,
+										posting_date: p.date,
+									},
+									callback: function () {
+										createNextPayment(index + 1);
+									},
+									error: function () {
+										failSubmit("Payment Entry failed");
+									},
+								});
+							}
+
+							function finalizeSubmit() {
+								// -------------------------------
+								// 5️⃣ MARK LOG COMPLETED
+								// -------------------------------
+								frappe.call({
+									method: "gold_app.api.sales.wholesale_bag_melt.mark_melt_assay_log_completed",
+									args: { name: WBMState.record_name },
+									callback: function () {
+										frappe.dom.unfreeze();
+
+										frappe.show_alert({
+											message: "Melt & Assay Sales submitted successfully.",
+											indicator: "green",
+										});
+
+										// Optional hard reload to reset UI
+										setTimeout(() => {
+											window.location.href = "/app/wholesale-bag-melt";
+										}, 1200);
+									},
+								});
+							}
+
+							if (payments.length) {
+								createNextPayment(0);
+							} else {
+								finalizeSubmit();
+							}
+						},
+					});
+				},
+			});
+		},
+		error: () => failSubmit("Submit failed"),
+	});
+}
+
+function failSubmit(message) {
+	frappe.dom.unfreeze();
+
+	frappe.msgprint(message);
 }

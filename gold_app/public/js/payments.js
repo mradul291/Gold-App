@@ -116,12 +116,6 @@ window.WBMComponents.payments = function ($mount, state) {
 					</tr>
 				</tfoot>
 			</table>
-
-			<div class="text-right mt-3 mb-4">
-				<button id="submit-payments" class="btn green">
-					Submit Payments
-				</button>
-			</div>
 		</div>
 	`;
 
@@ -200,24 +194,28 @@ window.WBMComponents.payments = function ($mount, state) {
 	// Events
 	// --------------------------------------------------
 	$mount.on("click", "#add-payment", () => {
-		const method = $("#pay-method").val();
-		const rawAmount = $("#pay-amount").val();
-		const amount = rawAmount ? parseFloat(rawAmount) : 0;
+		const method = $mount.find("#pay-method").val();
+		const rawAmount = $mount.find("#pay-amount").val();
+		const amount = rawAmount !== "" ? parseFloat(rawAmount) : NaN;
+
+		if (isNaN(amount) || amount <= 0) {
+			return;
+		}
 
 		const date =
-			$("#manual-date-toggle").is(":checked") && $("#manual-date").val()
-				? $("#manual-date").val().split("-").reverse().join("/")
+			$mount.find("#manual-date-toggle").is(":checked") && $mount.find("#manual-date").val()
+				? $mount.find("#manual-date").val().split("-").reverse().join("/")
 				: new Date().toLocaleDateString("en-GB");
 
 		payments.push({
 			date,
 			method,
 			amount,
-			reference: $("#pay-ref").val(),
+			reference: $mount.find("#pay-ref").val(),
 			status: "Received",
 		});
 
-		$("#pay-amount, #pay-ref").val("");
+		$mount.find("#pay-amount, #pay-ref").val("");
 		updateSummary();
 		renderHistory();
 	});
@@ -230,11 +228,6 @@ window.WBMComponents.payments = function ($mount, state) {
 
 	$mount.on("change", "#manual-date-toggle", function () {
 		$("#manual-date-wrapper").toggle(this.checked);
-	});
-
-	$mount.on("click", "#submit-payments", () => {
-		console.log("Payments (UI only):", payments);
-		alert("Payments captured locally (UI only).");
 	});
 
 	$mount.on("click", "#advance-payment", () => {

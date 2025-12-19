@@ -524,8 +524,8 @@ window.WBMComponents.buyer_sale = function ($mount, state) {
 // CUSTOMER SEARCH + SELECT LOGIC (ADDED CLEANLY)
 // --------------------------------------------------
 
-let WBS_ALL_CUSTOMERS = [];
-let WBS_SELECTED_CUSTOMER_ID = null;
+window.WBS_ALL_CUSTOMERS = window.WBS_ALL_CUSTOMERS || [];
+window.WBS_SELECTED_CUSTOMER_ID = window.WBS_SELECTED_CUSTOMER_ID || null;
 
 // Load customers once
 frappe.call({

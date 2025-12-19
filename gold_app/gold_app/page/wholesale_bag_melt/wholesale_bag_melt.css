@@ -228,6 +228,29 @@
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
 }
 
+/* Submit Button Styling */
+.wbm-submit-btn {
+    background-color: #2563eb;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    margin-left: 8px;
+}
+
+.wbm-submit-btn:hover {
+    background-color: #1e4fcc;
+}
+
+.wbm-submit-btn:active {
+    background-color: #1940a3;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
+}
+
 /***************************** Tabs ************************/
 
 .wbm-tabs-bar {

@@ -8,6 +8,7 @@
   "tab_bag_summary",
   "sec_bag_contents",
   "bag_contents",
+  "wholesale_bag",
   "sec_bag_summary_totals",
   "total_weight",
   "column_break_sagd",
@@ -678,12 +679,18 @@
    "label": "Payments",
    "options": "Wholesale Payment Line",
    "read_only": 1
+  },
+  {
+   "fieldname": "wholesale_bag",
+   "fieldtype": "Data",
+   "label": "Wholesale Bag",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-19 14:03:05.169738",
+ "modified": "2025-12-19 19:11:06.701341",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Melt and Assay Sales",

@@ -6,6 +6,14 @@ let WBMState = {
   bag_items: [],
   bag_list: [],
   record_name: null,
+
+  payments: [],
+  payment_summary: {
+    total_amount: 0,
+    amount_paid: 0,
+    balance_due: 0,
+    customer_advance_balance: 0,
+  },
 };
 
 frappe.pages["wholesale-bag-melt"].on_page_load = function (wrapper) {
@@ -119,8 +127,6 @@ function renderBagGrid(bags) {
                     <strong>RM${fmtNumber(bag.cost_per_gram, 2)}</strong>
                 </div>
 
-                <div class="wbdm-view-items">▼ View Items</div>
-
                 <button class="wbdm-select-btn" data-bag="${bag.bag_id}">
                     SELECT BAG
                 </button>
@@ -146,28 +152,6 @@ function renderBagGrid(bags) {
 
           WBMState.bag_summary.record_id = WBMState.selected_bag;
           WBMState.bag_summary.record_date = getTodayDate();
-
-          showBagSummaryUI();
-        },
-      });
-    });
-
-  $(".wbdm-view-items")
-    .off("click")
-    .on("click", function () {
-      const card = $(this).closest(".wbdm-card");
-      const bagId = card.find(".wbdm-select-btn").data("bag");
-
-      WBMState.selected_bag = bagId;
-
-      frappe.call({
-        method: "gold_app.api.sales.wholesale_bag_melt.get_bag_details",
-        args: { bag_id: bagId },
-        callback: function (r) {
-          if (!r.message) return;
-
-          WBMState.bag_summary = r.message.summary;
-          WBMState.bag_items = r.message.items;
 
           showBagSummaryUI();
         },
@@ -213,6 +197,7 @@ function showBagSummaryUI() {
                     <div class="wbm-tab-item" data-tab="melting_assay">Melting & Assay</div>
                     <div class="wbm-tab-item" data-tab="buyer_sale">Sales Detail</div>
                     <div class="wbm-tab-item" data-tab="metrics">Metrics</div>
+					<div class="wbm-tab-item" data-tab="payments">Payments</div>
                 </div>
             </div>
 
@@ -258,6 +243,7 @@ function loadTabContent(tabName) {
     melting_assay: "/assets/gold_app/js/melting_assay.js",
     buyer_sale: "/assets/gold_app/js/buyer_sale.js",
     metrics: "/assets/gold_app/js/metrics.js",
+    payments: "/assets/gold_app/js/payments.js",
   };
 
   const path = map[tabName];
@@ -304,6 +290,7 @@ function loadResumeData(log_id) {
       const header = payload.header || {};
       const bag_contents = payload.bag_contents || [];
       const locked_rates = payload.locked_rates || [];
+      const payments = payload.payments || [];
 
       // 1) Bag summary mapping — match keys expected by bag_summary component
       WBMState.bag_summary = {
@@ -379,6 +366,22 @@ function loadResumeData(log_id) {
         purity_variance: header.prev_purity_variance || 0,
         net_sellable: header.prev_net_sellable_percentage || 0,
         profit_margin: header.prev_profit_margin || 0,
+      };
+
+      // 6️⃣ PAYMENTS
+      WBMState.payments = payments.map((p) => ({
+        date: p.payment_date,
+        method: p.payment_method,
+        amount: p.amount,
+        reference: p.reference_no,
+        status: p.status,
+      }));
+
+      WBMState.payment_summary = {
+        total_amount: header.total_amount || 0,
+        amount_paid: header.amount_paid || 0,
+        balance_due: header.balance_due || 0,
+        customer_advance_balance: header.customer_advance_balance || 0,
       };
 
       // 7) store bag_list in background (optional) — helpful for UI that uses bag overview
@@ -546,6 +549,10 @@ function saveMeltAssaySales() {
   // 4️⃣ --- METRICS DATA ---
   const metrics = WBMState.metrics || {};
 
+  // 5️⃣ --- PAYMENTS DATA ---
+  const paymentSummary = WBMState.payment_summary || {};
+  const payments = WBMState.payments || [];
+
   // 5️⃣ --- BUILD CLEAN PAYLOAD ---
   const payload = {
     name: WBMState.record_name || null,
@@ -591,6 +598,12 @@ function saveMeltAssaySales() {
       customer_id_number: sale.customer_id_number,
 
       ...(metrics || {}),
+
+      // PAYMENTS SUMMARY
+      total_amount: paymentSummary.total_amount,
+      amount_paid: paymentSummary.amount_paid,
+      balance_due: paymentSummary.balance_due,
+      customer_advance_balance: paymentSummary.customer_advance_balance,
     },
 
     bag_contents: bagContents.map((r) => ({
@@ -603,6 +616,14 @@ function saveMeltAssaySales() {
     })),
 
     locked_rates: sale.locked_rates || [],
+
+    payments: payments.map((p) => ({
+      payment_date: p.date,
+      payment_method: p.method,
+      amount: p.amount,
+      reference_no: p.reference,
+      status: p.status,
+    })),
   };
 
   // 6️⃣ --- CALL BACKEND API ---
@@ -614,7 +635,10 @@ function saveMeltAssaySales() {
       if (r.message && r.message.name) {
         WBMState.record_name = r.message.name;
       }
-      frappe.msgprint("Melt & Assay Sales saved successfully.");
+      frappe.show_alert({
+        message: "Melt & Assay Sales saved successfully.",
+        indicator: "green",
+      });
     },
   });
 }
