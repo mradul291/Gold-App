@@ -29,6 +29,7 @@ app_include_css = [
     "/assets/gold_app/css/melting_assay.css",
     "/assets/gold_app/css/buyer_sale.css",
     "/assets/gold_app/css/metrics.css",
+    "/assets/gold_app/css/payments.css",
 ]
 
 app_include_js = [
@@ -45,6 +46,7 @@ app_include_js = [
     "/assets/gold_app/js/melting_assay.js",
     "/assets/gold_app/js/buyer_sale.js",
     "/assets/gold_app/js/metrics.js",
+    "/assets/gold_app/js/payments.js",
 ]
 
 doc_events = {

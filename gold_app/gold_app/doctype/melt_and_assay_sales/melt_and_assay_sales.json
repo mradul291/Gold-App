@@ -100,7 +100,15 @@
   "vs_net_sellable_percentage",
   "vs_profit_margin",
   "column_break_fofe",
-  "status"
+  "status",
+  "payments_tab",
+  "total_amount",
+  "amount_paid",
+  "column_break_umkx",
+  "balance_due",
+  "customer_advance_balance",
+  "section_break_sffj",
+  "payments"
  ],
  "fields": [
   {
@@ -626,12 +634,56 @@
    "fieldtype": "Data",
    "label": "ID Number",
    "read_only": 1
+  },
+  {
+   "fieldname": "payments_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payments"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_paid",
+   "fieldtype": "Currency",
+   "label": "Amount Paid",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_umkx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "balance_due",
+   "fieldtype": "Currency",
+   "label": "Balance Due",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_advance_balance",
+   "fieldtype": "Currency",
+   "label": "Customer Advance Balance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_sffj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "Wholesale Payment Line",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-18 15:19:58.615951",
+ "modified": "2025-12-19 14:03:05.169738",
  "modified_by": "Administrator",
  "module": "Gold App",
  "name": "Melt and Assay Sales",
