@@ -161,9 +161,13 @@ def create_invoice_and_payment(doc, method):
 
     # ---- Step 1: Create Purchase Invoice ----
     pi = make_purchase_invoice(doc.name)
+    
+    pi.set_posting_time = 1
+    pi.posting_date = doc.posting_date
+    pi.posting_time = doc.posting_time
+
     pi.supplier_invoice_date = doc.posting_date
     pi.custom_payment_mode = doc.payment_method
-    
     pi.allocate_advances_automatically = 0
     
     pi.flags.ignore_permissions = True
@@ -219,6 +223,7 @@ def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, referen
     """Helper to create Payment Entry"""
 
     pe = get_payment_entry("Purchase Invoice", pi.name)
+    pe.posting_date = doc.posting_date
     pe.mode_of_payment = mode
 
     # If specific amount is passed (Mix), override; else use default from get_payment_entry

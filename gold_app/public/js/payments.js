@@ -17,8 +17,8 @@ window.WBMComponents.payments = function ($mount, state) {
 		})}`;
 
 	const getTotalAmount = () => {
-		// later this will come from sale tab / state
-		return state?.sale?.total_revenue || 0;
+		const raw = state?.sale?.total_revenue || 0;
+		return roundAmount(raw);
 	};
 
 	// --------------------------------------------------
@@ -120,6 +120,10 @@ window.WBMComponents.payments = function ($mount, state) {
 	`;
 
 	$mount.html(html);
+
+	function roundAmount(val) {
+		return Math.round(val || 0);
+	}
 
 	// --------------------------------------------------
 	// Customer Advances
