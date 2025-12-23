@@ -293,16 +293,14 @@ window.WBMComponents.payments = function ($mount, state) {
 	});
 
 	$mount.on("click", "#full-payment", () => {
-		const totalAmount = getTotalAmount();
-		const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-		const balanceDue = Math.max(totalAmount - totalPaid, 0);
+		const balanceDue = state.payment_summary?.balance_due || 0;
 
 		if (balanceDue <= 0) {
 			frappe.msgprint("No outstanding balance to mark as paid.");
 			return;
 		}
 
-		// Put balance due into Amount to Pay field
+		// Always use latest UI balance
 		$mount.find("#pay-amount").val(balanceDue.toFixed(2));
 	});
 
