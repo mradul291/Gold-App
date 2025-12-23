@@ -250,13 +250,16 @@ window.WBMComponents.buyer_sale = function ($mount, state) {
 		);
 		$("#wbs-summary-rate").text(summary.weightedAvgRate.toFixed(2));
 
-		if (summary.totalXau > netXau) {
+		const roundedTableXAU = Number(summary.totalXau.toFixed(2));
+		const roundedNetXAU = Number(netXau.toFixed(2));
+
+		if (roundedTableXAU !== roundedNetXAU) {
 			$(".wbs-warning")
 				.show()
 				.html(
-					`⚠ Mismatch: Table shows <b>${summary.totalXau.toFixed(
+					`⚠ Mismatch: Table shows <b>${roundedTableXAU.toFixed(
 						2
-					)} g</b> but Net XAU is <b>${netXau.toFixed(2)} g</b>`
+					)} g</b> but Net XAU is <b>${roundedNetXAU.toFixed(2)} g</b>`
 				);
 		} else {
 			$(".wbs-warning").hide();

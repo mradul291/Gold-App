@@ -710,8 +710,29 @@ function submitMeltAssaySales() {
 	// Locked rates consistency
 	const totalLockedXAU = sale.locked_rates.reduce((t, r) => t + (r.xau_weight || 0), 0);
 
-	if (Math.abs(totalLockedXAU - assay.net_sellable) > 0.001) {
-		frappe.msgprint("Locked Rate XAU total must match Net XAU (Sellable).");
+	const roundedLockedXAU = Number(totalLockedXAU.toFixed(2));
+	const roundedNetXAU = Number(assay.net_sellable.toFixed(2));
+
+	if (roundedLockedXAU !== roundedNetXAU) {
+		frappe.msgprint(
+			`Locked Rate XAU (${roundedLockedXAU.toFixed(
+				2
+			)} g) must match Net XAU (${roundedNetXAU.toFixed(2)} g).`
+		);
+		return;
+	}
+
+	// -------- PAYMENT VALIDATIONS --------
+	const payments = WBMState.payments || [];
+	const totalPaid = payments.reduce((sum, p) => sum + (flt(p.amount) || 0), 0);
+
+	// SAME rounding as UI
+	const totalAmount = Math.round(flt(sale.total_revenue) || 0);
+
+	const balanceDue = totalAmount - totalPaid;
+
+	if (Math.abs(balanceDue) > 0.01) {
+		frappe.msgprint("Balance Due must be zero before submitting.");
 		return;
 	}
 
@@ -729,6 +750,7 @@ function runSubmitFlow() {
 	const bagItems = WBMState.bag_items || [];
 	const sale = WBMState.sale || {};
 	const bagWarehouse = WBMState.selected_bag;
+	const payments = WBMState.payments || [];
 
 	// -------------------------------
 	// 1️⃣ CREATE PURITY + ITEM
@@ -736,34 +758,28 @@ function runSubmitFlow() {
 	frappe.call({
 		method: "gold_app.api.sales.wholesale_bag_melt.create_purity_and_unsorted_item",
 		args: { purity: avgPurity },
-		callback: function (r1) {
-			if (!r1.message || r1.message.status !== "success") {
-				failSubmit("Failed to create purity item");
-				return;
-			}
+		callback(r1) {
+			if (!r1.message?.item_code) return failSubmit("Purity creation failed");
 
 			// -------------------------------
-			// 2️⃣ REPACK STOCK ENTRY
+			// 2️⃣ REPACK STOCK
 			// -------------------------------
 			frappe.call({
 				method: "gold_app.api.sales.wholesale_bag_melt.create_repack_stock_entry",
 				args: {
 					source_items: bagItems.map((r) => ({
-						item_code: r.purity, // purity only
+						item_code: r.purity,
 						qty: r.weight_g,
 					})),
 					finished_item_code: avgPurity,
 					s_warehouse: bagWarehouse,
 					t_warehouse: bagWarehouse,
 				},
-				callback: function (r2) {
-					if (!r2.message || !r2.message.stock_entry) {
-						failSubmit("Stock entry failed");
-						return;
-					}
+				callback(r2) {
+					if (!r2.message?.stock_entry) return failSubmit("Stock entry failed");
 
 					// -------------------------------
-					// 3️⃣ SALES INVOICE
+					// 3️⃣ CREATE DRAFT SALES INVOICE
 					// -------------------------------
 					frappe.call({
 						method: "gold_app.api.sales.wholesale_bag_melt.create_sales_invoice",
@@ -776,80 +792,102 @@ function runSubmitFlow() {
 								warehouse: bagWarehouse,
 							})),
 						},
-						callback: function (r3) {
-							if (!r3.message || !r3.message.sales_invoice) {
-								failSubmit("Sales Invoice creation failed");
-								return;
+						callback(r3) {
+							if (!r3.message?.sales_invoice)
+								return failSubmit("Invoice creation failed");
+
+							const invoice = r3.message.sales_invoice;
+
+							// -------------------------------
+							// 4️⃣ APPLY CUSTOMER ADVANCE (FIRST)
+							// -------------------------------
+							const advancePayment = payments.find(
+								(p) => p.method === "Customer Advance"
+							);
+
+							function continuePayments() {
+								createNonAdvancePayments(0);
 							}
 
-							const salesInvoice = r3.message.sales_invoice;
-							const payments = WBMState.payments || [];
+							if (advancePayment) {
+								frappe.call({
+									method: "gold_app.api.sales.wholesale_bag_melt.allocate_customer_advance_to_invoice",
+									args: {
+										sales_invoice_name: invoice,
+										allocate_amount: advancePayment.amount,
+									},
+									callback() {
+										continuePayments();
+									},
+									error() {
+										failSubmit("Advance allocation failed");
+									},
+								});
+							} else {
+								continuePayments();
+							}
 
 							// -------------------------------
-							// 4️⃣ CREATE PAYMENT ENTRIES (IF ANY)
+							// 5️⃣ CREATE REMAINING PAYMENTS
 							// -------------------------------
-							function createNextPayment(index) {
-								if (index >= payments.length) {
-									finalizeSubmit();
+							function createNonAdvancePayments(index) {
+								const list = payments.filter(
+									(p) => p.method !== "Customer Advance"
+								);
+
+								if (index >= list.length) {
+									finalize();
 									return;
 								}
 
-								const p = payments[index];
+								const p = list[index];
 
 								frappe.call({
 									method: "gold_app.api.sales.wholesale_bag_melt.create_payment_entry_for_invoice",
 									args: {
-										sales_invoice_name: salesInvoice,
+										sales_invoice_name: invoice,
 										payment_mode: p.method,
 										paid_amount: p.amount,
 										posting_date: p.date,
 									},
-									callback: function () {
-										createNextPayment(index + 1);
+									callback() {
+										createNonAdvancePayments(index + 1);
 									},
-									error: function () {
-										failSubmit("Payment Entry failed");
+									error() {
+										failSubmit("Payment entry failed");
 									},
 								});
 							}
 
-							function finalizeSubmit() {
-								// -------------------------------
-								// 5️⃣ MARK LOG COMPLETED
-								// -------------------------------
+							// -------------------------------
+							// 6️⃣ FINALIZE
+							// -------------------------------
+							function finalize() {
 								frappe.call({
 									method: "gold_app.api.sales.wholesale_bag_melt.mark_melt_assay_log_completed",
 									args: { name: WBMState.record_name },
-									callback: function () {
+									callback() {
 										frappe.dom.unfreeze();
-
 										frappe.show_alert({
-											message: "Melt & Assay Sales submitted successfully.",
+											message: "Melt & Assay Sales completed",
 											indicator: "green",
 										});
-
-										// Optional hard reload to reset UI
 										setTimeout(() => {
 											window.location.href = "/app/wholesale-bag-melt";
 										}, 1200);
 									},
 								});
 							}
-
-							if (payments.length) {
-								createNextPayment(0);
-							} else {
-								finalizeSubmit();
-							}
 						},
 					});
 				},
 			});
 		},
-		error: () => failSubmit("Submit failed"),
+		error() {
+			failSubmit("Submit failed");
+		},
 	});
 }
-
 function failSubmit(message) {
 	frappe.dom.unfreeze();
 

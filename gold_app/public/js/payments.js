@@ -84,7 +84,6 @@ window.WBMComponents.payments = function ($mount, state) {
 
 			<div class="form-actions">
 				<button id="add-payment" class="btn green">+ Add Payment</button>
-				<button id="advance-payment" class="btn blue">Use Advance</button>
 				<button id="full-payment" class="btn blue" style="float:right;">
 					Mark Fully Paid
 				</button>
@@ -194,6 +193,12 @@ window.WBMComponents.payments = function ($mount, state) {
 		});
 	}
 
+	const getRemainingBalance = () => {
+		const totalAmount = getTotalAmount();
+		const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+		return Math.max(totalAmount - totalPaid, 0);
+	};
+
 	// --------------------------------------------------
 	// Events
 	// --------------------------------------------------
@@ -206,18 +211,64 @@ window.WBMComponents.payments = function ($mount, state) {
 			return;
 		}
 
+		const remaining = getRemainingBalance();
+
+		if (remaining <= 0) {
+			frappe.msgprint("Payment already completed. No balance due.");
+			return;
+		}
+
+		if (amount > remaining) {
+			frappe.msgprint(
+				`Payment cannot exceed remaining balance. Balance Due: RM ${remaining.toFixed(2)}`
+			);
+			return;
+		}
+
+		if (method === "Customer Advance") {
+			if (amount > customerAdvanceBalance) {
+				frappe.msgprint(
+					`Advance balance insufficient. Available: RM ${customerAdvanceBalance.toFixed(
+						2
+					)}`
+				);
+				return;
+			}
+		}
+
 		const date =
 			$mount.find("#manual-date-toggle").is(":checked") && $mount.find("#manual-date").val()
 				? $mount.find("#manual-date").val().split("-").reverse().join("/")
 				: new Date().toLocaleDateString("en-GB");
 
-		payments.push({
-			date,
-			method,
-			amount,
-			reference: $mount.find("#pay-ref").val(),
-			status: "Received",
-		});
+		if (method === "Customer Advance") {
+			const existingAdvance = payments.find((p) => p.method === "Customer Advance");
+
+			if (existingAdvance) {
+				existingAdvance.amount += amount;
+				existingAdvance.date = date;
+				existingAdvance.reference =
+					$mount.find("#pay-ref").val() || existingAdvance.reference;
+			} else {
+				payments.push({
+					date,
+					method: "Customer Advance",
+					amount,
+					reference: $mount.find("#pay-ref").val(),
+					status: "Received",
+				});
+			}
+
+			customerAdvanceBalance = Math.max(customerAdvanceBalance - amount, 0);
+		} else {
+			payments.push({
+				date,
+				method,
+				amount,
+				reference: $mount.find("#pay-ref").val(),
+				status: "Received",
+			});
+		}
 
 		$mount.find("#pay-amount, #pay-ref").val("");
 		updateSummary();
@@ -225,42 +276,20 @@ window.WBMComponents.payments = function ($mount, state) {
 	});
 
 	$mount.on("click", ".remove-payment", function () {
-		payments.splice($(this).data("index"), 1);
+		const index = $(this).data("index");
+		const removed = payments[index];
+
+		if (removed.method === "Customer Advance") {
+			customerAdvanceBalance += removed.amount;
+		}
+
+		payments.splice(index, 1);
 		updateSummary();
 		renderHistory();
 	});
 
 	$mount.on("change", "#manual-date-toggle", function () {
 		$("#manual-date-wrapper").toggle(this.checked);
-	});
-
-	$mount.on("click", "#advance-payment", () => {
-		if (customerAdvanceBalance <= 0) {
-			frappe.msgprint("No customer advance available.");
-			return;
-		}
-
-		const balanceDue = getTotalAmount() - payments.reduce((s, p) => s + p.amount, 0);
-
-		if (balanceDue <= 0) {
-			frappe.msgprint("No outstanding balance to adjust.");
-			return;
-		}
-
-		const useAmount = Math.min(customerAdvanceBalance, balanceDue);
-
-		payments.push({
-			date: new Date().toLocaleDateString("en-GB"),
-			method: "Customer Advance",
-			amount: useAmount,
-			reference: "Advance Adjustment",
-			status: "Received",
-		});
-
-		customerAdvanceBalance -= useAmount;
-
-		updateSummary();
-		renderHistory();
 	});
 
 	$mount.on("click", "#full-payment", () => {
