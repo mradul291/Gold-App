@@ -731,11 +731,6 @@ function submitMeltAssaySales() {
 
 	const balanceDue = totalAmount - totalPaid;
 
-	if (Math.abs(balanceDue) > 0.01) {
-		frappe.msgprint("Balance Due must be zero before submitting.");
-		return;
-	}
-
 	// -------- CONFIRMATION --------
 	frappe.confirm(
 		"Submitting will create stock entries, sales invoice, and lock this record. Continue?",
