@@ -121,7 +121,7 @@ window.WBMComponents.payments = function ($mount, state) {
 	$mount.html(html);
 
 	function roundAmount(val) {
-		return Math.round(val || 0);
+		return Math.floor(val || 0);
 	}
 
 	// --------------------------------------------------
