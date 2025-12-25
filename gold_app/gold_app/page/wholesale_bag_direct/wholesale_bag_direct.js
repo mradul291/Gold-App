@@ -435,18 +435,13 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 		});
 	});
 
-	// Set current date and time on page load
-	const now = new Date();
-	const padZero = (n) => n.toString().padStart(2, "0");
+	// Set current date and time using ERPNext server timezone
+	const now = frappe.datetime.now_datetime(); // company timezone
 
-	const currentDate = `${now.getFullYear()}-${padZero(now.getMonth() + 1)}-${padZero(
-		now.getDate()
-	)}`;
-	const currentTime = `${padZero(now.getHours())}:${padZero(now.getMinutes())}`;
+	const [date, time] = now.split(" ");
 
-	// Set values in the date and time inputs
-	salesDetailsContainer.find("input[type='date']").val(currentDate);
-	salesDetailsContainer.find("input[type='time']").val(currentTime);
+	salesDetailsContainer.find("input[type='date']").val(date);
+	salesDetailsContainer.find("input[type='time']").val(time.slice(0, 5));
 
 	// Change Status to Not Saved on Any Update.
 	function markNotSaved() {
