@@ -129,21 +129,50 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
 
 # Fetching Entire Wholesale Transaction Doctype data
+# @frappe.whitelist()
+# def get_wholesale_transaction_by_bag(wholesale_bag, buyer=None):
+#     """
+#     Fetch an existing *Active* Wholesale Transaction for a specific bag and buyer.
+#     Returns None if not found or if it belongs to a different buyer.
+#     """
+#     if not wholesale_bag:
+#         frappe.throw(_("Parameter 'wholesale_bag' is required"))
+
+#     filters = {"wholesale_bag": wholesale_bag, "status": ["!=", "Completed"]}  # 🔹 Only active
+
+#     if buyer:
+#         filters["buyer"] = buyer
+
+#     docs = frappe.get_all("Wholesale Transaction", filters=filters, fields=["name"], limit=1)
+
+#     if not docs:
+#         msg = f"No active Wholesale Transaction found for bag '{wholesale_bag}'"
+#         if buyer:
+#             msg += f" and buyer '{buyer}'"
+#         return {"status": "error", "message": msg}
+
+#     doc = frappe.get_doc("Wholesale Transaction", docs[0].name)
+#     return {"status": "success", "data": doc.as_dict()}
+
 @frappe.whitelist()
 def get_wholesale_transaction_by_bag(wholesale_bag, buyer=None):
-    """
-    Fetch an existing *Active* Wholesale Transaction for a specific bag and buyer.
-    Returns None if not found or if it belongs to a different buyer.
-    """
     if not wholesale_bag:
         frappe.throw(_("Parameter 'wholesale_bag' is required"))
 
-    filters = {"wholesale_bag": wholesale_bag, "status": ["!=", "Completed"]}  # 🔹 Only active
+    filters = {
+        "wholesale_bag": wholesale_bag,
+        "status": ["!=", "Completed"],
+    }
 
     if buyer:
         filters["buyer"] = buyer
 
-    docs = frappe.get_all("Wholesale Transaction", filters=filters, fields=["name"], limit=1)
+    docs = frappe.get_all(
+        "Wholesale Transaction",
+        filters=filters,
+        fields=["name"],
+        limit=1
+    )
 
     if not docs:
         msg = f"No active Wholesale Transaction found for bag '{wholesale_bag}'"
@@ -152,7 +181,28 @@ def get_wholesale_transaction_by_bag(wholesale_bag, buyer=None):
         return {"status": "error", "message": msg}
 
     doc = frappe.get_doc("Wholesale Transaction", docs[0].name)
-    return {"status": "success", "data": doc.as_dict()}
+    data = doc.as_dict()
+
+    # ----------------------------------------------------
+    # 🔴 CRITICAL FIX: OVERRIDE TOTAL FROM SALES INVOICE
+    # ----------------------------------------------------
+    if doc.sales_invoice_ref:
+        sales_invoice = frappe.db.get_value(
+            "Sales Invoice",
+            doc.sales_invoice_ref,
+            ["grand_total", "outstanding_amount"],
+            as_dict=True,
+        )
+
+        if sales_invoice:
+            data["sales_invoice_grand_total"] = sales_invoice.grand_total
+            data["sales_invoice_outstanding"] = sales_invoice.outstanding_amount
+
+            # Optional but recommended: sync totals
+            data["total_payment_amount"] = sales_invoice.grand_total
+
+    return {"status": "success", "data": data}
+
 
 # Create Stock Entry for Newly Created Purity in Blending and then also do Stock Reduction
 @frappe.whitelist()

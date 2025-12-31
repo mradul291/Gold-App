@@ -727,9 +727,10 @@ function submitMeltAssaySales() {
 	const totalPaid = payments.reduce((sum, p) => sum + (flt(p.amount) || 0), 0);
 
 	// SAME rounding as UI
-	const totalAmount = Math.round(flt(sale.total_revenue) || 0);
+	// ERPNext-aligned: keep 2-decimal precision, NO rounding
+	const totalAmount = Math.round((flt(sale.total_revenue) || 0) * 100) / 100;
 
-	const balanceDue = totalAmount - totalPaid;
+	const balanceDue = Math.round((totalAmount - totalPaid) * 100) / 100;
 
 	// -------- CONFIRMATION --------
 	frappe.confirm(

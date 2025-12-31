@@ -121,7 +121,7 @@ window.WBMComponents.payments = function ($mount, state) {
 	$mount.html(html);
 
 	function roundAmount(val) {
-		return Math.floor(val || 0);
+		return Math.round((Number(val) || 0) * 100) / 100;
 	}
 
 	// --------------------------------------------------
@@ -141,6 +141,10 @@ window.WBMComponents.payments = function ($mount, state) {
 				}
 			},
 		});
+	}
+
+	function money(val) {
+		return Math.round((Number(val) || 0) * 100) / 100;
 	}
 
 	// --------------------------------------------------
@@ -211,14 +215,15 @@ window.WBMComponents.payments = function ($mount, state) {
 			return;
 		}
 
-		const remaining = getRemainingBalance();
+		const remaining = money(getRemainingBalance());
+		const payAmount = money(amount);
 
 		if (remaining <= 0) {
 			frappe.msgprint("Payment already completed. No balance due.");
 			return;
 		}
 
-		if (amount > remaining) {
+		if (payAmount - remaining > 0.0001) {
 			frappe.msgprint(
 				`Payment cannot exceed remaining balance. Balance Due: RM ${remaining.toFixed(2)}`
 			);
@@ -226,7 +231,7 @@ window.WBMComponents.payments = function ($mount, state) {
 		}
 
 		if (method === "Customer Advance") {
-			if (amount > customerAdvanceBalance) {
+			if (money(amount) - money(customerAdvanceBalance) > 0.0001) {
 				frappe.msgprint(
 					`Advance balance insufficient. Available: RM ${customerAdvanceBalance.toFixed(
 						2

@@ -33,6 +33,9 @@ class Step3TabPaymentEntry {
 
 			// ⭐ Auto-load Sales Invoice from DB
 			this.sales_invoice = data?.sales_invoice_ref || null;
+			if (this.sales_invoice && data.sales_invoice_grand_total != null) {
+				this.total = this.money(data.sales_invoice_grand_total);
+			}
 
 			// ⭐ Auto-load Payments
 			if (data?.payments) {
@@ -44,8 +47,7 @@ class Step3TabPaymentEntry {
 					status: p.status || "Received",
 				}));
 
-				this.paid = parseFloat(data.amount_paid || 0);
-				this.total = parseFloat(data.total_payment_amount || this.total);
+				this.paid = this.money(data.amount_paid);
 			}
 
 			// ⭐ Now render UI only after data load
@@ -281,17 +283,30 @@ class Step3TabPaymentEntry {
 
 		const ref = this.container.find("#pay-ref").val();
 
+		// ------------------------------
+		// PRECISION-SAFE OVERPAY CHECK
+		// ------------------------------
+		const remaining = this.money(this.total - this.paid);
+		const payAmount = this.money(amount);
+
+		if (payAmount - remaining > 0.0001) {
+			frappe.msgprint(
+				`Payment cannot exceed remaining balance. Balance Due: RM ${remaining.toFixed(2)}`
+			);
+			return;
+		}
+
 		// Push clean payment record
 		this.payments.push({
 			date,
 			method,
-			amount,
+			amount: this.money(amount),
 			ref,
 			status: "Not Received",
 		});
 
 		// Update paid amount
-		this.paid += amount;
+		this.paid = this.money(this.paid + amount);
 
 		// Update UI
 		this.renderHistory();
@@ -300,6 +315,10 @@ class Step3TabPaymentEntry {
 		// Clear fields
 		this.container.find("#pay-amount").val("");
 		this.container.find("#pay-ref").val("");
+	}
+
+	money(val) {
+		return Math.round((Number(val) || 0) * 100) / 100;
 	}
 
 	// ======================================================
@@ -361,7 +380,7 @@ class Step3TabPaymentEntry {
 			status: "ADVANCE",
 		});
 
-		this.paid += parseFloat(amount);
+		this.paid = this.money(this.paid + amount);
 
 		this.renderHistory();
 		this.updateSummary();
@@ -494,7 +513,8 @@ class Step3TabPaymentEntry {
 	// MARK FULLY PAID
 	// ======================================================
 	async markFullyPaid() {
-		const remaining = this.total - this.paid;
+		const remaining = this.money(this.total - this.paid);
+
 		if (remaining <= 0) {
 			frappe.msgprint("Already fully paid!");
 			return;
@@ -522,7 +542,8 @@ class Step3TabPaymentEntry {
 					status: "Not Received",
 				});
 
-				this.paid += remaining;
+				this.paid = this.money(this.paid + remaining);
+
 				this.renderHistory();
 				this.updateSummary();
 				dialog.hide();
@@ -536,9 +557,12 @@ class Step3TabPaymentEntry {
 	// SUMMARY UPDATE
 	// ======================================================
 	updateSummary() {
-		this.container.find("#total-paid").text(`RM${this.paid.toFixed(2)}`);
-		this.container.find("#remaining-amount").text(`RM${(this.total - this.paid).toFixed(2)}`);
-		this.container.find("#history-total").text(`RM${this.paid.toFixed(2)}`);
+		const paid = this.money(this.paid);
+		const remaining = this.money(this.total - paid);
+
+		this.container.find("#total-paid").text(`RM${paid.toFixed(2)}`);
+		this.container.find("#remaining-amount").text(`RM${remaining.toFixed(2)}`);
+		this.container.find("#history-total").text(`RM${paid.toFixed(2)}`);
 	}
 
 	// ======================================================
@@ -583,7 +607,8 @@ class Step3TabPaymentEntry {
 				return;
 			}
 
-			this.paid -= payment.amount;
+			this.paid = this.money(this.paid - payment.amount);
+
 			this.payments.splice(index, 1);
 			this.renderHistory();
 			this.updateSummary();

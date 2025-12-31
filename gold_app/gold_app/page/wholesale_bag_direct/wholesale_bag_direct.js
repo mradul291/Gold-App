@@ -934,7 +934,6 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			rowCount += 1;
 		});
 
-		totalSelling = Math.floor(totalSelling);
 		// Average Profit/g
 		let avgProfitPerGram = rowCount ? profitPerGramSum / rowCount : 0;
 
@@ -965,7 +964,13 @@ frappe.pages["wholesale-bag-direct"].on_page_load = function (wrapper) {
 			.eq(3) // Total Selling Amount
 			.find("span")
 			.eq(1)
-			.text("RM " + totalSelling.toLocaleString(undefined, { minimumFractionDigits: 2 }));
+			.text(
+				"RM " +
+					totalSelling.toLocaleString(undefined, {
+						minimumFractionDigits: 2,
+						maximumFractionDigits: 2,
+					})
+			);
 
 		$totals
 			.find(".wbd-totals-row")
