@@ -720,6 +720,63 @@ def allocate_customer_advance_to_invoice(sales_invoice_name, allocate_amount, co
             "sales_invoice": sales_invoice_name
         }
 
+# @frappe.whitelist()
+# def create_payment_entry_for_invoice(
+#     sales_invoice_name,
+#     payment_mode,
+#     paid_amount,
+#     posting_date=None
+# ):
+#     if not sales_invoice_name:
+#         frappe.throw("Sales Invoice name is required")
+
+#     if not payment_mode:
+#         frappe.throw("Mode of Payment is required")
+
+#     paid_amount = flt(paid_amount)
+#     if paid_amount <= 0:
+#         frappe.throw("Paid Amount must be greater than zero")
+
+#     # Normalize payment mode
+#     if payment_mode == "Bank Transfer":
+#         payment_mode = "Bank Draft"
+
+#     si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+
+#     # Auto-submit invoice if still draft
+#     if si.docstatus == 0:
+#         si.flags.ignore_permissions = True
+#         si.submit()
+
+#     if si.docstatus != 1:
+#         frappe.throw("Sales Invoice must be submitted")
+
+#     posting_date = getdate(posting_date) if posting_date else nowdate()
+#     # Create Payment Entry using ERPNext utility
+#     pe = get_payment_entry("Sales Invoice", sales_invoice_name)
+
+#     pe.mode_of_payment = payment_mode
+#     pe.paid_amount = paid_amount
+#     pe.received_amount = paid_amount
+#     pe.reference_no = f"AUTO-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+#     pe.reference_date = posting_date
+#     pe.posting_date = posting_date
+
+#     if pe.references:
+#         pe.references[0].allocated_amount = paid_amount
+
+#     pe.insert(ignore_permissions=True)
+#     pe.submit()
+
+#     frappe.db.commit()
+
+#     return {
+#         "status": "success",
+#         "payment_entry": pe.name,
+#         "sales_invoice": sales_invoice_name,
+#         "paid_amount": paid_amount
+#     }
+
 @frappe.whitelist()
 def create_payment_entry_for_invoice(
     sales_invoice_name,
@@ -737,13 +794,11 @@ def create_payment_entry_for_invoice(
     if paid_amount <= 0:
         frappe.throw("Paid Amount must be greater than zero")
 
-    # Normalize payment mode
     if payment_mode == "Bank Transfer":
         payment_mode = "Bank Draft"
 
     si = frappe.get_doc("Sales Invoice", sales_invoice_name)
 
-    # Auto-submit invoice if still draft
     if si.docstatus == 0:
         si.flags.ignore_permissions = True
         si.submit()
@@ -752,7 +807,7 @@ def create_payment_entry_for_invoice(
         frappe.throw("Sales Invoice must be submitted")
 
     posting_date = getdate(posting_date) if posting_date else nowdate()
-    # Create Payment Entry using ERPNext utility
+
     pe = get_payment_entry("Sales Invoice", sales_invoice_name)
 
     pe.mode_of_payment = payment_mode
@@ -762,12 +817,28 @@ def create_payment_entry_for_invoice(
     pe.reference_date = posting_date
     pe.posting_date = posting_date
 
+    # 🔴 CRITICAL FIX
+    mop_account = frappe.db.get_value(
+        "Mode of Payment Account",
+        {
+            "parent": payment_mode,
+            "company": pe.company
+        },
+        "default_account"
+    )
+
+    if not mop_account:
+        frappe.throw(
+            f"No default account configured for Mode of Payment: {payment_mode}"
+        )
+
+    pe.paid_to = mop_account
+
     if pe.references:
         pe.references[0].allocated_amount = paid_amount
 
     pe.insert(ignore_permissions=True)
     pe.submit()
-
     frappe.db.commit()
 
     return {
@@ -776,6 +847,7 @@ def create_payment_entry_for_invoice(
         "sales_invoice": sales_invoice_name,
         "paid_amount": paid_amount
     }
+
 
 @frappe.whitelist()
 def mark_melt_assay_log_completed(name):

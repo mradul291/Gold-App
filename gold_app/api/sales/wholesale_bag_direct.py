@@ -274,9 +274,75 @@ def create_sales_invoice(customer, items, discount_amount=0, company=None, posti
         "sales_invoice": si.name,
     }
 
-@frappe.whitelist()
-def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount, posting_date=None):
+# @frappe.whitelist()
+# def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amount, posting_date=None):
  
+#     try:
+#         if not sales_invoice_name:
+#             frappe.throw("Sales Invoice name is required.")
+
+#         if not payment_mode:
+#             frappe.throw("Mode of Payment is required.")
+
+#         if not paid_amount or float(paid_amount) <= 0:
+#             frappe.throw("Paid Amount must be greater than zero.")
+            
+#         if payment_mode == "Bank Transfer":
+#             payment_mode = "Bank Draft"
+            
+#         paid_amount = float(paid_amount)
+#         # Get Sales Invoice and ensure it's submitted
+#         si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+#         # AUTO-SUBMIT DRAFT INVOICE if needed
+#         if si.docstatus == 0:  # Draft
+#             si.flags.ignore_permissions = True
+#             si.submit()
+#             frappe.db.commit()
+        
+#         elif si.docstatus != 1:
+#             frappe.throw("Sales Invoice must be Draft or Submitted")
+            
+#         posting_date = posting_date or nowdate()
+
+#         # Get default Payment Entry for this invoice
+#         pe = get_payment_entry("Sales Invoice", sales_invoice_name)
+
+#         # Update payment details
+#         pe.mode_of_payment = payment_mode
+#         pe.paid_amount = float(paid_amount)
+#         pe.received_amount = float(paid_amount)
+#         pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+#         pe.posting_date = posting_date
+#         pe.reference_date = posting_date
+
+#         # Update references to reflect new paid amount
+#         if pe.references and len(pe.references) > 0:
+#             pe.references[0].allocated_amount = float(paid_amount)
+
+#         # Save and submit the Payment Entry
+#         pe.insert(ignore_permissions=True)
+#         pe.submit()
+#         frappe.db.commit()
+
+#         return {
+#             "status": "success",
+#             "message": "Payment Entry created successfully.",
+#             "payment_entry": pe.name,
+#             "sales_invoice": sales_invoice_name,
+#             "paid_amount": paid_amount,
+#         }
+
+#     except Exception as e:
+#         frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
+#         frappe.throw(f"Failed to create Payment Entry: {str(e)}")
+
+@frappe.whitelist()
+def create_payment_entry_for_invoice(
+    sales_invoice_name,
+    payment_mode,
+    paid_amount,
+    posting_date=None
+):
     try:
         if not sales_invoice_name:
             frappe.throw("Sales Invoice name is required.")
@@ -286,55 +352,66 @@ def create_payment_entry_for_invoice(sales_invoice_name, payment_mode, paid_amou
 
         if not paid_amount or float(paid_amount) <= 0:
             frappe.throw("Paid Amount must be greater than zero.")
-            
-        if payment_mode == "Bank Transfer":
-            payment_mode = "Bank Draft"
-            
+
         paid_amount = float(paid_amount)
-        # Get Sales Invoice and ensure it's submitted
+        posting_date = posting_date or nowdate()
+
         si = frappe.get_doc("Sales Invoice", sales_invoice_name)
-        # AUTO-SUBMIT DRAFT INVOICE if needed
-        if si.docstatus == 0:  # Draft
+
+        # Auto submit invoice if draft
+        if si.docstatus == 0:
             si.flags.ignore_permissions = True
             si.submit()
             frappe.db.commit()
-        
         elif si.docstatus != 1:
             frappe.throw("Sales Invoice must be Draft or Submitted")
-            
-        posting_date = posting_date or nowdate()
 
-        # Get default Payment Entry for this invoice
+        # Get correct account from Mode of Payment
+        mop_account = frappe.db.get_value(
+            "Mode of Payment Account",
+            {
+                "parent": payment_mode,
+                "company": si.company
+            },
+            "default_account"
+        )
+
+        if not mop_account:
+            frappe.throw(
+                f"No default account configured for Mode of Payment: {payment_mode}"
+            )
+
         pe = get_payment_entry("Sales Invoice", sales_invoice_name)
 
-        # Update payment details
+        # Core fixes
         pe.mode_of_payment = payment_mode
-        pe.paid_amount = float(paid_amount)
-        pe.received_amount = float(paid_amount)
-        pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
+        pe.paid_amount = paid_amount
+        pe.received_amount = paid_amount
         pe.posting_date = posting_date
         pe.reference_date = posting_date
+        pe.reference_no = f"Auto-{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}"
 
-        # Update references to reflect new paid amount
-        if pe.references and len(pe.references) > 0:
-            pe.references[0].allocated_amount = float(paid_amount)
+        pe.paid_to = mop_account
 
-        # Save and submit the Payment Entry
+        # Update allocation
+        if pe.references:
+            pe.references[0].allocated_amount = paid_amount
+
         pe.insert(ignore_permissions=True)
         pe.submit()
         frappe.db.commit()
 
         return {
             "status": "success",
-            "message": "Payment Entry created successfully.",
             "payment_entry": pe.name,
             "sales_invoice": sales_invoice_name,
-            "paid_amount": paid_amount,
+            "paid_amount": paid_amount
         }
 
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Payment Entry Creation Failed")
-        frappe.throw(f"Failed to create Payment Entry: {str(e)}")
+        frappe.throw(str(e))
+
 
 @frappe.whitelist()
 def get_customer_advance_balance(customer, company=None):
