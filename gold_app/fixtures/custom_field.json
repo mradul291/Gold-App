@@ -720,5 +720,16 @@
     "reqd": 0,
     "name": "Customer-bank_account_number",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt",
+    "fieldname": "account_paid_from",
+    "label": "Account Paid From",
+    "fieldtype": "Link",
+    "options": "Account",
+    "insert_after": "total_advance",
+    "name": "Purchase Receipt-account_paid_from",
+    "module": "Gold App"
   }
 ]

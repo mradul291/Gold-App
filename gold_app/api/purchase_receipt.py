@@ -255,6 +255,9 @@ def _create_payment_entry(doc, pi, mode, amount=None, reference_no=None, referen
     if mode == "Bank Draft":
         pe.reference_no = reference_no
         pe.reference_date = reference_date
+        
+    if doc.account_paid_from:
+        pe.paid_from = doc.account_paid_from
 
     pe.flags.ignore_permissions = True
     pe.insert()

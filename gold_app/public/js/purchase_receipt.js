@@ -71,7 +71,7 @@ frappe.ui.form.on("Purchase Receipt Item", {
           frappe.msgprint(
             __("Item {0} not found in MG - Mixed Gold group", [
               target_item_code,
-            ])
+            ]),
           );
           frappe.model.set_value(cdt, cdn, "item_code", "");
         }
@@ -94,7 +94,7 @@ frappe.ui.form.on("Purchase Receipt", {
             frm.set_value("supplier_bank_name", r.message.bank_name || "");
             frm.set_value(
               "supplier_bank_account_number",
-              r.message.bank_account_number || ""
+              r.message.bank_account_number || "",
             );
           }
         });
@@ -266,7 +266,7 @@ frappe.ui.form.on("Purchase Receipt", {
               frm.set_value("supplier_bank_name", bank_name);
               frm.set_value(
                 "supplier_bank_account_number",
-                bank_account_number
+                bank_account_number,
               );
             } else {
               // Case 2: Missing details → ask user to input
@@ -290,7 +290,7 @@ frappe.ui.form.on("Purchase Receipt", {
                   frm.set_value("supplier_bank_name", values.bank_name);
                   frm.set_value(
                     "supplier_bank_account_number",
-                    values.bank_account_number
+                    values.bank_account_number,
                   );
 
                   // Update Supplier record as well
@@ -302,14 +302,14 @@ frappe.ui.form.on("Purchase Receipt", {
                     .then(() => {
                       frappe.show_alert({
                         message: __(
-                          "Supplier bank details saved successfully."
+                          "Supplier bank details saved successfully.",
                         ),
                         indicator: "green",
                       });
                     });
                 },
                 __("Enter Supplier Bank Details"),
-                __("Save")
+                __("Save"),
               );
             }
           }
@@ -466,4 +466,59 @@ function validate_payment_split_total(frm) {
   }
 
   return true;
+}
+
+frappe.ui.form.on("Purchase Receipt", {
+  refresh(frm) {
+    toggle_account_paid_from(frm);
+    set_account_paid_from_filter(frm);
+  },
+
+  payment_method(frm) {
+    toggle_account_paid_from(frm);
+  },
+
+  payment_split_on_form_rendered(frm) {
+    toggle_account_paid_from(frm);
+  },
+});
+
+frappe.ui.form.on("Purchase Receipt Payment Split", {
+  mode_of_payment(frm) {
+    toggle_account_paid_from(frm);
+  },
+});
+
+function toggle_account_paid_from(frm) {
+  let show_field = false;
+
+  if (frm.doc.payment_method === "Bank Transfer") {
+    show_field = true;
+  }
+
+  if (frm.doc.payment_method === "Mix") {
+    (frm.doc.payment_split || []).forEach((row) => {
+      if (row.mode_of_payment === "Bank Transfer") {
+        show_field = true;
+      }
+    });
+  }
+
+  frm.toggle_display("account_paid_from", show_field);
+
+  if (!show_field) {
+    frm.set_value("account_paid_from", null);
+  }
+}
+
+function set_account_paid_from_filter(frm) {
+  frm.set_query("account_paid_from", function () {
+    return {
+      filters: {
+        account_type: ["in", ["Bank", "Cash"]],
+        is_group: 0,
+        company: "Anygold Sdn. Bhd.",
+      },
+    };
+  });
 }
