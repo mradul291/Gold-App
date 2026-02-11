@@ -18,7 +18,7 @@ def get_all_bag_overview():
             bin.warehouse AS bag_id,
             item.purity AS purity,
             SUM(bin.actual_qty) AS weight,
-            AVG(bin.valuation_rate) AS rate,
+            SUM(bin.actual_qty * bin.valuation_rate) / SUM(bin.actual_qty) AS rate,
             SUM(bin.actual_qty * bin.valuation_rate) AS amount
         FROM
             `tabBin` AS bin
