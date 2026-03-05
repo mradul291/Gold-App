@@ -9,27 +9,100 @@ def set_item_group_prefix(doc, method):
     doc.item_code_prefix = prefix
 
 # Autoname Item using Item Group's prefix and incremented sequence
-def autoname(doc, method):
-    prefix = frappe.db.get_value("Item Group", doc.item_group, "item_code_prefix")
-    if not prefix:
-        frappe.throw(f"Item Group '{doc.item_group}' has no Item Code Prefix. Please set it in Item Group.")
+# def autoname(doc, method):
+#     prefix = frappe.db.get_value("Item Group", doc.item_group, "item_code_prefix")
+#     if not prefix:
+#         frappe.throw(f"Item Group '{doc.item_group}' has no Item Code Prefix. Please set it in Item Group.")
 
-    # Get max numeric part safely
+#     # Get max numeric part safely
+#     last_number = frappe.db.sql("""
+#         SELECT MAX(CAST(SUBSTRING_INDEX(item_code, '-', -1) AS UNSIGNED)) AS max_number
+#         FROM `tabItem`
+#         WHERE item_code LIKE %s
+#     """, (f"{prefix}-%",), as_dict=True)[0].max_number or 0
+
+#     # Increment
+#     new_number = last_number + 1
+#     new_code = f"{prefix}-{new_number:03d}"
+
+#     # Double-check uniqueness
+#     if frappe.db.exists("Item", new_code):
+#         frappe.throw(f"Could not generate unique code for prefix {prefix}. Please try again.")
+
+#     doc.item_code = new_code
+
+def autoname(doc, method):
+
+    # ----------------------------
+    # RETAIL ITEM LOGIC
+    # ----------------------------
+    if doc.item_category == "Retail":
+
+        type_map = {
+            "Ring": "RNG",
+            "Necklace": "NCK",
+            "Bracelet": "BRC",
+            "Bangle": "BNG",
+            "Earring": "EAR",
+            "Pendant": "PND",
+            "Chain": "CHN",
+            "Bar/Wafer": "BAR"
+        }
+
+        if not doc.purity:
+            frappe.throw("Purity is required for Retail items.")
+
+        if not doc.item_group:
+            frappe.throw("Item Type is required for Retail items.")
+
+        type_code = type_map.get(doc.item_group, "OTH")
+        # purity = str(int(doc.purity))
+        purity = str(round(flt(doc.purity), 1)).rstrip("0").rstrip(".")
+
+        # Count existing retail items of same purity & type
+        count = frappe.db.count("Item", {
+            "item_category": "Retail",
+            "purity": doc.purity,
+            "item_group": doc.item_group
+        }) + 1
+
+        sequence = str(count).zfill(4)
+
+        sku = f"RET-{purity}-{type_code}-{sequence}"
+
+        if frappe.db.exists("Item", sku):
+            frappe.throw(f"SKU {sku} already exists. Try again.")
+
+        doc.item_code = sku
+        doc.name = sku
+        return
+
+    # ----------------------------
+    # NORMAL ITEM LOGIC (EXISTING)
+    # ----------------------------
+
+    prefix = frappe.db.get_value("Item Group", doc.item_group, "item_code_prefix")
+
+    if not prefix:
+        frappe.throw(
+            f"Item Group '{doc.item_group}' has no Item Code Prefix. Please set it in Item Group."
+        )
+
     last_number = frappe.db.sql("""
         SELECT MAX(CAST(SUBSTRING_INDEX(item_code, '-', -1) AS UNSIGNED)) AS max_number
         FROM `tabItem`
         WHERE item_code LIKE %s
     """, (f"{prefix}-%",), as_dict=True)[0].max_number or 0
 
-    # Increment
     new_number = last_number + 1
     new_code = f"{prefix}-{new_number:03d}"
 
-    # Double-check uniqueness
     if frappe.db.exists("Item", new_code):
         frappe.throw(f"Could not generate unique code for prefix {prefix}. Please try again.")
 
     doc.item_code = new_code
+    doc.name = new_code
+
 
 @frappe.whitelist()
 def create_item_from_group(item_group, valuation_rate=None):

@@ -18,6 +18,8 @@ frappe.pages["retail-inventory"].on_page_load = function (wrapper) {
 		aging: "",
 	};
 
+	let search_timeout = null;
+
 	let html = `
 	<div class="ri-container">
 
@@ -502,4 +504,28 @@ frappe.pages["retail-inventory"].on_page_load = function (wrapper) {
 	$body.on("click", "#ri-export", function () {
 		frappe.set_route("List", "Item");
 	});
+
+	// ==========================
+// REAL-TIME SEARCH
+// ==========================
+
+$body.on("input", "#ri-search", function () {
+
+    let value = $(this).val().trim();
+
+    // Clear previous timer
+    if (search_timeout) {
+        clearTimeout(search_timeout);
+    }
+
+    // Debounce: wait 400ms after typing stops
+    search_timeout = setTimeout(function () {
+
+        current_filters.search = value;
+        current_page = 1;
+
+        load_inventory_items(1);
+
+    }, 400);
+});
 };

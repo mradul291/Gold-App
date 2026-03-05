@@ -731,5 +731,90 @@
     "insert_after": "total_advance",
     "name": "Purchase Receipt-account_paid_from",
     "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "item_category",
+    "label": "Item Category",
+    "fieldtype": "Select",
+    "options": "\nRetail\nWholesale",
+    "insert_after": "item_tag",
+    "name": "Item-item_category",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "rfid_tag",
+    "label": "RFID Tag",
+    "fieldtype": "Data",
+    "unique": 1,
+    "insert_after": "custom_item_classification_code",
+    "name": "Item-rfid_tag",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "purchase_date",
+    "label": "Purchase Date",
+    "fieldtype": "Date",
+    "insert_after": "rfid_tag",
+    "name": "Item-purchase_date",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "purchase_transaction_ref",
+    "label": "Purchase Transaction Ref",
+    "fieldtype": "Link",
+    "options": "Stock Entry",
+    "insert_after": "purchase_date",
+    "name": "Item-purchase_transaction_ref",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "retail_status",
+    "label": "Retail Status",
+    "fieldtype": "Select",
+    "options": "\nAvailable\nReserved\nSold",
+    "insert_after": "purchase_transaction_ref",
+    "name": "Item-retail_status",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "sold_date",
+    "label": "Sold Date",
+    "fieldtype": "Datetime",
+    "insert_after": "retail_status",
+    "name": "Item-sold_date",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "gross_weight_g",
+    "label": "Gross Weight (g)",
+    "fieldtype": "Float",
+    "precision": "2",
+    "insert_after": "sold_date",
+    "name": "Item-gross_weight_g",
+    "module": "Gold App"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Item",
+    "fieldname": "length_size",
+    "label": "Length / Size",
+    "fieldtype": "Data",
+    "insert_after": "gross_weight_g",
+    "name": "Item-length_size",
+    "module": "Gold App"
   }
 ]

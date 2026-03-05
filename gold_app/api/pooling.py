@@ -277,9 +277,6 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         if not purity:
             frappe.throw(_("Purity is required in each row"))
             
-        if not r.get("item_code") and r.get("item_group"):
-            created = bulk_create_items([r])
-            r["item_code"] = created[0]["item_code"] if created else None
         
         source_item = r.get("source_item") or f"Unsorted-{purity}"
         rows.append({
@@ -344,14 +341,28 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         se.remaining_quantity = max(available_qty - reduce_qty, 0) 
 
         for r in group_rows:
-            item_code = r["item_code"]
-            if not frappe.db.exists("Item", item_code):
-                new_item = frappe.new_doc("Item")
-                new_item.item_code = item_code
-                new_item.item_name = item_code
-                new_item.item_group = r["item_group"] or "All Item Groups"
-                new_item.stock_uom = "Gram"
-                new_item.insert(ignore_permissions=True)
+            # Always create fresh Retail Item
+            new_item = frappe.new_doc("Item")
+
+            new_item.item_category = "Retail"
+            new_item.item_group = r["item_group"]
+            new_item.stock_uom = "Gram"
+
+            # Required for autoname
+            new_item.purity = r["purity"]
+
+            # Retail fields
+            new_item.retail_status = "Available"
+            new_item.gross_weight_g = r["qty"]
+            new_item.length_size = r.get("item_length") or r.get("item_size")
+            new_item.valuation_rate = r["valuation_rate"]
+
+            new_item.purchase_date = posting_date or nowdate()
+            new_item.rfid_tag = generate_rfid()
+
+            new_item.insert(ignore_permissions=True)
+
+            item_code = new_item.item_code
 
             se.append("items", {
                 "item_code": item_code,
@@ -460,3 +471,12 @@ def create_stock_entry_from_pool(purity_data, pool_name=None, remaining_transfer
         "created_items": created_items,
     }
 
+
+def generate_rfid():
+    import random
+    import string
+
+    while True:
+        code = "RFID-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        if not frappe.db.exists("Item", {"rfid_tag": code}):
+            return code

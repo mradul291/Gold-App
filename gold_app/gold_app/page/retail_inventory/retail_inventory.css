@@ -1,0 +1,305 @@
+/* MAIN CONTAINER */
+.ri-container {
+	padding: 20px;
+	background: #f8fafc;
+}
+
+/* HEADER CARD */
+.ri-header-card {
+	background: #fff;
+	border-radius: 12px;
+	padding: 18px 24px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* TITLE */
+.ri-title {
+	font-size: 18px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.ri-icon {
+	font-size: 20px;
+}
+
+/* STATS ROW */
+.ri-stats {
+	display: flex;
+	gap: 40px;
+}
+
+/* EACH STAT */
+.ri-stat {
+	text-align: center;
+}
+
+.ri-stat-label {
+	font-size: 11px;
+	color: #8d99ae;
+	letter-spacing: 0.5px;
+	font-weight: 600;
+}
+
+.ri-stat-value {
+	font-size: 16px;
+	font-weight: 700;
+	margin-top: 4px;
+}
+
+/* COLORS */
+.green {
+	color: #2ecc71;
+}
+
+.gold {
+	color: #d4a017;
+}
+
+/* CARD */
+.ri-card {
+	background: #fff;
+	border-radius: 12px;
+	margin-top: 20px;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.ri-card-header {
+	padding: 14px 18px;
+	border-bottom: 1px solid #eee;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-weight: 600;
+}
+
+.ri-card-title {
+	font-size: 16px;
+}
+
+.ri-collapse {
+	cursor: pointer;
+	font-size: 16px;
+	color: #777;
+}
+
+.ri-card-body {
+	padding: 15px;
+}
+
+/* TABLE */
+.ri-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 11px;
+	table-layout: fixed;
+}
+
+.ri-table th {
+	text-align: left;
+	padding: 8px 6px;
+	font-size: 11px;
+	color: #7a7a7a;
+	font-weight: 600;
+	border-bottom: 2px solid #f1f1f1;
+}
+
+.ri-table td {
+	padding: 8px 6px;
+	vertical-align: middle;
+	border-bottom: 1px solid #f4f4f4;
+}
+
+.inventory-table th,
+.inventory-table td {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* TOTAL ROW */
+.total-row {
+	font-weight: 700;
+	background: #fafafa;
+}
+
+/* PURITY BADGES */
+.badge {
+	padding: 2px 6px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.purity-999 {
+	background: #ffd700;
+	color: #000;
+}
+
+.purity-916 {
+	background: #ffecb3;
+	color: #000;
+}
+
+.purity-750 {
+	background: #fff4e6;
+	color: #000;
+}
+/* FILTERS ROW */
+.ri-filters {
+	display: flex;
+	gap: 16px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+/* INPUT */
+.ri-input {
+	height: 32px;
+	padding: 0 8px;
+	border-radius: 6px;
+	border: 1px solid #ddd;
+	width: 260px;
+	font-size: 12px;
+}
+
+/* SELECT */
+.ri-select {
+	height: 32px;
+	padding: 0 8px;
+	border-radius: 6px;
+	border: 1px solid #ddd;
+	min-width: 160px;
+	font-size: 12px;
+}
+
+/* BUTTONS */
+.ri-btn {
+	height: 32px;
+	padding: 0 14px;
+	border-radius: 6px;
+	border: none;
+	font-weight: 600;
+	cursor: pointer;
+	font-size: 12px;
+}
+
+.ri-btn-gold {
+	background: #d4a017;
+	color: white;
+}
+
+.ri-btn-gray {
+	background: #6c757d;
+	color: white;
+}
+.ri-actions {
+	display: flex;
+	gap: 10px;
+}
+.photo-box {
+	width: 32px;
+	height: 32px;
+	background: #f1f1f1;
+	border-radius: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+}
+.sku {
+	font-weight: 600;
+	color: #2c3e50;
+}
+.cost {
+	color: #e74c3c;
+	font-weight: 600;
+}
+.rfid {
+	color: #7a7a7a;
+	font-size: 11px;
+}
+.days-badge {
+	padding: 3px 8px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.days-badge.green {
+	background: #d4edda;
+	color: #155724;
+}
+.status-badge {
+	padding: 3px 8px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.status-badge.available {
+	background: #d4edda;
+	color: #155724;
+}
+.action-btn {
+	border: none;
+	padding: 4px 8px;
+	border-radius: 5px;
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	margin-right: 4px;
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.action-btn.view {
+	background: #d6e4ff;
+	color: #1c4ed8;
+}
+
+.action-btn.edit {
+	background: #fff3cd;
+	color: #856404;
+}
+.ri-pagination {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 18px;
+	padding-top: 12px;
+	border-top: 1px solid #eee;
+}
+.ri-pagination-info {
+	color: #6c757d;
+	font-size: 12px;
+}
+.ri-pagination-controls {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+.page-btn {
+	border: 1px solid #ddd;
+	background: #fff;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	cursor: pointer;
+	min-width: 34px;
+}
+.page-btn.active {
+	background: #d4a017;
+	color: white;
+	border-color: #d4a017;
+}
+.page-btn.disabled {
+	color: #bbb;
+	background: #f5f5f5;
+	cursor: not-allowed;
+}
